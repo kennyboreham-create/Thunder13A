@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hockey Training App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
+
+    <div id="login-screen" class="flex flex-col items-center justify-center h-screen">
+        <h1 class="text-4xl font-bold mb-6 text-blue-400">Hockey Trainer</h1>
+        <input type="text" id="login-id" placeholder="Player ID (e.g. P001)" class="p-2 mb-2 rounded text-black">
+        <input type="password" id="login-pass" placeholder="Password" class="p-2 mb-4 rounded text-black">
+        <button onclick="login()" class="bg-blue-600 px-6 py-2 rounded font-bold hover:bg-blue-500">Login</button>
+        <p id="login-msg" class="mt-4 text-red-400"></p>
+    </div>
+
+    <div id="dashboard" class="hidden p-6 max-w-4xl mx-auto">
+        <header class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
+            <h2 class="text-2xl font-bold" id="player-name">Player Name</h2>
+            <div class="text-lg">Stars: <span id="star-count" class="text-yellow-400 font-bold">0</span></div>
+        </header>
+
+        <div class="flex gap-4 mb-6">
+            <button onclick="showSection('training')" class="hover:text-blue-400">Training</button>
+            <button onclick="showSection('game')" class="hover:text-blue-400">Games</button>
+            <button onclick="showSection('store')" class="hover:text-blue-400">Store</button>
+        </div>
+
+        <div id="training" class="section">
+            <h3 class="text-xl mb-4">Lessons</h3>
+            <div id="lessons-list" class="grid gap-4"></div>
+        </div>
+
+        <div id="game" class="section hidden">
+            <h3 class="text-xl mb-4">Game Levels</h3>
+            <div id="games-list" class="grid gap-4"></div>
+        </div>
+
+        <div id="store" class="section hidden">
+            <h3 class="text-xl mb-4">Sprite Store</h3>
+            <div id="store-list" class="grid grid-cols-2 gap-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // REPLACE THIS URL WITH YOUR GOOGLE APPS SCRIPT WEB APP URL
+        const API_URL = "https://script.google.com/macros/s/AKfycby2ElX2hUYDVhssObiN8Q7-KyCyBTHMT7lU6CFrS7Pt9Wy5MCghNa3wlvndnjvmf0gB/exec";
+
+        let playerData = {};
+        let currentPlayerId = "";
+
+        async function login() {
+            const id = document.getElementById('login-id').value;
+            const pass = document.getElementById('login-pass').value;
+            const msg = document.getElementById('login-msg');
+
+            const resp = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'login', playerId: id, password: pass })
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                currentPlayerId = id;
+                fetchDashboard();
+            } else {
+                msg.innerText = "Login Failed: " + data.message;
+            }
+        }
+
+        async function fetchDashboard() {
+            const resp = await fetch(`${API_URL}?action=getDashboard&playerId=${currentPlayerId}`);
+            playerData = await resp.json();
+            
+            if(playerData.success) {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                renderDashboard();
+            }
+        }
+
+        function renderDashboard() {
+            document.getElementById('player-name').innerText = playerData.playerProfile.name;
+            document.getElementById('star-count').innerText = playerData.playerProfile.totalStars;
+
+            // Render Lessons
+            const lessonsDiv = document.getElementById('lessons-list');
+            lessonsDiv.innerHTML = playerData.lessons.map(l => `
+                <div class="p-4 bg-slate-800 rounded flex justify-between">
+                    <span>${l.title}</span>
+                    ${l.completed ? '<span class="text-green-400">Done!</span>' : `<button onclick="complete('${l.id}', 'LESSON')" class="bg-blue-600 px-2 py-1 rounded">Complete</button>`}
+                </div>
+            `).join('');
+
+            // Render Games
+            const gamesDiv = document.getElementById('games-list');
+            gamesDiv.innerHTML = playerData.gameLevels.map(g => `
+                <div class="p-4 bg-slate-800 rounded flex justify-between">
+                    <span>${g.level_name}</span>
+                    ${g.completed ? '<span class="text-green-400">Done!</span>' : `<button onclick="complete('${g.id}', 'GAME_LEVEL')" class="bg-blue-600 px-2 py-1 rounded">Play</button>`}
+                </div>
+            `).join('');
+
+            // Render Store
+            const storeDiv = document.getElementById('store-list');
+            storeDiv.innerHTML = playerData.storeSprites.map(s => `
+                <div class="p-4 bg-slate-800 rounded">
+                    <p class="font-bold">${s.sprite_name}</p>
+                    <p>${s.cost_in_stars} Stars</p>
+                    ${s.owned ? 
+                        `<button onclick="equip('${s.id}')" class="bg-gray-600 mt-2 w-full py-1 rounded">Equip</button>` : 
+                        `<button onclick="buy('${s.id}')" class="bg-yellow-600 mt-2 w-full py-1 rounded">Buy</button>`}
+                </div>
+            `).join('');
+        }
+
+        async function complete(id, type) {
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'completeActivity', playerId: currentPlayerId, activityId: id, activityType: type })});
+            fetchDashboard(); // Refresh
+        }
+
+        async function buy(id) {
+            await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'buySprite', playerId: currentPlayerId, spriteId: id })});
+            fetchDashboard(); // Refresh
+        }
+        
+        function equip(id) {
+            fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'equipSprite', playerId: currentPlayerId, spriteId: id })});
+            alert("Sprite Equipped!");
+        }
+
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
