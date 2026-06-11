@@ -51,22 +51,34 @@
         let playerData = {};
         let currentPlayerId = "";
 
-        async function login() {
+       async function login() {
             const id = document.getElementById('login-id').value;
             const pass = document.getElementById('login-pass').value;
             const msg = document.getElementById('login-msg');
-
-            const resp = await fetch(API_URL, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'login', playerId: id, password: pass })
-            });
-            const data = await resp.json();
-
-            if (data.success) {
-                currentPlayerId = id;
-                fetchDashboard();
-            } else {
-                msg.innerText = "Login Failed: " + data.message;
+        
+            msg.innerText = "Logging in..."; // Show a quick status
+        
+            try {
+                const resp = await fetch(API_URL, {
+                    method: 'POST',
+                    // Sending as URL-encoded form data completely bypasses the strict CORS preflight check
+                    body: new URLSearchParams({ 
+                        action: 'login', 
+                        playerId: id, 
+                        password: pass 
+                    })
+                });
+                const data = await resp.json();
+        
+                if (data.success) {
+                    currentPlayerId = id;
+                    fetchDashboard();
+                } else {
+                    msg.innerText = "Login Failed: " + data.message;
+                }
+            } catch (error) {
+                console.error("CORS or Network Error:", error);
+                msg.innerText = "Connection error. Make sure your Web App is deployed correctly!";
             }
         }
 
