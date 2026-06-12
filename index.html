@@ -775,7 +775,7 @@
                                 const rawOptions = q.options ? q.options.toString() : "";
                                 const choices = rawOptions.split(',')
                                     .map(opt => opt.trim())
-                                    .filter(opt => opt !== ""); // Skips accidental trailing commas
+                                    .filter(opt => opt !== ""); // Skips accidental trailing commas or empty slots
                                 
                                 // Fallback correct answer trim rule
                                 const correctAnswer = q.correct_answer ? q.correct_answer.toString().trim() : "";
@@ -786,7 +786,8 @@
                                         <div class="grid gap-2">
                                             ${choices.map(choice => `
                                                 <label class="flex items-center gap-3 p-3 bg-slate-800/40 hover:bg-slate-800 rounded-xl border border-slate-700/50 cursor-pointer select-none text-xs font-medium text-slate-300 group transition">
-                                                    <input type="radio" name="answer_${q.id}" value="${choice}" class="w-4 h-4 text-indigo-600 focus:ring-0 bg-slate-700 border-slate-600 accent-indigo-500">
+                                                    <!-- ISOLATED: Added _${qIndex} to prevent radio choice cross-talk across different questions -->
+                                                    <input type="radio" name="answer_${q.id}_${qIndex}" value="${choice}" class="w-4 h-4 text-indigo-600 focus:ring-0 bg-slate-700 border-slate-600 accent-indigo-500">
                                                     <span>${choice}</span>
                                                 </label>
                                             `).join('')}
