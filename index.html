@@ -249,7 +249,7 @@
             const container = document.getElementById('lessons-list');
             if (!playerData.lessons) return;
             
-            // 1. Intercept Custom Workout Checklist Tab
+            // 1. Intercept Custom Weekly Workout Checklist Tab
             if (currentTrainingCategory.toLowerCase() === 'workout') {
                 renderWeeklyWorkoutSection(container);
                 return;
@@ -261,17 +261,19 @@
                 return;
             }
 
-            // 3. Standard Render Engine handling for Strategy
+            // 3. Handling for Strategy Tab (Standard Lessons + Strategy Tests)
             const filtered = playerData.lessons.filter(l => l.category && l.category.toLowerCase().trim() === currentTrainingCategory.toLowerCase());
 
             if (filtered.length === 0) {
-                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded">No ${currentTrainingCategory} lessons found.</p>`;
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded">No ${currentTrainingCategory} items found.</p>`;
                 return;
             }
 
+            // Sort standard lessons: Incomplete first, Completed dropped to the bottom
             const sortedLessons = filtered.sort((a, b) => a.completed - b.completed);
 
-            container.innerHTML = sortedLessons.map(l => {
+            // Build standard lesson HTML elements
+            let htmlOutput = sortedLessons.map(l => {
                 const videoUrl = l.video_url ? l.video_url.trim() : "";
                 return `
                     <div class="p-4 bg-slate-800 border border-slate-700/50 rounded-xl flex justify-between items-center shadow-sm ${l.completed ? 'opacity-60' : ''}">
@@ -291,6 +293,37 @@
                     </div>
                 `;
             }).join('');
+
+            // 4. Append Data-Driven Strategy Tests (only visible on Strategy tab)
+            if (currentTrainingCategory.toLowerCase() === 'strategy' && playerData.tests) {
+                // Collect unique lesson links mapped inside the test pool
+                const linkedLessonIds = [...new Set(playerData.tests.map(t => t.lesson_id))];
+                
+                linkedLessonIds.forEach(lId => {
+                    const correspondingLesson = playerData.lessons.find(l => l.id === lId);
+                    const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
+                    
+                    // Check if user has already solved this test successfully
+                    const alreadyPassed = playerData.lessons.find(l => l.id === lId && l.completed);
+
+                    htmlOutput += `
+                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/50 transition">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider">Exam Assess</span>
+                                    <p class="font-bold text-slate-100">${labelText}</p>
+                                </div>
+                                <p class="text-xs text-yellow-500 font-medium mt-0.5">+10 Stars <span class="text-slate-400">(Requires 100%)</span></p>
+                            </div>
+                            <button onclick="openQuizModal('${lId}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">
+                                ${alreadyPassed ? "Retry Challenge" : "Take Test"}
+                            </button>
+                        </div>
+                    `;
+                });
+            }
+
+            container.innerHTML = htmlOutput;
         }
 
         function renderDailySkillsSection(container) {
@@ -720,6 +753,108 @@
                     btn.classList.add('text-slate-400', 'hover:text-white');
                 }
             });
+        }
+        function openQuizModal(lessonId) {
+            const targetQuestions = playerData.tests.filter(t => t.lesson_id === lessonId);
+            if(targetQuestions.length === 0) {
+                alert("No questionnaire dataset available for this model row selection.");
+                return;
+            }
+
+            // Build popup modal structure programmatically
+            const modalHtml = `
+                <div id="quiz-modal-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+                        <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                            <h3 class="text-lg font-bold text-white">Strategy Theory Assessment</h3>
+                            <button onclick="document.getElementById('quiz-modal-overlay').remove()" class="text-slate-400 hover:text-slate-200 text-sm">✕ Close</button>
+                        </div>
+                        <div class="p-6 overflow-y-auto space-y-6 flex-1">
+                            ${targetQuestions.map((q, qIndex) => {
+                                const choices = q.options.split(',').map(opt => opt.trim());
+                                return `
+                                    <div class="space-y-2.5 question-block" data-qid="${q.id}" data-correct="${q.correct_answer.trim()}">
+                                        <p class="text-sm font-semibold text-slate-200"><span class="text-indigo-400 font-mono">Q${qIndex+1}.</span> ${q.question}</p>
+                                        <div class="grid gap-2">
+                                            ${choices.map(choice => `
+                                                <label class="flex items-center gap-3 p-3 bg-slate-800/40 hover:bg-slate-800 rounded-xl border border-slate-700/50 cursor-pointer select-none text-xs font-medium text-slate-300 group transition">
+                                                    <input type="radio" name="answer_${q.id}" value="${choice}" class="w-4 h-4 text-indigo-600 focus:ring-0 bg-slate-700 border-slate-600 accent-indigo-500">
+                                                    <span>${choice}</span>
+                                                </label>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        <div class="p-4 bg-slate-900 border-t border-slate-800">
+                            <button onclick="gradeAndSubmitQuiz('${lessonId}')" id="quiz-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition text-sm">
+                                Submit Answers
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+
+        async function gradeAndSubmitQuiz(lessonId) {
+            const blocks = document.querySelectorAll('.question-block');
+            let totalQuestions = blocks.length;
+            let correctCount = 0;
+            let allAnswered = true;
+
+            blocks.forEach(b => {
+                const qId = b.getAttribute('data-qid');
+                const correctVal = b.getAttribute('data-correct');
+                const selected = b.querySelector(`input[name="answer_${qId}"]:checked`);
+                
+                if(!selected) {
+                    allAnswered = false;
+                } else if(selected.value === correctVal) {
+                    correctCount++;
+                }
+            });
+
+            if(!allAnswered) {
+                alert("Please answer all questions before submitting!");
+                return;
+            }
+
+            const scorePct = Math.round((correctCount / totalQuestions) * 100);
+            const passed = (scorePct === 100);
+
+            const submitBtn = document.getElementById('quiz-submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Evaluating System Logs...";
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        action: 'submitTestResult',
+                        playerId: currentPlayerId,
+                        lessonId: lessonId,
+                        score: `${correctCount}/${totalQuestions}`,
+                        passed: passed ? "true" : "false"
+                    })
+                });
+                const status = await res.json();
+                
+                document.getElementById('quiz-modal-overlay').remove();
+                
+                if(passed) {
+                    alert(`🎉 Perfect 100%! Score: ${scorePct}%. ${status.pointsAwarded ? '10 Stars added to your account!' : 'Result recorded (Stars previously claimed).'}`);
+                } else {
+                    alert(`❌ Review Strategy Patterns! You scored ${scorePct}%. Remember, you need 100% accuracy to earn the 10-star reward bounty. Try again!`);
+                }
+                
+                fetchDashboard();
+            } catch(e) {
+                console.error(e);
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Submit Answers";
+            }
         }
     </script>
 </body>
