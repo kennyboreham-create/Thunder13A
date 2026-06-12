@@ -347,12 +347,9 @@
                 uniqueLessonIdsInTests.forEach(lId => {
                     const correspondingLesson = playerData.lessons.find(l => l.id === lId);
                     
-                    // --- FIX: Create the exact activity signature the database uses (e.g., "TEST_L001") ---
-                    const targetTestSignature = `TEST_${lId.toString().trim()}`;
-                    
-                    // Search through the user's completed activity history array to find a match
-                    // This guarantees that if it exists in 'player_progress', it will flag true instantly!
-                    const isTestPassed = playerData.lessons.some(l => l.id === targetTestSignature && l.completed === true);
+                    // Find any single question belonging to this test ID group to see if the backend flagged it completed
+                    const matchingTestData = playerData.tests.find(t => t.lesson_id === lId);
+                    const isTestPassed = matchingTestData ? matchingTestData.completed === true : false;
                     
                     const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
 
