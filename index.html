@@ -279,11 +279,6 @@
             const container = document.getElementById('lessons-list');
             if (!playerData.lessons) return;
             
-            // Safety check: Hide the playbook challenge rink when looking at workouts/skills/strategy
-            if (document.getElementById('playbook-challenge-panel')) {
-                document.getElementById('playbook-challenge-panel').classList.add('hidden');
-            }
-            
             // Route tracking views to their respective specialized rendering sub-components
             if (currentTrainingCategory.toLowerCase() === 'workout') {
                 renderWeeklyWorkoutSection(container);
@@ -341,7 +336,6 @@
 
             // 3. Map and append Strategy Exam Quizzes independently below the lessons
             if (playerData.tests) {
-                // Collect a single unique list of reference lesson keys available inside your quiz spreadsheet tab
                 const uniqueLessonIdsInTests = [...new Set(playerData.tests.map(t => t.lesson_id))];
                 
                 uniqueLessonIdsInTests.forEach(lId => {
@@ -379,6 +373,14 @@
                     `;
                 });
             }
+
+            // Fallback display context if filter choices hide all elements on screen completely
+            if (htmlOutput === "") {
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No strategy elements found matching this filter selection.</p>`;
+            } else {
+                container.innerHTML = htmlOutput;
+            }
+        }
 
             // Fallback display context if filter choices hide all elements on screen completely
             if (htmlOutput === "") {
