@@ -174,7 +174,6 @@
             }
 
             container.innerHTML = filtered.map(l => {
-                // Safe check: default to empty string if video_url is missing
                 const videoUrl = l.video_url ? l.video_url.trim() : "";
 
                 return `
@@ -183,9 +182,12 @@
                             <p class="font-bold text-slate-100">${l.title}</p>
                             <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
                         </div>
-                        <div>
+                        <div class="flex items-center gap-3">
                         ${l.completed ? 
-                            '<span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>' : 
+                            `
+                            <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>
+                            ${videoUrl !== "" ? `<button onclick="window.open('${videoUrl}', '_blank')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold">Watch Again</button>` : ''}
+                            ` : 
                             `<button onclick="handleLessonCompletion('${l.id}', '${videoUrl}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">Complete</button>`
                         }
                         </div>
