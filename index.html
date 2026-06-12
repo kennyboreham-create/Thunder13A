@@ -8,6 +8,7 @@
 </head>
 <body class="bg-slate-900 text-white min-h-screen">
 
+    <!-- Login Screen -->
     <div id="login-screen" class="flex flex-col items-center justify-center h-screen">
         <h1 class="text-4xl font-bold mb-6 text-blue-400">Hockey Trainer</h1>
         <input type="text" id="login-id" placeholder="Player ID" class="p-2 mb-2 rounded text-black w-64">
@@ -16,6 +17,7 @@
         <p id="login-msg" class="mt-4 text-red-400 max-w-md text-center whitespace-pre-line"></p>
     </div>
 
+    <!-- Dashboard -->
     <div id="dashboard" class="hidden p-6 max-w-4xl mx-auto">
         <header class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
             <div class="flex items-center gap-4">
@@ -30,12 +32,14 @@
             <div class="text-lg">Stars: <span id="star-count" class="text-yellow-400 font-bold">0</span></div>
         </header>
 
+        <!-- Main Navigation Tabs -->
         <div class="flex gap-6 mb-6 border-b border-slate-800 pb-2 text-lg font-medium">
             <button onclick="showMainTab('training')" id="tab-btn-training" class="text-blue-400 border-b-2 border-blue-400 pb-2 px-1">Training</button>
             <button onclick="showMainTab('gameboard')" id="tab-btn-gameboard" class="text-slate-400 hover:text-white pb-2 px-1">Game Board</button>
             <button onclick="showMainTab('store')" id="tab-btn-store" class="text-slate-400 hover:text-white pb-2 px-1">Store</button>
         </div>
 
+        <!-- TRAINING SECTION -->
         <div id="training-section" class="main-section">
             <div class="flex gap-3 mb-6 bg-slate-800 p-1.5 rounded-lg w-fit">
                 <button onclick="filterLessons('Strategy')" id="sub-btn-Strategy" class="px-4 py-1.5 rounded bg-blue-600 font-medium text-sm">Strategy</button>
@@ -45,11 +49,10 @@
             <div id="lessons-list" class="grid gap-4"></div>
         </div>
 
+        <!-- GAME BOARD SECTION -->
         <div id="gameboard-section" class="main-section hidden">
             <div class="bg-slate-800 rounded-xl p-6 shadow-xl">
-                <h3 class="text-xl font-bold mb-4 text-blue-400 flex items-center gap-2">
-                    🏆 Team Leaderboard
-                </h3>
+                <h3 class="text-xl font-bold mb-4 text-blue-400 flex items-center gap-2">🏆 Team Leaderboard</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -61,8 +64,7 @@
                                 <th class="py-3 px-4 text-center w-28">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="leaderboard-body" class="divide-y divide-slate-700/50">
-                            </tbody>
+                        <tbody id="leaderboard-body" class="divide-y divide-slate-700/50"></tbody>
                     </table>
                 </div>
             </div>
@@ -73,12 +75,14 @@
             </div>
         </div>
 
+        <!-- STORE SECTION -->
         <div id="store-section" class="main-section hidden">
             <h3 class="text-xl font-bold mb-4">Sprite Store</h3>
-            <div id="store-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+            <div id="store-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
         </div>
     </div>
 
+    <!-- Inventory Inspection Modal Popup -->
     <div id="inventory-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700 shadow-2xl">
             <div class="flex justify-between items-start mb-4">
@@ -88,14 +92,12 @@
                 </div>
                 <button onclick="closeInventoryModal()" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
             </div>
-            <div id="modal-inventory-list" class="grid gap-2 max-h-60 overflow-y-auto pr-1">
-                </div>
+            <div id="modal-inventory-list" class="grid gap-3 max-h-80 overflow-y-auto pr-1"></div>
         </div>
     </div>
 
     <script>
-        // PASTE YOUR LIVE GOOGLE APPS SCRIPT WEB APP DEPLOYMENT URL HERE
-        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec";
+        const API_URL = "YOUR_WEB_APP_URL_HERE";
 
         let playerData = {};
         let currentPlayerId = "";
@@ -105,7 +107,6 @@
             const id = document.getElementById('login-id').value;
             const pass = document.getElementById('login-pass').value;
             const msg = document.getElementById('login-msg');
-
             msg.innerText = "Connecting...";
 
             try {
@@ -122,7 +123,7 @@
                     msg.innerText = data.message || "Invalid credentials.";
                 }
             } catch (error) {
-                msg.innerText = "Network Error window. Check your Apps Script deployment accessibility settings.";
+                msg.innerText = "Network Error during verification.";
             }
         }
 
@@ -142,14 +143,11 @@
         }
 
         function renderDashboard() {
-            // 1. Profile Info Text
             document.getElementById('player-name').innerText = playerData.playerProfile.name;
             document.getElementById('player-jersey').innerText = `Jersey #${playerData.playerProfile.jerseyNumber}`;
             document.getElementById('star-count').innerText = playerData.playerProfile.totalStars;
 
-            // 2. Find and Show Main Player Avatar
             const activeId = playerData.playerProfile.activeSpriteId;
-            // Search the store list to find the matching sprite row
             const activeSprite = playerData.storeSprites.find(s => s.id.toString() === activeId.toString());
             
             const avatarContainer = document.getElementById('player-avatar-container');
@@ -159,16 +157,14 @@
                 avatarImg.src = activeSprite.image_url;
                 avatarContainer.classList.remove('hidden');
             } else {
-                avatarContainer.classList.add('hidden'); // Hide container if no image URL is set yet
+                avatarContainer.classList.add('hidden');
             }
 
-            // Render Tab Modules
             renderLessonsList();
             renderGameBoard();
             renderStore();
         }
 
-        // Subcategory Filter Logic inside Training Tab
         function filterLessons(category) {
             currentTrainingCategory = category;
             ['Strategy', 'Workout', 'Skills'].forEach(cat => {
@@ -195,7 +191,6 @@
 
             container.innerHTML = filtered.map(l => {
                 const videoUrl = l.video_url ? l.video_url.trim() : "";
-
                 return `
                     <div class="p-4 bg-slate-800 border border-slate-700/50 rounded-xl flex justify-between items-center shadow-sm">
                         <div>
@@ -217,29 +212,20 @@
         }
 
         function handleLessonCompletion(lessonId, videoUrl) {
-            // 1. If a video link exists in the spreadsheet row, open it instantly in a new window tab
             if (videoUrl && videoUrl !== "") {
                 window.open(videoUrl, '_blank');
-            } else {
-                alert("Note: No video link was provided for this lesson row in the Google Sheet, but your stars are being tracked!");
             }
-
-            // 2. Run the star addition transaction logic onto the Google Sheet database
             completeActivity(lessonId, 'LESSON');
         }
 
         function renderGameBoard() {
             const leaderboardBody = document.getElementById('leaderboard-body');
-            
-            // Grab the store information so we can map out avatars on the leaderboard rows
-            let sortedPlayers = [playerData.playerProfile]; // Base layout context tracking current user
+            let sortedPlayers = [playerData.playerProfile]; 
 
             leaderboardBody.innerHTML = sortedPlayers.map((p, idx) => {
-                // Find the sprite row for this specific player row
                 const spriteMatch = playerData.storeSprites.find(s => s.id.toString() === p.activeSpriteId.toString());
-                // Use the matching image URL, fallback to an empty pixel spacer if missing
                 const avatarUrl = (spriteMatch && spriteMatch.image_url) ? spriteMatch.image_url : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-                const hasAvatar = (spriteMatch && spriteMatch.image_url);
+                const hasAvatar = !!(spriteMatch && spriteMatch.image_url);
 
                 return `
                     <tr class="hover:bg-slate-700/30 transition text-sm">
@@ -261,7 +247,6 @@
                 `;
             }).join('');
 
-            // Render Game Challenge Levels Layout underneath inside Game Board 
             const gamesDiv = document.getElementById('games-list');
             gamesDiv.innerHTML = playerData.gameLevels.map(g => `
                 <div class="p-4 bg-slate-800 border border-slate-700/50 rounded-xl flex justify-between items-center shadow-sm">
@@ -282,19 +267,30 @@
 
         function renderStore() {
             const storeDiv = document.getElementById('store-list');
-            storeDiv.innerHTML = playerData.storeSprites.map(s => `
-                <div class="p-4 bg-slate-800 border border-slate-700 rounded-xl flex flex-col justify-between">
-                    <div class="mb-4">
-                        <p class="font-bold text-lg text-slate-100">${s.sprite_name}</p>
-                        <p class="text-sm text-yellow-400 font-semibold">${s.cost_in_stars} Stars</p>
+            storeDiv.innerHTML = playerData.storeSprites.map(s => {
+                const fallbackImg = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+                const imgUrl = s.image_url ? s.image_url.trim() : fallbackImg;
+
+                return `
+                    <div class="p-4 bg-slate-800 border border-slate-700 rounded-xl flex flex-col items-center justify-between shadow-md group hover:border-slate-600 transition">
+                        <!-- Store Card Image Display Block -->
+                        <div class="w-24 h-24 rounded-full bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center mb-4 shadow-inner group-hover:scale-105 transition-transform duration-200">
+                            <img src="${imgUrl}" alt="${s.sprite_name}" class="w-full h-full object-cover">
+                        </div>
+                        <div class="text-center w-full mb-4">
+                            <p class="font-bold text-base text-slate-100 truncate">${s.sprite_name}</p>
+                            <p class="text-sm text-yellow-400 font-semibold flex items-center justify-center gap-1">⭐️ ${s.cost_in_stars} Stars</p>
+                        </div>
+                        <div class="w-full">
+                        ${s.owned ? 
+                            (playerData.playerProfile.activeSpriteId === s.id ? 
+                                `<button class="bg-emerald-600 text-white w-full py-2 rounded-lg font-bold text-sm cursor-default" disabled>Equipped</button>` : 
+                                `<button onclick="equip('${s.id}')" class="bg-slate-600 hover:bg-slate-500 text-white w-full py-2 rounded-lg font-bold text-sm transition">Equip</button>`) : 
+                            `<button onclick="buy('${s.id}')" class="bg-amber-600 hover:bg-amber-500 text-white w-full py-2 rounded-lg font-bold text-sm transition">Purchase</button>`}
+                        </div>
                     </div>
-                    ${s.owned ? 
-                        (playerData.playerProfile.activeSpriteId === s.id ? 
-                            `<button class="bg-emerald-600 text-white w-full py-2 rounded-lg font-bold cursor-default" disabled>Equipped</button>` : 
-                            `<button onclick="equip('${s.id}')" class="bg-slate-600 hover:bg-slate-500 text-white w-full py-2 rounded-lg font-bold transition">Equip</button>`) : 
-                        `<button onclick="buy('${s.id}')" class="bg-amber-600 hover:bg-amber-500 text-white w-full py-2 rounded-lg font-bold transition">Purchase Sprite</button>`}
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         async function completeActivity(id, type) {
@@ -323,24 +319,32 @@
             fetchDashboard();
         }
 
-        // Modal Display Inspector for Inventory Items
         function openInventoryModal(playerName) {
             document.getElementById('modal-player-name').innerText = `${playerName}'s Inventory`;
             const listContainer = document.getElementById('modal-inventory-list');
             
-            // Build visual inventory validation lists
-            // Compares configured items inside store array matching possession flags
             const ownedItems = playerData.storeSprites.filter(s => s.owned);
 
             if(ownedItems.length === 0) {
-                listContainer.innerHTML = `<p class="text-sm text-slate-500 italic p-2">No custom sprites unlocked yet.</p>`;
+                listContainer.innerHTML = `<p class="text-sm text-slate-500 italic p-2 text-center">No custom sprites unlocked yet.</p>`;
             } else {
-                listContainer.innerHTML = ownedItems.map(item => `
-                    <div class="p-2.5 bg-slate-900/60 rounded-lg flex justify-between items-center border border-slate-700/30">
-                        <span class="text-sm font-semibold text-slate-200">${item.sprite_name}</span>
-                        <span class="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20">Unlocked</span>
-                    </div>
-                `).join('');
+                listContainer.innerHTML = ownedItems.map(item => {
+                    const fallbackImg = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+                    const imgUrl = item.image_url ? item.image_url.trim() : fallbackImg;
+
+                    return `
+                        <div class="p-3 bg-slate-900/60 rounded-xl flex justify-between items-center border border-slate-700/40 shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <!-- Dynamic Avatar inside Leaderboard Inventory Inspector -->
+                                <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-600 overflow-hidden flex items-center justify-center">
+                                    <img src="${imgUrl}" alt="" class="w-full h-full object-cover">
+                                </div>
+                                <span class="text-sm font-semibold text-slate-100">${item.sprite_name}</span>
+                            </div>
+                            <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md border border-emerald-500/20 font-bold">Unlocked</span>
+                        </div>
+                    `;
+                }).join('');
             }
             document.getElementById('inventory-modal').classList.remove('hidden');
         }
@@ -349,7 +353,6 @@
             document.getElementById('inventory-modal').classList.add('hidden');
         }
 
-        // Navigation tab switching wrapper
         function showMainTab(tabId) {
             document.querySelectorAll('.main-section').forEach(s => s.classList.add('hidden'));
             document.getElementById(`${tabId}-section`).classList.remove('hidden');
