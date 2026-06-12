@@ -3,306 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hockey Training App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Hockey Team Training Hub</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; }
+        /* Smooth scrolling for modal lists */
+        .overflow-y-auto::-webkit-scrollbar { width: 6px; }
+        .overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
+        .overflow-y-auto::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen">
+<body class="min-h-screen font-sans antialiased bg-slate-950 text-slate-100 selection:bg-blue-600 selection:text-white">
 
-    <!-- Login Screen -->
-    <div id="login-screen" class="flex flex-col items-center justify-center h-screen">
-        <h1 class="text-4xl font-bold mb-6 text-blue-400">Hockey Trainer</h1>
-        <input type="text" id="login-id" placeholder="Player ID" class="p-2 mb-2 rounded text-black w-64">
-        <input type="password" id="login-pass" placeholder="Password" class="p-2 mb-4 rounded text-black w-64">
-        <button onclick="login()" class="bg-blue-600 px-6 py-2 rounded font-bold hover:bg-blue-500 w-64">Login</button>
-        <p id="login-msg" class="mt-4 text-red-400 max-w-md text-center whitespace-pre-line"></p>
-    </div>
-
-    <!-- Dashboard -->
-    <div id="dashboard" class="hidden p-6 max-w-4xl mx-auto">
-        <header class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
-            <div class="flex items-center gap-4">
-                <div id="player-avatar-container" class="w-16 h-16 rounded-full bg-slate-800 border-2 border-blue-500 overflow-hidden hidden flex items-center justify-center">
-                    <img id="player-avatar-img" src="" alt="Avatar" class="w-full h-full object-cover">
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 p-4">
+        <div class="w-full max-w-md p-8 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl space-y-6">
+            <div class="text-center">
+                <div class="inline-flex p-3 bg-blue-600/10 border border-blue-500/20 text-blue-400 rounded-2xl mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                </div>
+                <h2 class="text-2xl font-black tracking-tight text-white">Team Player Locker</h2>
+                <p class="text-sm text-slate-400 mt-1">Sign in to sync your weekly roster training logs</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Player Jersey ID</label>
+                    <input type="text" id="login-player-id" placeholder="e.g., P001" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 transition text-sm">
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold" id="player-name">Player Name</h2>
-                    <p class="text-sm text-slate-400" id="player-jersey"></p>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Locker Access Key</label>
+                    <input type="password" id="login-password" placeholder="••••••••" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-blue-500 transition text-sm">
+                </div>
+                <button onclick="executeAuthenticationRequest()" id="login-btn" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-600/20 transition duration-200 text-sm">
+                    Unlock Training Matrix
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden min-h-screen flex flex-col max-w-4xl mx-auto px-4 pb-24 pt-4">
+        
+        <header class="flex justify-between items-center bg-slate-900 border border-slate-800/80 rounded-2xl p-4 shadow-xl mb-6">
+            <div class="flex items-center gap-3">
+                <div id="hud-avatar-frame" class="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center p-0.5"></div>
+                <div>
+                    <h1 id="hud-player-name" class="font-black text-slate-100 leading-tight text-sm">Roster Loading...</h1>
+                    <p id="hud-jersey-number" class="text-xs font-bold text-slate-400 mt-0.5"></p>
                 </div>
             </div>
-            <div class="text-lg">Stars: <span id="star-count" class="text-yellow-400 font-bold">0</span></div>
+            <div class="flex items-center gap-4 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800/60">
+                <div class="text-center">
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Wallet</p>
+                    <p id="hud-total-stars" class="text-sm font-black text-yellow-500 mt-0.5">0 ⭐️</p>
+                </div>
+                <div class="w-px h-6 bg-slate-800"></div>
+                <div class="text-center">
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Lifetime</p>
+                    <p id="hud-lifetime-stars" class="text-sm font-black text-slate-300 mt-0.5">0</p>
+                </div>
+            </div>
         </header>
 
-        <!-- Dynamic Incoming Alerts Banner Panel -->
-        <div id="trade-alerts-container" class="mb-6 hidden grid gap-2"></div>
+        <main class="flex-1 space-y-6">
+            
+            <div id="view-lessons" class="space-y-4">
+                <nav class="flex gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
+                    <button onclick="switchCategoryView('strategy')" id="tab-strategy" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Strategy</button>
+                    <button onclick="switchCategoryView('workout')" id="tab-workout" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Workout</button>
+                    <button onclick="switchCategoryView('skills')" id="tab-skills" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Skills</button>
+                    <button onclick="switchCategoryView('gameboard')" id="tab-gameboard" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Gameboard</button>
+                    <button onclick="switchCategoryView('store')" id="tab-store" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Store</button>
+                </nav>
 
-        <!-- Main Navigation Tabs -->
-        <div class="flex gap-6 mb-6 border-b border-slate-800 pb-2 text-lg font-medium">
-            <button onclick="showMainTab('training')" id="tab-btn-training" class="text-blue-400 border-b-2 border-blue-400 pb-2 px-1">Training</button>
-            <button onclick="showMainTab('gameboard')" id="tab-btn-gameboard" class="text-slate-400 hover:text-white pb-2 px-1">Game Board</button>
-            <button onclick="showMainTab('store')" id="tab-btn-store" class="text-slate-400 hover:text-white pb-2 px-1">Store</button>
-        </div>
-
-        <!-- TRAINING SECTION -->
-        <div id="training-section" class="main-section">
-            <div class="flex gap-3 mb-6 bg-slate-800 p-1.5 rounded-lg w-fit">
-                <button onclick="filterLessons('Strategy')" id="sub-btn-Strategy" class="px-4 py-1.5 rounded bg-blue-600 font-medium text-sm">Strategy</button>
-                <button onclick="filterLessons('Workout')" id="sub-btn-Workout" class="px-4 py-1.5 rounded text-slate-400 hover:text-white font-medium text-sm">Workout</button>
-                <button onclick="filterLessons('Skills')" id="sub-btn-Skills" class="px-4 py-1.5 rounded text-slate-400 hover:text-white font-medium text-sm">Skills</button>
+                <div id="lessons-list" class="grid gap-3"></div>
             </div>
-            <div id="lessons-list" class="grid gap-4"></div>
-        </div>
 
-        <!-- GAME BOARD SECTION -->
-        <div id="gameboard-section" class="main-section hidden">
-            <div class="bg-slate-800 rounded-xl p-6 shadow-xl">
-                <h3 class="text-xl font-bold mb-4 text-blue-400 flex items-center gap-2">🏆 Team Leaderboard</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="border-b border-slate-700 text-slate-400 text-sm">
-                                <th class="py-3 px-4 w-16">Rank</th>
-                                <th class="py-3 px-4">Player</th>
-                                <th class="py-3 px-4 text-center">Jersey</th>
-                                <th class="py-3 px-4 text-right">Stars</th>
-                                <th class="py-3 px-4 text-center w-28">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leaderboard-body" class="divide-y divide-slate-700/50"></tbody>
-                    </table>
+            <div id="playbook-challenge-panel" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl max-w-xl mx-auto hidden">
+                <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-start">
+                    <div>
+                        <span class="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider border border-blue-500/20">Weekly Challenge</span>
+                        <h3 id="pb-scenario-title" class="text-lg font-bold text-slate-100 mt-1">Playbook Canvas Loading...</h3>
+                        <p id="pb-scenario-desc" class="text-xs text-slate-400 mt-0.5"></p>
+                    </div>
+                    <div id="pb-star-reward-chip" class="text-right"></div>
+                </div>
+                
+                <div class="overflow-x-auto w-full flex justify-center py-2">
+                    <div id="rink-canvas-frame" class="relative w-[600px] h-[350px] bg-slate-950 rounded-xl border border-slate-700 select-none overflow-hidden shadow-inner flex-shrink-0" style="background-image: url('https://images.unsplash.com/photo-1518063319789-7217e6706b04?q=80&w=600&h=350&fit=crop'); background-size: cover; background-position: center;">
+                        <div id="draggable-token-node" class="absolute w-9 h-9 bg-blue-600 text-white font-extrabold rounded-full border-2 border-white flex items-center justify-center cursor-grab active:cursor-grabbing shadow-2xl z-30 select-none hidden" style="left: 0px; top: 0px;">X</div>
+                        <div id="dropzone-target-guide" class="absolute w-10 h-10 border-2 border-dashed border-emerald-400/60 bg-emerald-500/5 rounded-full pointer-events-none transform -translate-x-1/2 -translate-y-1/2 hidden" style="left: 0px; top: 0px;"></div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 pt-3 border-t border-slate-700/50 flex justify-between items-center gap-4">
+                    <div id="pb-feedback-feedback" class="text-xs font-semibold text-slate-400"></div>
+                    <button onclick="evaluatePlaybookPosition()" id="pb-submit-btn" class="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition shadow-md whitespace-nowrap">
+                        Lock Tactics Position
+                    </button>
                 </div>
             </div>
-            
-            <div class="mt-8">
-                <h3 class="text-xl font-bold mb-4">Available Challenges</h3>
-                <div id="games-list" class="grid gap-4"></div>
-                <div id="playbook-challenge-panel" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl max-w-xl mx-auto my-6 hidden">
-    <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-start">
-        <div>
-            <span class="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider border border-blue-500/20">Weekly Challenge</span>
-            <h3 id="pb-scenario-title" class="text-lg font-bold text-slate-100 mt-1">Playbook Canvas Loading...</h3>
-            <p id="pb-scenario-desc" class="text-xs text-slate-400 mt-0.5"></p>
-        </div>
-        <div id="pb-star-reward-chip" class="text-right"></div>
-    </div>
-    
-    <div class="overflow-x-auto w-full flex justify-center py-2">
-        <div id="rink-canvas-frame" class="relative w-[600px] h-[350px] bg-slate-950 rounded-xl border border-slate-700 select-none overflow-hidden shadow-inner flex-shrink-0" style="background-image: url('https://images.unsplash.com/photo-1518063319789-7217e6706b04?q=80&w=600&h=350&fit=crop'); background-size: cover; background-position: center;">
-            
-            <div id="draggable-token-node" class="absolute w-9 h-9 bg-blue-600 text-white font-extrabold rounded-full border-2 border-white flex items-center justify-center cursor-grab active:cursor-grabbing shadow-2xl z-30 select-none hidden" style="left: 0px; top: 0px;">X</div>
-            
-            <div id="dropzone-target-guide" class="absolute w-10 h-10 border-2 border-dashed border-emerald-400/60 bg-emerald-500/5 rounded-full pointer-events-none transform -translate-x-1/2 -translate-y-1/2 hidden" style="left: 0px; top: 0px;"></div>
-        </div>
-    </div>
-    
-    <div class="mt-4 pt-3 border-t border-slate-700/50 flex justify-between items-center gap-4">
-        <div id="pb-feedback-feedback" class="text-xs font-semibold text-slate-400"></div>
-        <button onclick="evaluatePlaybookPosition()" id="pb-submit-btn" class="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition shadow-md whitespace-nowrap">
-            Lock Tactics Position
-        </button>
-    </div>
-</div>
-            </div>
-        </div>
 
-        <!-- STORE SECTION -->
-        <div id="store-section" class="main-section hidden">
-            <h3 class="text-xl font-bold mb-4">Sprite Store</h3>
-            <div id="store-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
-        </div>
-    </div>
-
-    <!-- Inventory Inspection Modal Popup -->
-    <div id="inventory-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700 shadow-2xl">
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <h3 id="modal-player-name" class="text-xl font-bold text-blue-400">Player's Items</h3>
-                    <p class="text-xs text-slate-400">Vault Checklist</p>
+            <div id="gameboard-view-container" class="hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+                    <div class="border-b border-slate-800 pb-3 mb-4 flex justify-between items-center">
+                        <h3 class="text-sm font-black text-slate-100 uppercase tracking-wider">Team Standings & Roster</h3>
+                        <span class="text-slate-500 text-xs font-mono">Live Ranks</span>
+                    </div>
+                    <div id="leaderboard-target" class="divide-y divide-slate-800/60 max-h-96 overflow-y-auto pr-1"></div>
                 </div>
-                <button onclick="closeInventoryModal()" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
             </div>
-            <div id="modal-inventory-list" class="grid gap-3 max-h-80 overflow-y-auto pr-1"></div>
-        </div>
-    </div>
 
-    <!-- Trade Offer Selection Drawer Overlay Modal -->
-    <div id="trade-select-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div class="bg-slate-800 rounded-xl p-6 max-w-sm w-full border border-slate-700 shadow-2xl text-center">
-            <h3 class="text-lg font-bold text-amber-400 mb-1">Propose a Trade</h3>
-            <p class="text-xs text-slate-400 mb-4">Select one of your sprites to offer in exchange:</p>
-            <div id="my-trade-options-list" class="grid gap-2 max-h-60 overflow-y-auto mb-6 pr-1"></div>
-            <button onclick="closeTradeSelectModal()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-4 py-2 rounded-lg transition w-full">Cancel Offer</button>
-        </div>
+            <div id="store-view-container" class="hidden space-y-6">
+                <div class="flex gap-3 justify-center">
+                    <button onclick="openTradingPanelModal()" class="bg-slate-900 border border-slate-800 hover:border-slate-700 font-bold text-xs text-slate-200 px-5 py-3 rounded-xl transition shadow-md flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                        Locker Exchange Trading Post
+                    </button>
+                </div>
+                <div id="store-shelf-target" class="grid grid-cols-2 sm:grid-cols-3 gap-4"></div>
+            </div>
+
+        </main>
     </div>
 
     <script>
-        // PASTE YOUR LIVE WEB APP URL DEPLOYMENT GOOGLE APPS SCRIPT STRING HERE
-        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec";
+        // BACKEND CONNECTION CONFIG POINT
+        const API_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
 
-        let playerData = {};
+        // APP CORE APPLICATION GLOBAL VARIABLES
         let currentPlayerId = "";
-        let currentTrainingCategory = "Strategy";
+        let currentTrainingCategory = "strategy";
+        let playerData = {};
+        
+        // PLAYBOOK TIMING CANVAS CONTROLLERS
+        let activeChallengeRef = null;
+        let playbookDragData = { isDragging: false, currentX: 0, currentY: 0, startX: 0, startY: 0 };
 
-        let activeTradeTargetPlayerId = "";
-        let activeTradeTargetSpriteId = "";
+        // --- AUTHENTICATION CONTEXT MODULES ---
+        async function executeAuthenticationRequest() {
+            const idField = document.getElementById('login-player-id').value.trim();
+            const passField = document.getElementById('login-password').value.trim();
+            const loginBtn = document.getElementById('login-btn');
 
-        async function login() {
-            const id = document.getElementById('login-id').value;
-            const pass = document.getElementById('login-pass').value;
-            const msg = document.getElementById('login-msg');
-            msg.innerText = "Connecting...";
+            if (!idField || !passField) {
+                alert("Please declare both variables to unlock profile vault entries.");
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.innerText = "Accessing Database Engine...";
 
             try {
-                const resp = await fetch(API_URL, {
+                const response = await fetch(API_URL, {
                     method: 'POST',
-                    body: new URLSearchParams({ action: 'login', playerId: id, password: pass })
+                    body: new URLSearchParams({ action: 'login', playerId: idField, password: passField })
                 });
-                const data = await resp.json();
+                const data = await response.json();
 
                 if (data.success) {
-                    currentPlayerId = id.toString().trim();
+                    currentPlayerId = idField;
                     document.getElementById('login-screen').classList.add('hidden');
-                    document.getElementById('dashboard').classList.remove('hidden');
-                    fetchDashboard();
+                    document.getElementById('main-app').classList.remove('hidden');
+                    await fetchDashboard();
+                    switchCategoryView('strategy');
                 } else {
-                    msg.innerText = data.message || "Invalid credentials.";
+                    alert(data.message || "Credential authentication validation match error.");
+                    loginBtn.disabled = false;
+                    loginBtn.innerText = "Unlock Training Matrix";
                 }
-            } catch (error) {
-                msg.innerText = "Network Error during verification.";
+            } catch (err) {
+                console.error(err);
+                alert("Network communication timeout or missing backend CORS distribution version code.");
+                loginBtn.disabled = false;
+                loginBtn.innerText = "Unlock Training Matrix";
             }
         }
 
         async function fetchDashboard() {
+            if (!currentPlayerId) return;
             try {
-                const resp = await fetch(`${API_URL}?action=getDashboard&playerId=${currentPlayerId}`);
-                playerData = await resp.json();
-                
-                if (playerData && playerData.success) {
-                    renderDashboard();
-                } else {
-                    console.error("Failed to fetch player context data structure.");
+                const response = await fetch(`${API_URL}?action=getDashboard&playerId=${currentPlayerId}`);
+                playerData = await response.json();
+                if (playerData.success) {
+                    syncApplicationHUDLayout();
+                    refreshActiveCategoryPanelLayout();
                 }
-            } catch (error) {
-                console.error("Dashboard engine query error:", error);
+            } catch (err) {
+                console.error("Dashboard engine state acquisition crash loop:", err);
             }
         }
 
-        function renderDashboard() {
-            // Safe assignment fallbacks to protect layout execution execution loop
-            document.getElementById('player-name').innerText = playerData.playerProfile?.name || "Player";
-            document.getElementById('player-jersey').innerText = `Jersey #${playerData.playerProfile?.jerseyNumber || '00'}`;
-            document.getElementById('star-count').innerText = playerData.playerProfile?.totalStars || 0;
-
-            const activeId = playerData.playerProfile?.activeSpriteId;
-            const activeSprite = playerData.storeSprites?.find(s => s.id?.toString() === activeId?.toString());
+        function syncApplicationHUDLayout() {
+            const profile = playerData.playerProfile;
+            document.getElementById('hud-player-name').innerText = profile.name;
+            document.getElementById('hud-jersey-number').innerText = `#${profile.jerseyNumber} • Active Athlete`;
+            document.getElementById('hud-total-stars').innerText = `${profile.totalStars} ⭐️`;
+            document.getElementById('hud-lifetime-stars').innerText = profile.lifetimeStars;
             
-            const avatarContainer = document.getElementById('player-avatar-container');
-            const avatarImg = document.getElementById('player-avatar-img');
-
-            if (activeSprite && activeSprite.image_url) {
-                avatarImg.src = activeSprite.image_url;
-                avatarContainer.classList.remove('hidden');
-            } else {
-                avatarContainer.classList.add('hidden');
-            }
-
-            // Render submodules sequence wraps safely inside catch locks
-            try { renderTradeAlerts(); } catch(e) { console.error("Alert module fail", e); }
-            try { renderLessonsList(); } catch(e) { console.error("Lessons module fail", e); }
-            try { renderGameBoard(); } catch(e) { console.error("GameBoard module fail", e); }
-            try { renderStore(); } catch(e) { console.error("Store module fail", e); }
+            const activeId = profile.activeSpriteId || "S001";
+            document.getElementById('hud-avatar-frame').innerHTML = `
+                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${activeId}" class="w-full h-full object-contain" alt="Avatar">
+            `;
         }
 
-        function renderTradeAlerts() {
-            const container = document.getElementById('trade-alerts-container');
-            if (!playerData.activeTrades || playerData.activeTrades.length === 0) {
-                container.classList.add('hidden');
-                return;
-            }
-
-            // Make evaluation logic strings clean and trimmed
-            const incomingTrades = playerData.activeTrades.filter(t => t.receiver_id?.toString().trim() === currentPlayerId.toString().trim());
-            if (!incomingTrades || incomingTrades.length === 0) {
-                container.classList.add('hidden');
-                return;
-            }
-
-            container.classList.remove('hidden');
-            container.innerHTML = incomingTrades.map(t => {
-                const senderName = (playerData.leaderboard?.find(p => p.id?.toString().trim() === t.sender_id?.toString().trim()) || {name: "Another Player"}).name;
-                const giveSprite = (playerData.storeSprites?.find(s => s.id?.toString().trim() === t.offered_sprite_id?.toString().trim()) || {sprite_name: "Default"}).sprite_name;
-                const takeSprite = (playerData.storeSprites?.find(s => s.id?.toString().trim() === t.requested_sprite_id?.toString().trim()) || {sprite_name: "Default"}).sprite_name;
-
-                return `
-                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md">
-                        <div>
-                            <p class="text-sm font-bold text-amber-400">🤝 Trade Proposal Received!</p>
-                            <p class="text-xs text-slate-200 mt-0.5"><b>${senderName}</b> offers <b>${giveSprite}</b> in exchange for your <b>${takeSprite}</b>.</p>
-                        </div>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="resolveTrade('${t.id}', 'acceptTrade')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex-1 sm:flex-none">Accept</button>
-                            <button onclick="resolveTrade('${t.id}', 'denyTrade')" class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-lg transition flex-1 sm:flex-none">Decline</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function resolveTrade(id, actionRoute) {
-            await fetch(API_URL, { 
-                method: 'POST', 
-                body: new URLSearchParams({ action: actionRoute, playerId: currentPlayerId, tradeId: id })
-            });
-            fetchDashboard();
-        }
-
-        function filterLessons(category) {
-            currentTrainingCategory = category;
-            ['Strategy', 'Workout', 'Skills'].forEach(cat => {
-                const btn = document.getElementById(`sub-btn-${cat}`);
-                if(cat === category) {
-                    btn.classList.add('bg-blue-600');
-                    btn.classList.remove('text-slate-400', 'hover:text-white');
+        // --- APPLICATION ROUTER CONTROLLERS ---
+        function switchCategoryView(targetTab) {
+            currentTrainingCategory = targetTab;
+            
+            // Re-render matching styles on active horizontal nav menu buttons
+            ['strategy', 'workout', 'skills', 'gameboard', 'store'].forEach(t => {
+                const button = document.getElementById(`tab-${t}`);
+                if (t === targetTab) {
+                    button.className = "flex-1 py-2.5 text-center font-black text-xs rounded-lg uppercase tracking-wider transition bg-blue-600 text-white shadow-md shadow-blue-600/10 border border-blue-500/20";
                 } else {
-                    btn.classList.remove('bg-blue-600');
-                    btn.classList.add('text-slate-400', 'hover:text-white');
+                    button.className = "flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition text-slate-400 hover:text-slate-200 hover:bg-slate-800/40";
                 }
             });
-            renderLessonsList();
+
+            // Toggle layout structure views
+            const lessonsList = document.getElementById('lessons-list');
+            const gameboardView = document.getElementById('gameboard-view-container');
+            const storeView = document.getElementById('store-view-container');
+            const playbookPanel = document.getElementById('playbook-challenge-panel');
+
+            // Default State Resets
+            lessonsList.classList.add('hidden');
+            gameboardView.classList.add('hidden');
+            storeView.classList.add('hidden');
+            playbookPanel.classList.add('hidden');
+
+            if (targetTab === 'gameboard') {
+                gameboardView.classList.remove('hidden');
+                playbookPanel.classList.remove('hidden');
+                renderTeamLeaderboardLayout();
+                initPlaybookScenarioChallengeEngine();
+            } else if (targetTab === 'store') {
+                storeView.classList.remove('hidden');
+                renderStoreInventoryLayout();
+            } else {
+                lessonsList.classList.remove('hidden');
+                renderLessonsList();
+            }
         }
 
+        function refreshActiveCategoryPanelLayout() {
+            switchCategoryView(currentTrainingCategory);
+        }
+
+        // --- VIEW MODULE A: LESSONS & CUSTOM MODULE CHECKS ---
         function renderLessonsList() {
             const container = document.getElementById('lessons-list');
             if (!playerData.lessons) return;
             
-            // 1. Intercept Custom Weekly Workout Checklist Tab
             if (currentTrainingCategory.toLowerCase() === 'workout') {
                 renderWeeklyWorkoutSection(container);
                 return;
             }
 
-            // 2. Intercept Custom Daily Skills Checklist Tab
             if (currentTrainingCategory.toLowerCase() === 'skills') {
                 renderDailySkillsSection(container);
                 return;
             }
 
-            // 3. Handling for Strategy Tab (Standard Lessons + Strategy Tests)
+            // Fallback rendering structure matching Strategy
             const filtered = playerData.lessons.filter(l => l.category && l.category.toLowerCase().trim() === currentTrainingCategory.toLowerCase());
-
             if (filtered.length === 0) {
-                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded">No ${currentTrainingCategory} items found.</p>`;
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded-xl border border-slate-800">No content uploaded for this training grid yet.</p>`;
                 return;
             }
 
-            // Sort standard lessons: Incomplete first, Completed dropped to the bottom
             const sortedLessons = filtered.sort((a, b) => a.completed - b.completed);
 
-            // Build standard lesson HTML elements
             let htmlOutput = sortedLessons.map(l => {
                 const videoUrl = l.video_url ? l.video_url.trim() : "";
                 return `
-                    <div class="p-4 bg-slate-800 border border-slate-700/50 rounded-xl flex justify-between items-center shadow-sm ${l.completed ? 'opacity-60' : ''}">
+                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${l.completed ? 'opacity-60' : ''}">
                         <div>
                             <p class="font-bold ${l.completed ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
                             <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
@@ -320,23 +294,19 @@
                 `;
             }).join('');
 
-            // 4. Append Data-Driven Strategy Tests (only visible on Strategy tab)
+            // Inject Theory tests if working on strategy panels
             if (currentTrainingCategory.toLowerCase() === 'strategy' && playerData.tests) {
-                // Collect unique lesson links mapped inside the test pool
                 const linkedLessonIds = [...new Set(playerData.tests.map(t => t.lesson_id))];
-                
                 linkedLessonIds.forEach(lId => {
                     const correspondingLesson = playerData.lessons.find(l => l.id === lId);
                     const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
-                    
-                    // Check if user has already solved this test successfully
                     const alreadyPassed = playerData.lessons.find(l => l.id === lId && l.completed);
 
                     htmlOutput += `
-                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/50 transition">
+                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/40 transition">
                             <div>
                                 <div class="flex items-center gap-2">
-                                    <span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider">Exam Assess</span>
+                                    <span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-indigo-500/20">Exam Assess</span>
                                     <p class="font-bold text-slate-100">${labelText}</p>
                                 </div>
                                 <p class="text-xs text-yellow-500 font-medium mt-0.5">+10 Stars <span class="text-slate-400">(Requires 100%)</span></p>
@@ -348,58 +318,119 @@
                     `;
                 });
             }
-
             container.innerHTML = htmlOutput;
         }
 
-        function renderDailySkillsSection(container) {
-            // Locate the dynamic date row reference entry inside the database array
-            const skillsLesson = playerData.lessons.find(l => l.id === 'L_DAILY_SKILLS');
-            const currentDateLabel = skillsLesson ? skillsLesson.title.toString().trim() : "Today";
-            
-            const isAlreadyCompleted = skillsLesson && skillsLesson.completed;
+        async function handleLessonCompletion(lessonId, url) {
+            if (url !== "") window.open(url, '_blank');
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: new URLSearchParams({ action: 'completeActivity', playerId: currentPlayerId, activityType: 'LESSON', activityId: lessonId })
+                });
+                fetchDashboard();
+            } catch(e) { console.error(e); }
+        }
 
-            // State A: Routine already turned in for today
-            if (isAlreadyCompleted) {
+        // --- VIEW COMPONENT ROUTINE MODULE A.1: WORKOUT CHECKS GRID ---
+        function renderWeeklyWorkoutSection(container) {
+            const workoutLesson = playerData.lessons.find(l => l.id === 'L_WEEKLY_WORKOUT');
+            const label = workoutLesson ? (isNaN(workoutLesson.title) ? workoutLesson.title : "Week " + workoutLesson.title) : "Current Week";
+            
+            if (workoutLesson && workoutLesson.completed) {
                 container.innerHTML = `
-                    <div class="bg-slate-800/40 border border-emerald-500/20 rounded-2xl p-8 text-center max-w-md mx-auto shadow-xl">
-                        <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+                    <div class="bg-slate-900 border border-emerald-500/20 rounded-2xl p-8 text-center max-w-md mx-auto shadow-xl">
+                        <div class="w-14 h-14 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-3 border border-emerald-500/20">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
                         </div>
-                        <h3 class="text-xl font-bold text-slate-100">Daily Skills Done!</h3>
-                        <p class="text-sm text-slate-400 mt-2">Repetitions locked in for ${currentDateLabel}. Your stars have been added to your vault. Wake up tomorrow for a fresh list!</p>
+                        <h3 class="text-lg font-bold text-slate-100">Workout Locked In!</h3>
+                        <p class="text-xs text-slate-400 mt-1.5">Bounty stars collected for ${label}. Clear tracking hooks will reset automatically this upcoming Monday morning.</p>
                     </div>
                 `;
                 return;
             }
 
-            // State B: Checklist items to perform
-            const skillItems = [
-                "50 Shots",
-                "100 Stickhandling Touches",
-                "10 Rock Paper Scissor Matches"
-            ];
-
+            const drills = [ "50 Pushups Total", "100 Air Squats", "50 Alternating Lunges", "100 Jumping Jacks" ];
             container.innerHTML = `
-                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl max-w-xl mx-auto">
-                    <div class="border-b border-slate-700/60 pb-3 mb-4">
-                        <h3 class="text-xl font-bold text-blue-400">Daily Skills Tracking</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Earn 1 Star instantly per drill checklist target reached!</p>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl max-w-xl mx-auto">
+                    <div class="border-b border-slate-800 pb-3 mb-4">
+                        <h3 class="text-lg font-black text-blue-400">${label} Conditioning Tracker</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Complete all sets across the entire week to claim a +5 star block reward package.</p>
                     </div>
-                    
-                    <div class="grid gap-3 mb-6">
-                        ${skillItems.map((sk, index) => `
-                            <label class="flex items-center gap-3 p-3 bg-slate-900/60 hover:bg-slate-900 rounded-xl border border-slate-700/40 cursor-pointer select-none transition group">
-                                <input type="checkbox" value="1" data-index="${index}" class="skills-checkbox w-5 h-5 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-0 focus:ring-offset-0 accent-blue-500">
+                    <div class="grid gap-2.5 mb-5">
+                        ${drills.map((d, i) => `
+                            <label class="flex items-center gap-3 p-3 bg-slate-950 hover:bg-slate-900/60 rounded-xl border border-slate-800/80 cursor-pointer select-none transition group">
+                                <input type="checkbox" class="workout-checkbox w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-500 focus:ring-0 accent-blue-500">
+                                <span class="text-xs font-medium text-slate-300 group-hover:text-slate-200">${d}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                    <button onclick="submitWeeklyWorkoutCompletion('${label}')" id="workout-submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition text-xs shadow-lg shadow-blue-600/10">
+                        Submit Weekly Progress Report
+                    </button>
+                </div>
+            `;
+        }
+
+        async function submitWeeklyWorkoutCompletion(weekLabel) {
+            const checks = document.querySelectorAll('.workout-checkbox');
+            let matched = true;
+            checks.forEach(c => { if(!c.checked) matched = false; });
+
+            if (!matched) {
+                alert("You must check off every required target drill set block to submit this week's report!");
+                return;
+            }
+
+            const btn = document.getElementById('workout-submit-btn');
+            btn.disabled = true;
+            btn.innerText = "Transmitting Training Logs...";
+
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: new URLSearchParams({ action: 'completeWorkoutModule', playerId: currentPlayerId, starBonus: '5', activityId: `L_WEEKLY_WORKOUT_${weekLabel}` })
+                });
+                fetchDashboard();
+            } catch(e) { console.error(e); btn.disabled = false; btn.innerText = "Submit Weekly Progress Report"; }
+        }
+
+        // --- VIEW COMPONENT ROUTINE MODULE A.2: DAILY SKILLS ENGINE ---
+        function renderDailySkillsSection(container) {
+            const skillsLesson = playerData.lessons.find(l => l.id === 'L_DAILY_SKILLS');
+            const currentDateLabel = skillsLesson ? skillsLesson.title.toString().trim() : "Today";
+            if (skillsLesson && skillsLesson.completed) {
+                container.innerHTML = `
+                    <div class="bg-slate-900 border border-emerald-500/20 rounded-2xl p-8 text-center max-w-md mx-auto shadow-xl">
+                        <div class="w-14 h-14 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-3 border border-emerald-500/20">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-100">Daily Routine Finished!</h3>
+                        <p class="text-xs text-slate-400 mt-1.5">Repetitions locked in for ${currentDateLabel}. A clean checkbox slate will open at midnight tonight.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const skillItems = [ "50 Shots", "100 Stickhandling Touches", "10 Rock Paper Scissor Matches" ];
+            container.innerHTML = `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl max-w-xl mx-auto">
+                    <div class="border-b border-slate-800 pb-3 mb-4">
+                        <h3 class="text-lg font-black text-blue-400">Daily Skills Tracking</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Earn +1 Star instantly per drill checklist target reached!</p>
+                    </div>
+                    <div class="grid gap-2.5 mb-5">
+                        ${skillItems.map((sk, idx) => `
+                            <label class="flex items-center gap-3 p-3 bg-slate-950 hover:bg-slate-900/60 rounded-xl border border-slate-800/80 cursor-pointer select-none transition group">
+                                <input type="checkbox" value="1" data-index="${idx}" class="skills-checkbox w-4 h-4 rounded border-slate-700 bg-slate-800 text-blue-500 focus:ring-0 accent-blue-500">
                                 <div class="flex justify-between items-center w-full">
-                                    <span class="text-sm font-medium text-slate-200 group-hover:text-white">${sk}</span>
-                                    <span class="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">+1 ⭐️</span>
+                                    <span class="text-xs font-medium text-slate-300 group-hover:text-slate-200">${sk}</span>
+                                    <span class="text-[10px] font-bold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">+1 ⭐️</span>
                                 </div>
                             </label>
                         `).join('')}
                     </div>
-                    
-                    <button onclick="submitDailySkills('${currentDateLabel}')" id="skills-submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition duration-200 shadow-lg shadow-blue-600/10 text-sm">
+                    <button onclick="submitDailySkills('${currentDateLabel}')" id="skills-submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition text-xs shadow-lg shadow-blue-600/10">
                         Submit Daily Progress Report
                     </button>
                 </div>
@@ -407,15 +438,12 @@
         }
 
         async function submitDailySkills(dateLabel) {
-            const checkboxes = document.querySelectorAll('.skills-checkbox');
+            const boxes = document.querySelectorAll('.skills-checkbox');
             let totalEarnedStars = 0;
-            
-            checkboxes.forEach(cb => {
-                if (cb.checked) totalEarnedStars++;
-            });
+            boxes.forEach(cb => { if(cb.checked) totalEarnedStars++; });
 
             if (totalEarnedStars === 0) {
-                alert("Please select at least one tracking step to submit your daily training report!");
+                alert("Please select at least one training step to submit your daily training report!");
                 return;
             }
 
@@ -424,369 +452,15 @@
             submitBtn.innerText = "Processing Routine Data...";
 
             try {
-                // Generates unique activity lookup identity string: L_DAILY_SKILLS_2026-06-12
-                const pseudoActivityId = `L_DAILY_SKILLS_${dateLabel}`;
-                
                 await fetch(API_URL, {
                     method: 'POST',
-                    body: new URLSearchParams({
-                        action: 'completeWorkoutModule', // Reuses the secure workout core backend function
-                        playerId: currentPlayerId,
-                        starBonus: totalEarnedStars,
-                        activityId: pseudoActivityId
-                    })
+                    body: new URLSearchParams({ action: 'completeWorkoutModule', playerId: currentPlayerId, starBonus: totalEarnedStars, activityId: `L_DAILY_SKILLS_${dateLabel}` })
                 });
-                
                 fetchDashboard();
-            } catch(e) {
-                console.error(e);
-                submitBtn.disabled = false;
-                submitBtn.innerText = "Submit Daily Progress Report";
-            }
+            } catch(e) { console.error(e); submitBtn.disabled = false; submitBtn.innerText = "Submit Daily Progress Report"; }
         }
 
-        function renderWeeklyWorkoutSection(container) {
-            // 1. Locate the master workout row asset passed down from the database array
-            const workoutLesson = playerData.lessons.find(l => l.id === 'L_WEEKLY_WORKOUT');
-            
-            // 2. Safely clean and normalize the title text string from the sheet cell
-            let rawTitle = workoutLesson ? workoutLesson.title.toString().trim() : "";
-            
-            // 3. Fallback math check: If the sheet passes a raw number like "1", transform it to "Week 1"
-            const currentWeekLabel = isNaN(rawTitle) || rawTitle === "" ? (rawTitle || "Weekly Workout") : "Week " + rawTitle;
-            
-            // 4. Read the completion state processed by the backend engine maps
-            const isAlreadyCompleted = workoutLesson && workoutLesson.completed;
-
-            // 5. State Banner A: If the user has already submitted this week's workout routine
-            if (isAlreadyCompleted) {
-                container.innerHTML = `
-                    <div class="bg-slate-800/40 border border-emerald-500/20 rounded-2xl p-8 text-center max-w-md mx-auto shadow-xl">
-                        <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
-                        </div>
-                        <h3 class="text-xl font-bold text-slate-100">${currentWeekLabel} Completed!</h3>
-                        <p class="text-sm text-slate-400 mt-2">Awesome hustle! Your star rewards are safe inside your vault profile. Come back next Monday for your next challenge session.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            // 6. State Banner B: If the player needs to complete their exercises
-            const exerciseItems = [
-                "20 Pushups",
-                "30 Squats",
-                "20 Lunges",
-                "30 Situps",
-                "30 Jump on Spots",
-                "100 Jumping Jacks"
-            ];
-
-            container.innerHTML = `
-                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl max-w-xl mx-auto">
-                    <div class="border-b border-slate-700/60 pb-3 mb-4">
-                        <h3 class="text-xl font-bold text-blue-400">${currentWeekLabel} Fitness Checklist</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Earn 1 Star instantly per challenge completed!</p>
-                    </div>
-                    
-                    <div class="grid gap-3 mb-6">
-                        ${exerciseItems.map((ex, index) => `
-                            <label class="flex items-center gap-3 p-3 bg-slate-900/60 hover:bg-slate-900 rounded-xl border border-slate-700/40 cursor-pointer select-none transition group">
-                                <input type="checkbox" value="1" data-index="${index}" class="workout-checkbox w-5 h-5 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-0 focus:ring-offset-0 accent-blue-500">
-                                <div class="flex justify-between items-center w-full">
-                                    <span class="text-sm font-medium text-slate-200 group-hover:text-white">${ex}</span>
-                                    <span class="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">+1 ⭐️</span>
-                                </div>
-                            </label>
-                        `).join('')}
-                    </div>
-                    
-                    <button onclick="submitWeeklyWorkout('${currentWeekLabel}')" id="workout-submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition duration-200 shadow-lg shadow-blue-600/10 text-sm">
-                        Submit Workout Routine
-                    </button>
-                </div>
-            `;
-        }
-
-        async function submitWeeklyWorkout(weekLabel) {
-            const checkboxes = document.querySelectorAll('.workout-checkbox');
-            let totalEarnedStars = 0;
-            
-            checkboxes.forEach(cb => {
-                if (cb.checked) totalEarnedStars++;
-            });
-
-            if (totalEarnedStars === 0) {
-                alert("Please complete at least one exercise step to submit your tracking report!");
-                return;
-            }
-
-            const submitBtn = document.getElementById('workout-submit-btn');
-            submitBtn.disabled = true;
-            submitBtn.innerText = "Processing Routine Data...";
-
-            try {
-                // Unique tracking key generated dynamically: "L_WEEKLY_WORKOUT_Week 1"
-                const pseudoActivityId = `L_WEEKLY_WORKOUT_${weekLabel}`;
-                
-                await fetch(API_URL, {
-                    method: 'POST',
-                    body: new URLSearchParams({
-                        action: 'completeWorkoutModule',
-                        playerId: currentPlayerId,
-                        starBonus: totalEarnedStars,
-                        activityId: pseudoActivityId
-                    })
-                });
-                
-                fetchDashboard();
-            } catch(e) {
-                console.error(e);
-                submitBtn.disabled = false;
-                submitBtn.innerText = "Submit Workout Routine";
-            }
-        }
-
-        function handleLessonCompletion(lessonId, videoUrl) {
-            if (videoUrl && videoUrl !== "") window.open(videoUrl, '_blank');
-            completeActivity(lessonId, 'LESSON');
-        }
-
-        function renderGameBoard() {
-            const leaderboardBody = document.getElementById('leaderboard-body');
-            if(!playerData.leaderboard) return;
-            leaderboardBody.innerHTML = playerData.leaderboard.map((p, idx) => {
-                const spriteMatch = playerData.storeSprites?.find(s => s.id?.toString() === p.activeSpriteId?.toString());
-                const avatarUrl = (spriteMatch && spriteMatch.image_url) ? spriteMatch.image_url : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-                const hasAvatar = !!(spriteMatch && spriteMatch.image_url);
-
-                return `
-                    <tr class="hover:bg-slate-700/30 transition text-sm">
-                        <td class="py-3 px-4 font-bold text-slate-400">#${idx + 1}</td>
-                        <td class="py-3 px-4 flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center ${hasAvatar ? '' : 'opacity-0'}">
-                                <img src="${avatarUrl}" alt="" class="w-full h-full object-cover">
-                            </div>
-                            <span class="font-semibold text-white">
-                                ${p.name} ${p.id?.toString().trim() === currentPlayerId ? '<span class="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded ml-1">You</span>':''}
-                            </span>
-                        </td>
-                        <td class="py-3 px-4 text-center text-slate-300">${p.jerseyNumber || '-'}</td>
-                        <td class="py-3 px-4 text-right font-bold text-yellow-400">${p.totalStars}</td>
-                        <td class="py-3 px-4 text-center">
-                            <button onclick="openInventoryModal('${p.id}')" class="text-blue-400 hover:text-blue-300 underline font-medium text-xs">Inventory</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            const gamesDiv = document.getElementById('games-list');
-            if(!playerData.gameLevels) return;
-            gamesDiv.innerHTML = playerData.gameLevels.map(g => `
-                <div class="p-4 bg-slate-800 border border-slate-700/50 rounded-xl flex justify-between items-center shadow-sm">
-                    <div>
-                        <p class="font-bold text-slate-100">${g.level_name}</p>
-                        <p class="text-xs text-slate-400">Difficulty: ${g.difficulty || 'Normal'}</p>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <span class="text-sm font-bold text-yellow-400">+${g.star_reward} ⭐️</span>
-                        ${g.completed ? 
-                            '<span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Passed</span>' : 
-                            `<button onclick="completeActivity('${g.id}', 'GAME_LEVEL')" class="bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">Play</button>`
-                        }
-                    </div>
-                </div>
-            `).join('');
-                    // --- ADD THIS BLOCK AT THE VERY BOTTOM OF THE FUNCTION ---
-            const playbookPanel = document.getElementById('playbook-challenge-panel');
-            if (playbookPanel) {
-                playbookPanel.classList.remove('hidden');
-                initPlaybookScenarioChallengeEngine();
-            }
-            // --- END OF ADDED BLOCK ---
-        }
-
-        function renderStore() {
-            const storeDiv = document.getElementById('store-list');
-            if(!playerData.storeSprites) return;
-            storeDiv.innerHTML = playerData.storeSprites.map(s => {
-                const fallbackImg = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-                const imgUrl = s.image_url ? s.image_url.trim() : fallbackImg;
-                
-                let rarityLabel = "Common";
-                let rarityColor = "bg-slate-700 text-slate-300";
-                if (parseInt(s.rarity) === 2) { rarityLabel = "Rare (Max 2)"; rarityColor = "bg-blue-500/20 text-blue-400 border border-blue-500/30"; }
-                if (parseInt(s.rarity) === 1) { rarityLabel = "Legendary (Max 1)"; rarityColor = "bg-amber-500/20 text-amber-400 border border-amber-500/30"; }
-
-                let actionButtonHtml = "";
-                if (s.soldOut) {
-                    actionButtonHtml = `<button class="bg-red-900/40 text-red-400/60 w-full py-2 rounded-lg font-bold text-sm cursor-not-allowed border border-red-900/30" disabled>Sold Out</button>`;
-                } else if (s.owned) {
-                    if (playerData.playerProfile?.activeSpriteId?.toString() === s.id?.toString()) {
-                        actionButtonHtml = `<button class="bg-emerald-600 text-white w-full py-2 rounded-lg font-bold text-sm cursor-default" disabled>Equipped</button>`;
-                    } else {
-                        actionButtonHtml = `<button onclick="equip('${s.id}')" class="bg-slate-600 hover:bg-slate-500 text-white w-full py-2 rounded-lg font-bold text-sm transition">Equip</button>`;
-                    }
-                } else {
-                    actionButtonHtml = `<button onclick="buy('${s.id}')" class="bg-amber-600 hover:bg-amber-500 text-white w-full py-2 rounded-lg font-bold text-sm transition">Purchase</button>`;
-                }
-
-                return `
-                    <div class="p-4 bg-slate-800 border border-slate-700 rounded-xl flex flex-col items-center justify-between shadow-md relative group hover:border-slate-600 transition">
-                        <span class="absolute top-2.5 left-2.5 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md ${rarityColor}">${rarityLabel}</span>
-                        ${(!s.owned && !s.soldOut && s.stockLeft !== undefined) ? `<span class="absolute top-2.5 right-2.5 text-[10px] font-bold bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/50">Left: ${s.stockLeft}</span>` : ''}
-                        <div class="w-24 h-24 rounded-full bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center mb-4 mt-4 shadow-inner group-hover:scale-105 transition-transform duration-200">
-                            <img src="${imgUrl}" alt="${s.sprite_name}" class="w-full h-full object-cover">
-                        </div>
-                        <div class="text-center w-full mb-4">
-                            <p class="font-bold text-base text-slate-100 truncate">${s.sprite_name}</p>
-                            <p class="text-sm text-yellow-400 font-semibold flex items-center justify-center gap-1">⭐️ ${s.cost_in_stars} Stars</p>
-                        </div>
-                        <div class="w-full">${actionButtonHtml}</div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function completeActivity(id, type) {
-            await fetch(API_URL, { 
-                method: 'POST', 
-                body: new URLSearchParams({ action: 'completeActivity', playerId: currentPlayerId, activityId: id, activityType: type })
-            });
-            fetchDashboard();
-        }
-
-        async function buy(id) {
-            const resp = await fetch(API_URL, { 
-                method: 'POST', 
-                body: new URLSearchParams({ action: 'buySprite', playerId: currentPlayerId, spriteId: id })
-            });
-            const res = await resp.json();
-            if(!res.success) alert(res.message || "Error completing transaction.");
-            fetchDashboard();
-        }
-        
-        async function equip(id) {
-            await fetch(API_URL, { 
-                method: 'POST', 
-                body: new URLSearchParams({ action: 'equipSprite', playerId: currentPlayerId, spriteId: id })
-            });
-            fetchDashboard();
-        }
-
-        function openInventoryModal(targetPlayerId) {
-            const targetPlayer = playerData.leaderboard?.find(p => p.id?.toString().trim() === targetPlayerId.toString().trim());
-            if (!targetPlayer) return;
-
-            document.getElementById('modal-player-name').innerText = `${targetPlayer.name}'s Inventory`;
-            const listContainer = document.getElementById('modal-inventory-list');
-            
-            const isMe = (targetPlayerId.toString().trim() === currentPlayerId.toString().trim());
-
-            if (!targetPlayer.ownedSprites || targetPlayer.ownedSprites.length === 0) {
-                listContainer.innerHTML = `<p class="text-sm text-slate-500 italic p-2 text-center">No sprites unlocked yet.</p>`;
-            } else {
-                listContainer.innerHTML = targetPlayer.ownedSprites.map(sId => {
-                    const item = playerData.storeSprites?.find(s => s.id?.toString() === sId.toString()) || { sprite_name: "Default Card", image_url: "" };
-                    const fallbackImg = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-                    const imgUrl = item.image_url ? item.image_url.trim() : fallbackImg;
-
-                    const isPending = playerData.activeTrades && playerData.activeTrades.some(t => 
-                        t.status === "PENDING" && t.requested_sprite_id?.toString() === sId.toString() && t.receiver_id?.toString() === targetPlayerId.toString()
-                    );
-
-                    let actionMarkup = `<span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded border border-emerald-500/20 font-bold">Unlocked</span>`;
-                    
-                    if (!isMe) {
-                        if (isPending) {
-                            actionMarkup = `<span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-1 rounded border border-amber-500/20 font-bold animate-pulse">Pending...</span>`;
-                        } else {
-                            actionMarkup = `<button onclick="openTradeOfferSelection('${targetPlayerId}', '${sId}')" class="bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition shadow">Trade</button>`;
-                        }
-                    }
-
-                    return `
-                        <div class="p-2.5 bg-slate-900/60 rounded-xl flex justify-between items-center border border-slate-700/40 shadow-sm">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-600 overflow-hidden flex items-center justify-center">
-                                    <img src="${imgUrl}" alt="" class="w-full h-full object-cover">
-                                </div>
-                                <span class="text-sm font-semibold text-slate-100">${item.sprite_name}</span>
-                            </div>
-                            <div>${actionMarkup}</div>
-                        </div>
-                    `;
-                }).join('');
-            }
-            document.getElementById('inventory-modal').classList.remove('hidden');
-        }
-
-        function closeInventoryModal() {
-            document.getElementById('inventory-modal').classList.add('hidden');
-        }
-
-        function openTradeOfferSelection(targetPlayerId, targetSpriteId) {
-            activeTradeTargetPlayerId = targetPlayerId;
-            activeTradeTargetSpriteId = targetSpriteId;
-
-            closeInventoryModal();
-
-            const myProfileMatch = playerData.leaderboard?.find(p => p.id?.toString().trim() === currentPlayerId.toString().trim());
-            const optionsContainer = document.getElementById('my-trade-options-list');
-
-            if (!myProfileMatch || !myProfileMatch.ownedSprites || myProfileMatch.ownedSprites.length === 0) {
-                optionsContainer.innerHTML = `<p class="text-xs text-red-400 italic">You don't own any tradeable items!</p>`;
-            } else {
-                optionsContainer.innerHTML = myProfileMatch.ownedSprites.map(sId => {
-                    const item = playerData.storeSprites?.find(s => s.id?.toString() === sId.toString()) || { sprite_name: "Default", image_url: "" };
-                    return `
-                        <button onclick="submitTradeProposal('${sId}')" class="w-full p-2.5 bg-slate-900 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center gap-3 text-left transition group">
-                            <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-600 overflow-hidden flex items-center justify-center">
-                                <img src="${item.image_url || ''}" class="w-full h-full object-cover">
-                            </div>
-                            <span class="text-sm font-semibold text-slate-200 group-hover:text-white">${item.sprite_name}</span>
-                        </button>
-                    `;
-                }).join('');
-            }
-
-            document.getElementById('trade-select-modal').classList.remove('hidden');
-        }
-
-        function closeTradeSelectModal() {
-            document.getElementById('trade-select-modal').classList.add('hidden');
-        }
-
-        async function submitTradeProposal(myOfferedSpriteId) {
-            closeTradeSelectModal();
-            await fetch(API_URL, {
-                method: 'POST',
-                body: new URLSearchParams({
-                    action: 'proposeTrade',
-                    playerId: currentPlayerId,
-                    targetPlayerId: activeTradeTargetPlayerId,
-                    offerSpriteId: myOfferedSpriteId,
-                    requestSpriteId: activeTradeTargetSpriteId
-                })
-            });
-            fetchDashboard();
-        }
-
-        function showMainTab(tabId) {
-            document.querySelectorAll('.main-section').forEach(s => s.classList.add('hidden'));
-            document.getElementById(`${tabId}-section`).classList.remove('hidden');
-
-            ['training', 'gameboard', 'store'].forEach(t => {
-                const btn = document.getElementById(`tab-btn-${t}`);
-                if (t === tabId) {
-                    btn.classList.add('text-blue-400', 'border-b-2', 'border-blue-400');
-                    btn.classList.remove('text-slate-400', 'hover:text-white');
-                } else {
-                    btn.classList.remove('text-blue-400', 'border-b-2', 'border-blue-400');
-                    btn.classList.add('text-slate-400', 'hover:text-white');
-                }
-            });
-        }
+        // --- VIEW COMPONENT ROUTINE MODULE A.3: THEORY MODAL CONTEXTS ---
         function openQuizModal(lessonId) {
             const targetQuestions = playerData.tests.filter(t => t.lesson_id === lessonId);
             if(targetQuestions.length === 0) {
@@ -794,33 +468,26 @@
                 return;
             }
 
-            // Build popup modal structure programmatically
             const modalHtml = `
                 <div id="quiz-modal-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
                         <div class="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-                            <h3 class="text-lg font-bold text-white">Strategy Theory Assessment</h3>
-                            <button onclick="document.getElementById('quiz-modal-overlay').remove()" class="text-slate-400 hover:text-slate-200 text-sm">✕ Close</button>
+                            <h3 class="text-sm font-black text-white uppercase tracking-wider">Strategy Theory Assessment</h3>
+                            <button onclick="document.getElementById('quiz-modal-overlay').remove()" class="text-slate-400 hover:text-slate-200 text-xs p-1">✕ CLOSE</button>
                         </div>
                         <div class="p-6 overflow-y-auto space-y-6 flex-1">
                             ${targetQuestions.map((q, qIndex) => {
-                                // SAFE CHECK: Ensure options exist and turn them into a clean array safely
                                 const rawOptions = q.options ? q.options.toString() : "";
-                                const choices = rawOptions.split(',')
-                                    .map(opt => opt.trim())
-                                    .filter(opt => opt !== ""); // Skips accidental trailing commas or empty slots
-                                
-                                // Fallback correct answer trim rule
+                                const choices = rawOptions.split(',').map(opt => opt.trim()).filter(opt => opt !== "");
                                 const correctAnswer = q.correct_answer ? q.correct_answer.toString().trim() : "";
 
                                 return `
                                     <div class="space-y-2.5 question-block" data-qid="${q.id}" data-correct="${correctAnswer}">
-                                        <p class="text-sm font-semibold text-slate-200"><span class="text-indigo-400 font-mono">Q${qIndex+1}.</span> ${q.question}</p>
-                                        <div class="grid gap-2">
+                                        <p class="text-xs font-bold text-slate-200"><span class="text-indigo-400 font-mono">Q${qIndex+1}.</span> ${q.question}</p>
+                                        <div class="grid gap-1.5">
                                             ${choices.map(choice => `
-                                                <label class="flex items-center gap-3 p-3 bg-slate-800/40 hover:bg-slate-800 rounded-xl border border-slate-700/50 cursor-pointer select-none text-xs font-medium text-slate-300 group transition">
-                                                    <!-- ISOLATED: Added _${qIndex} to prevent radio choice cross-talk across different questions -->
-                                                    <input type="radio" name="answer_${q.id}_${qIndex}" value="${choice}" class="w-4 h-4 text-indigo-600 focus:ring-0 bg-slate-700 border-slate-600 accent-indigo-500">
+                                                <label class="flex items-center gap-3 p-3 bg-slate-950 hover:bg-slate-800/40 rounded-xl border border-slate-800 cursor-pointer select-none text-xs font-medium text-slate-300 group transition">
+                                                    <input type="radio" name="answer_${q.id}_${qIndex}" value="${choice}" class="w-4 h-4 text-indigo-600 focus:ring-0 bg-slate-800 border-slate-700 accent-indigo-500">
                                                     <span>${choice}</span>
                                                 </label>
                                             `).join('')}
@@ -829,9 +496,9 @@
                                 `;
                             }).join('')}
                         </div>
-                        <div class="p-4 bg-slate-900 border-t border-slate-800">
-                            <button onclick="gradeAndSubmitQuiz('${lessonId}')" id="quiz-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition text-sm">
-                                Submit Answers
+                        <div class="p-4 bg-slate-900/50 border-t border-slate-800">
+                            <button onclick="gradeAndSubmitQuiz('${lessonId}')" id="quiz-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl transition text-xs shadow-lg shadow-indigo-600/10">
+                                Submit Verification Answers
                             </button>
                         </div>
                     </div>
@@ -846,215 +513,352 @@
             let correctCount = 0;
             let allAnswered = true;
 
-            // Direct element scanning rather than relying on shared string IDs
             blocks.forEach((b) => {
                 const correctVal = b.getAttribute('data-correct');
-                
-                // Find ANY checked radio button inside this specific question block container
                 const selected = b.querySelector('input[type="radio"]:checked');
-                
-                if (!selected) {
-                    allAnswered = false;
-                } else if (selected.value === correctVal) {
-                    correctCount++;
-                }
+                if (!selected) { allAnswered = false; }
+                else if (selected.value === correctVal) { correctCount++; }
             });
 
             if (!allAnswered) {
-                alert("Please answer all questions before submitting!");
+                alert("Please declare values across all question sets before processing.");
                 return;
             }
 
             const scorePct = Math.round((correctCount / totalQuestions) * 100);
             const passed = (scorePct === 100);
-
             const submitBtn = document.getElementById('quiz-submit-btn');
             submitBtn.disabled = true;
-            submitBtn.innerText = "Evaluating System Logs...";
 
             try {
                 const res = await fetch(API_URL, {
                     method: 'POST',
-                    body: new URLSearchParams({
-                        action: 'submitTestResult',
-                        playerId: currentPlayerId,
-                        lessonId: lessonId,
-                        score: `${correctCount}/${totalQuestions}`,
-                        passed: passed ? "true" : "false"
-                    })
+                    body: new URLSearchParams({ action: 'submitTestResult', playerId: currentPlayerId, lessonId: lessonId, score: `${correctCount}/${totalQuestions}`, passed: passed ? "true" : "false" })
                 });
                 const status = await res.json();
-                
                 document.getElementById('quiz-modal-overlay').remove();
                 
                 if (passed) {
-                    alert(`🎉 Perfect 100%! Score: ${scorePct}%. ${status.pointsAwarded ? '10 Stars added to your account!' : 'Result recorded (Stars previously claimed).'}`);
+                    alert(`🎉 Perfect 100%! Score: ${scorePct}%. ${status.pointsAwarded ? '10 Stars added to your locker profile account!' : 'Result saved.'}`);
                 } else {
-                    alert(`❌ Review Strategy Patterns! You scored ${scorePct}%. Remember, you need 100% accuracy to earn the 10-star reward bounty. Try again!`);
+                    alert(`❌ Review Strategy Patterns! You scored ${scorePct}%. You need 100% accuracy to earn the 10-star reward bounty. Try again!`);
                 }
-                
                 fetchDashboard();
-            } catch(e) {
-                console.error(e);
+            } catch(e) { console.error(e); submitBtn.disabled = false; }
+        }
+
+        // --- VIEW MODULE B: DRAG PLAYBOOK SCENARIO CANVAS TASKS ---
+        function initPlaybookScenarioChallengeEngine() {
+            if (!playerData.playbookChallenges || playerData.playbookChallenges.length === 0) {
+                document.getElementById('pb-scenario-title').innerText = "No Playbook Scenarios Loaded";
+                return;
+            }
+            
+            let target = playerData.playbookChallenges.find(c => !c.completed);
+            if (!target) target = playerData.playbookChallenges[playerData.playbookChallenges.length - 1];
+            
+            activeChallengeRef = target;
+            document.getElementById('pb-scenario-title').innerText = target.scenario_title;
+            document.getElementById('pb-scenario-desc').innerText = target.description;
+            document.getElementById('pb-star-reward-chip').innerHTML = `<span class="text-xs font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1 rounded-md inline-block">+${target.star_reward} Stars</span>`;
+            
+            const token = document.getElementById('draggable-token-node');
+            const guide = document.getElementById('dropzone-target-guide');
+            const feedback = document.getElementById('pb-feedback-feedback');
+            const submitBtn = document.getElementById('pb-submit-btn');
+            
+            token.innerText = target.piece_type || "X";
+            feedback.className = "text-xs font-semibold text-slate-400";
+            
+            if (target.completed) {
+                feedback.innerText = "✓ Playbook Challenge Cleared for this week!";
+                feedback.classList.add("text-emerald-400");
+                submitBtn.disabled = true;
+                setTokenPosition(target.target_x, target.target_y);
+                guide.classList.add('hidden');
+                removeDragListeners();
+            } else {
+                feedback.innerText = "Drag the marker piece to the tactical position.";
                 submitBtn.disabled = false;
-                submitBtn.innerText = "Submit Answers";
+                setTokenPosition(target.initial_x, target.initial_y);
+                guide.classList.remove('hidden');
+                setGuidePosition(target.target_x, target.target_y);
+                setupDragAndDropInteractions();
             }
         }
-        // Central Playbook State Tracker Variables
-let activeChallengeRef = null;
-let playbookDragData = { isDragging: false, currentX: 0, currentY: 0, startX: 0, startY: 0 };
 
-function initPlaybookScenarioChallengeEngine() {
-    if (!playerData.playbookChallenges || playerData.playbookChallenges.length === 0) {
-        document.getElementById('pb-scenario-title').innerText = "No Playbook Scenarios Loaded";
-        return;
-    }
-    
-    // Auto-select the first uncompleted challenge, or default to the most recent one
-    let target = playerData.playbookChallenges.find(c => !c.completed);
-    if (!target) target = playerData.playbookChallenges[playerData.playbookChallenges.length - 1];
-    
-    activeChallengeRef = target;
-    
-    // Display metadata text definitions to elements
-    document.getElementById('pb-scenario-title').innerText = target.scenario_title;
-    document.getElementById('pb-scenario-desc').innerText = target.description;
-    document.getElementById('pb-star-reward-chip').innerHTML = `
-        <span class="text-xs font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1 rounded-md inline-block">+${target.star_reward} Stars</span>
-    `;
-    
-    const token = document.getElementById('draggable-token-node');
-    const guide = document.getElementById('dropzone-target-guide');
-    const feedback = document.getElementById('pb-feedback-feedback');
-    const submitBtn = document.getElementById('pb-submit-btn');
-    
-    token.innerText = target.piece_type || "X";
-    feedback.className = "text-xs font-semibold text-slate-400";
-    
-    if (target.completed) {
-        feedback.innerText = "✓ Playbook Challenge Cleared for this week!";
-        feedback.classList.add("text-emerald-400");
-        submitBtn.disabled = true;
-        // Place token directly at final correct destination target coordinate
-        setTokenPosition(target.target_x, target.target_y);
-        guide.classList.add('hidden');
-        removeDragListeners();
-    } else {
-        feedback.innerText = "Drag the marker piece to the tactical position.";
-        submitBtn.disabled = false;
-        // Seed initial coordinate configuration cell bounds
-        setTokenPosition(target.initial_x, target.initial_y);
-        guide.classList.remove('hidden');
-        setGuidePosition(target.target_x, target.target_y);
-        setupDragAndDropInteractions();
-    }
-}
-
-function setTokenPosition(x, y) {
-    const token = document.getElementById('draggable-token-node');
-    playbookDragData.currentX = parseInt(x);
-    playbookDragData.currentY = parseInt(y);
-    token.style.left = `${playbookDragData.currentX - 18}px`; // Subtract radius offset (half of w-9)
-    token.style.top = `${playbookDragData.currentY - 18}px`;
-    token.classList.remove('hidden');
-}
-
-function setGuidePosition(x, y) {
-    const guide = document.getElementById('dropzone-target-guide');
-    guide.style.left = `${parseInt(x)}px`;
-    guide.style.top = `${parseInt(y)}px`;
-}
-
-function setupDragAndDropInteractions() {
-    const token = document.getElementById('draggable-token-node');
-    
-    // Reset any existing listener attachments
-    token.onpointerdown = startPlaybookDrag;
-}
-
-function removeDragListeners() {
-    const token = document.getElementById('draggable-token-node');
-    token.onpointerdown = null;
-}
-
-function startPlaybookDrag(e) {
-    e.preventDefault();
-    playbookDragData.isDragging = true;
-    
-    playbookDragData.startX = e.clientX - playbookDragData.currentX;
-    playbookDragData.startY = e.clientY - playbookDragData.currentY;
-    
-    document.onpointermove = executePlaybookDrag;
-    document.onpointerup = stopPlaybookDrag;
-}
-
-function executePlaybookDrag(e) {
-    if (!playbookDragData.isDragging) return;
-    
-    const frame = document.getElementById('rink-canvas-frame');
-    const rect = frame.getBoundingClientRect();
-    
-    // Calculate raw mouse tracking placement relative to container constraints
-    let computedX = e.clientX - playbookDragData.startX;
-    let computedY = e.clientY - playbookDragData.startY;
-    
-    // Clamp movement boundary limits inside our 600x350 box layout envelope
-    playbookDragData.currentX = Math.max(18, Math.min(582, computedX));
-    playbookDragData.currentY = Math.max(18, Math.min(332, computedY));
-    
-    const token = document.getElementById('draggable-token-node');
-    token.style.left = `${playbookDragData.currentX - 18}px`;
-    token.style.top = `${playbookDragData.currentY - 18}px`;
-}
-
-function stopPlaybookDrag() {
-    playbookDragData.isDragging = false;
-    document.onpointermove = null;
-    document.onpointerup = null;
-}
-
-async function evaluatePlaybookPosition() {
-    if (!activeChallengeRef) return;
-    
-    // Math Core Step: Calculate distance error vector matrix variance 
-    const dx = playbookDragData.currentX - parseInt(activeChallengeRef.target_x);
-    const dy = playbookDragData.currentY - parseInt(activeChallengeRef.target_y);
-    const absoluteDistance = Math.sqrt(dx * dx + dy * dy);
-    
-    // Allow an acceptable drop radius threshold (e.g., 30px target window box padding accuracy)
-    const passed = absoluteDistance <= 30;
-    
-    const submitBtn = document.getElementById('pb-submit-btn');
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Locking Alignment Vector...";
-
-    try {
-        const res = await fetch(API_URL, {
-            method: 'POST',
-            body: new URLSearchParams({
-                action: 'submitPlaybookChallenge',
-                playerId: currentPlayerId,
-                challengeId: activeChallengeRef.id,
-                passed: passed ? "true" : "false"
-            })
-        });
-        const status = await res.json();
-        
-        if (passed) {
-            alert(`🎉 Tactical Position Cleared! Position confirmed within playbook margin limits. ${status.pointsAwarded ? `Earned +${status.starsEarned} Stars!` : 'Position logged.'}`);
-        } else {
-            alert(`❌ Out of Alignment! F1 placement leaves the passing channel open or fails breakout lock positioning variables. Readjust and try again!`);
+        function setTokenPosition(x, y) {
+            const token = document.getElementById('draggable-token-node');
+            playbookDragData.currentX = parseInt(x);
+            playbookDragData.currentY = parseInt(y);
+            token.style.left = `${playbookDragData.currentX - 18}px`; // Center radius calculation
+            token.style.top = `${playbookDragData.currentY - 18}px`;
+            token.classList.remove('hidden');
         }
-        
-        // Reload master data matrices state profiles from sheets API
-        await fetchDashboard();
-        initPlaybookScenarioChallengeEngine();
-    } catch(e) {
-        console.error(e);
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Lock Tactics Position";
-    }
-}
+
+        function setGuidePosition(x, y) {
+            const guide = document.getElementById('dropzone-target-guide');
+            guide.style.left = `${parseInt(x)}px`;
+            guide.style.top = `${parseInt(y)}px`;
+        }
+
+        function setupDragAndDropInteractions() {
+            document.getElementById('draggable-token-node').onpointerdown = startPlaybookDrag;
+        }
+
+        function removeDragListeners() {
+            document.getElementById('draggable-token-node').onpointerdown = null;
+        }
+
+        function startPlaybookDrag(e) {
+            e.preventDefault();
+            playbookDragData.isDragging = true;
+            playbookDragData.startX = e.clientX - playbookDragData.currentX;
+            playbookDragData.startY = e.clientY - playbookDragData.currentY;
+            document.onpointermove = executePlaybookDrag;
+            document.onpointerup = stopPlaybookDrag;
+        }
+
+        function executePlaybookDrag(e) {
+            if (!playbookDragData.isDragging) return;
+            const frame = document.getElementById('rink-canvas-frame');
+            const rect = frame.getBoundingClientRect();
+            
+            let computedX = e.clientX - playbookDragData.startX;
+            let computedY = e.clientY - playbookDragData.startY;
+            
+            playbookDragData.currentX = Math.max(18, Math.min(582, computedX));
+            playbookDragData.currentY = Math.max(18, Math.min(332, computedY));
+            
+            const token = document.getElementById('draggable-token-node');
+            token.style.left = `${playbookDragData.currentX - 18}px`;
+            token.style.top = `${playbookDragData.currentY - 18}px`;
+        }
+
+        function stopPlaybookDrag() {
+            playbookDragData.isDragging = false;
+            document.onpointermove = null;
+            document.onpointerup = null;
+        }
+
+        async function evaluatePlaybookPosition() {
+            if (!activeChallengeRef) return;
+            const dx = playbookDragData.currentX - parseInt(activeChallengeRef.target_x);
+            const dy = playbookDragData.currentY - parseInt(activeChallengeRef.target_y);
+            const absoluteDistance = Math.sqrt(dx * dx + dy * dy);
+            
+            const passed = absoluteDistance <= 30; // 30px allowance threshold target window 
+            const submitBtn = document.getElementById('pb-submit-btn');
+            submitBtn.disabled = true;
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: new URLSearchParams({ action: 'submitPlaybookChallenge', playerId: currentPlayerId, challengeId: activeChallengeRef.id, passed: passed ? "true" : "false" })
+                });
+                const status = await res.json();
+                
+                if (passed) {
+                    alert(`🎉 Tactical Position Cleared! confirmed within margin limits. ${status.pointsAwarded ? `Earned +${status.starsEarned} Stars!` : 'Position logged.'}`);
+                } else {
+                    alert(`❌ Out of Alignment! Placement leaves the passing channel open. Readjust and try again!`);
+                }
+                await fetchDashboard();
+            } catch(e) { console.error(e); submitBtn.disabled = false; }
+        }
+
+        // --- VIEW MODULE C: LEADERBOARD SYSTEM ---
+        function renderTeamLeaderboardLayout() {
+            const target = document.getElementById('leaderboard-target');
+            if (!playerData.leaderboard) return;
+
+            target.innerHTML = playerData.leaderboard.map((player, index) => {
+                const isMe = player.id.toString().trim() === currentPlayerId.toString().trim();
+                const activeSpriteId = player.activeSpriteId || "S001";
+                
+                return `
+                    <div class="flex justify-between items-center py-3 px-2 rounded-xl transition ${isMe ? 'bg-blue-600/10 border border-blue-500/20' : ''}">
+                        <div class="flex items-center gap-3">
+                            <span class="w-5 text-center font-mono font-black text-xs text-slate-500">${index + 1}</span>
+                            <div class="w-9 h-9 rounded-lg bg-slate-950 border border-slate-800 overflow-hidden p-0.5">
+                                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${activeSpriteId}" class="w-full h-full object-contain" alt="Avatar">
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold ${isMe ? 'text-blue-400' : 'text-slate-200'}">${player.name} <span class="text-[10px] font-medium text-slate-500">#${player.jerseyNumber}</span></p>
+                                <p class="text-[10px] text-slate-500 mt-0.5">${player.ownedSprites.length} Sprites Unlocked</p>
+                            </div>
+                        </div>
+                        <p class="text-xs font-black text-yellow-500 font-mono">${player.totalStars} ⭐️</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- VIEW MODULE D: AVATAR STORE MARKET ---
+        function renderStoreInventoryLayout() {
+            const shelf = document.getElementById('store-shelf-target');
+            if (!playerData.storeSprites) return;
+
+            shelf.innerHTML = playerData.storeSprites.map(s => {
+                let actionBtn = "";
+                if (s.owned) {
+                    const isActive = playerData.playerProfile.activeSpriteId === s.id;
+                    actionBtn = isActive ? 
+                        `<span class="w-full text-center bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 text-[10px] py-1.5 rounded-lg inline-block">Active Avatar</span>` :
+                        `<button onclick="executeEquipLockerAction('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[10px] py-1.5 rounded-lg transition">Equip Profile</button>`;
+                } else if (s.soldOut) {
+                    actionBtn = `<span class="w-full text-center bg-slate-900 text-slate-600 font-bold border border-slate-800 text-[10px] py-1.5 rounded-lg inline-block">SOLD OUT</span>`;
+                } else {
+                    actionBtn = `<button onclick="executePurchaseLockerAction('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-[10px] py-1.5 rounded-lg transition">Buy (${s.cost_in_stars} ⭐️)</button>`;
+                }
+
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col justify-between shadow-md group hover:border-slate-700 transition">
+                        <div class="relative bg-slate-950 rounded-lg p-2 border border-slate-800/80 mb-2 overflow-hidden flex items-center justify-center aspect-square">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${s.id}" class="w-20 h-20 object-contain group-hover:scale-110 transition duration-200" alt="Card">
+                            <span class="absolute top-1 right-1 text-[8px] font-black font-mono tracking-wider bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 text-slate-400">STOCK: ${s.stockLeft}</span>
+                        </div>
+                        <div class="space-y-2 mt-1">
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-200 truncate">${s.name}</h4>
+                                <p class="text-[9px] text-slate-500 font-mono mt-0.5 uppercase tracking-wide">Batch limit: ${s.rarity}</p>
+                            </div>
+                            ${actionBtn}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function executePurchaseLockerAction(spriteId) {
+            try {
+                const res = await fetch(API_URL, { method: 'POST', body: new URLSearchParams({ action: 'buySprite', playerId: currentPlayerId, spriteId: spriteId }) });
+                const status = await res.json();
+                if(!status.success) alert(status.message);
+                fetchDashboard();
+            } catch(e) { console.error(e); }
+        }
+
+        async function executeEquipLockerAction(spriteId) {
+            try {
+                await fetch(API_URL, { method: 'POST', body: new URLSearchParams({ action: 'equipSprite', playerId: currentPlayerId, spriteId: spriteId }) });
+                fetchDashboard();
+            } catch(e) { console.error(e); }
+        }
+
+        // --- VIEW COMPONENT ROUTINE MODULE D.1: EXCHANGE TRADING MODALS ---
+        function openTradingPanelModal() {
+            const teamRoster = playerData.leaderboard.filter(p => p.id.toString().trim() !== currentPlayerId.toString().trim());
+            const myProfile = playerData.leaderboard.find(p => p.id.toString().trim() === currentPlayerId.toString().trim());
+            const myOwnedItems = myProfile ? myProfile.ownedSprites : ["S001"];
+
+            const modalHtml = `
+                <div id="trade-modal-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+                        <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+                            <h3 class="text-sm font-black text-white uppercase tracking-wider">Locker Exchange Trading Floor</h3>
+                            <button onclick="document.getElementById('trade-modal-overlay').remove()" class="text-slate-400 hover:text-slate-200 text-xs p-1">✕ CLOSE</button>
+                        </div>
+                        
+                        <div class="p-5 overflow-y-auto space-y-5 flex-1 text-xs">
+                            <div class="space-y-2">
+                                <h4 class="font-bold text-slate-400 uppercase tracking-wide text-[10px]">Open Team Invites</h4>
+                                <div id="modal-pending-trades-list" class="grid gap-2"></div>
+                            </div>
+                            
+                            <hr class="border-slate-800">
+
+                            <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-3">
+                                <h4 class="font-bold text-blue-400 uppercase tracking-wide text-[10px]">Draft New Card Swap Request</h4>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Target Player</label>
+                                        <select id="trade-target-player" class="w-full p-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:outline-none">
+                                            ${teamRoster.map(p => `<option value="${p.id}">${p.name} (#${p.jerseyNumber})</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Your Card Offer</label>
+                                        <select id="trade-my-offer" class="w-full p-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:outline-none">
+                                            ${myOwnedItems.map(sId => `<option value="${sId}">${sId}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Wanted Card ID</label>
+                                        <input type="text" id="trade-wanted-card" placeholder="e.g., S005" class="w-full p-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 focus:outline-none placeholder-slate-600 uppercase">
+                                    </div>
+                                </div>
+                                <button onclick="executeTradeSubmissionProposal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg transition text-[11px] shadow-md">
+                                    Dispatch Swap Request
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            renderModalActiveTradesList();
+        }
+
+        function renderModalActiveTradesList() {
+            const container = document.getElementById('modal-pending-trades-list');
+            if (!playerData.activeTrades || playerData.activeTrades.length === 0) {
+                container.innerHTML = `<p class="text-slate-600 italic text-[11px] bg-slate-950 p-3 rounded-lg border border-slate-800/40 text-center">No pending trade requests items currently open.</p>`;
+                return;
+            }
+
+            container.innerHTML = playerData.activeTrades.map(t => {
+                const isIncoming = t.receiver_id.toString().trim() === currentPlayerId.toString().trim();
+                return `
+                    <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl flex justify-between items-center text-xs">
+                        <div>
+                            <p class="font-medium text-slate-300">
+                                ${isIncoming ? `Incoming Offer from <span class="text-blue-400 font-bold">${t.sender_id}</span>` : `Outgoing Offer to <span class="text-slate-400 font-bold">${t.receiver_id}</span>`}
+                            </p>
+                            <p class="text-[10px] text-slate-500 mt-0.5">Giving: <span class="font-mono text-slate-300">${t.offer_sprite_id}</span> • Requesting: <span class="font-mono text-slate-300">${t.request_sprite_id}</span></p>
+                        </div>
+                        ${isIncoming ? `
+                            <div class="flex gap-1.5">
+                                <button onclick="handleExchangeTradeResolution('${t.id}', 'acceptTrade')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] px-3 py-1 rounded-md transition">Accept</button>
+                                <button onclick="handleExchangeTradeResolution('${t.id}', 'denyTrade')" class="bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold text-[10px] px-3 py-1 rounded-md transition">Decline</button>
+                            </div>
+                        ` : `<span class="text-[10px] font-bold text-yellow-600/80 uppercase bg-yellow-500/5 px-2 py-0.5 rounded border border-yellow-500/10 tracking-wide animate-pulse">Awaiting Team Response</span>`}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function executeTradeSubmissionProposal() {
+            const targetPlayer = document.getElementById('trade-target-player').value;
+            const myOffer = document.getElementById('trade-my-offer').value;
+            const wantedCard = document.getElementById('trade-wanted-card').value.trim().toUpperCase();
+
+            if (!wantedCard) {
+                alert("Please type a valid target wanted Card inventory identification string code.");
+                return;
+            }
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: new URLSearchParams({ action: 'proposeTrade', playerId: currentPlayerId, targetPlayerId: targetPlayer, offerSpriteId: myOffer, requestSpriteId: wantedCard })
+                });
+                const data = await res.json();
+                alert(data.message);
+                document.getElementById('trade-modal-overlay').remove();
+                fetchDashboard();
+            } catch(e) { console.error(e); }
+        }
+
+        async function handleExchangeTradeResolution(tradeId, actionType) {
+            try {
+                const res = await fetch(API_URL, { method: 'POST', body: new URLSearchParams({ action: actionType, playerId: currentPlayerId, tradeId: tradeId }) });
+                const data = await res.json();
+                alert(data.message);
+                document.getElementById('trade-modal-overlay').remove();
+                fetchDashboard();
+            } catch(e) { console.error(e); }
+        }
     </script>
 </body>
 </html>
