@@ -18,9 +18,14 @@
 
     <div id="dashboard" class="hidden p-6 max-w-4xl mx-auto">
         <header class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
-            <div>
-                <h2 class="text-2xl font-bold" id="player-name">Player Name</h2>
-                <p class="text-sm text-slate-400" id="player-jersey"></p>
+            <div class="flex items-center gap-4">
+                <div id="player-avatar-container" class="w-16 h-16 rounded-full bg-slate-800 border-2 border-blue-500 overflow-hidden hidden flex items-center justify-center">
+                    <img id="player-avatar-img" src="" alt="Avatar" class="w-full h-full object-cover">
+                </div>
+                <div>
+                    <h2 class="text-2xl font-bold" id="player-name">Player Name</h2>
+                    <p class="text-sm text-slate-400" id="player-jersey"></p>
+                </div>
             </div>
             <div class="text-lg">Stars: <span id="star-count" class="text-yellow-400 font-bold">0</span></div>
         </header>
@@ -137,10 +142,25 @@
         }
 
         function renderDashboard() {
-            // Profile Info
+            // 1. Profile Info Text
             document.getElementById('player-name').innerText = playerData.playerProfile.name;
             document.getElementById('player-jersey').innerText = `Jersey #${playerData.playerProfile.jerseyNumber}`;
             document.getElementById('star-count').innerText = playerData.playerProfile.totalStars;
+
+            // 2. Find and Show Main Player Avatar
+            const activeId = playerData.playerProfile.activeSpriteId;
+            // Search the store list to find the matching sprite row
+            const activeSprite = playerData.storeSprites.find(s => s.id.toString() === activeId.toString());
+            
+            const avatarContainer = document.getElementById('player-avatar-container');
+            const avatarImg = document.getElementById('player-avatar-img');
+
+            if (activeSprite && activeSprite.image_url) {
+                avatarImg.src = activeSprite.image_url;
+                avatarContainer.classList.remove('hidden');
+            } else {
+                avatarContainer.classList.add('hidden'); // Hide container if no image URL is set yet
+            }
 
             // Render Tab Modules
             renderLessonsList();
@@ -209,33 +229,39 @@
         }
 
         function renderGameBoard() {
-            // 1. Leaderboard Construction (Sorted Descending based on stars balance)
             const leaderboardBody = document.getElementById('leaderboard-body');
             
-            // Re-fetch custom structured list out of global schema scope objects
-            let sortedPlayers = [];
-            if (playerData.lessons && playerData.storeSprites) {
-                // If backend provides explicit leaderboard data fallback or reads inside array contexts
-                // Since base payload maps profile structural object, let's inject simulation container
-                sortedPlayers = [playerData.playerProfile]; // Base user focus context
-            }
+            // Grab the store information so we can map out avatars on the leaderboard rows
+            let sortedPlayers = [playerData.playerProfile]; // Base layout context tracking current user
 
-            // Fallback safety to show current status. 
-            // Note: If you want all players displayed simultaneously on the leaderboard array,
-            // ensure your spreadsheet values load multiple entries.
-            leaderboardBody.innerHTML = sortedPlayers.map((p, idx) => `
-                <tr class="hover:bg-slate-700/30 transition text-sm">
-                    <td class="py-3 px-4 font-bold text-slate-400">#${idx + 1}</td>
-                    <td class="py-3 px-4 font-semibold text-white">${p.name} ${p.id === currentPlayerId ? '<span class="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded ml-1">You</span>':''}</td>
-                    <td class="py-3 px-4 text-center text-slate-300">${p.jerseyNumber || '-'}</td>
-                    <td class="py-3 px-4 text-right font-bold text-yellow-400">${p.totalStars}</td>
-                    <td class="py-3 px-4 text-center">
-                        <button onclick="openInventoryModal('${p.name}')" class="text-blue-400 hover:text-blue-300 underline font-medium text-xs">Inventory</button>
-                    </td>
-                </tr>
-            `).join('');
+            leaderboardBody.innerHTML = sortedPlayers.map((p, idx) => {
+                // Find the sprite row for this specific player row
+                const spriteMatch = playerData.storeSprites.find(s => s.id.toString() === p.activeSpriteId.toString());
+                // Use the matching image URL, fallback to an empty pixel spacer if missing
+                const avatarUrl = (spriteMatch && spriteMatch.image_url) ? spriteMatch.image_url : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+                const hasAvatar = (spriteMatch && spriteMatch.image_url);
 
-            // 2. Render Game Challenge Levels Layout underneath inside Game Board 
+                return `
+                    <tr class="hover:bg-slate-700/30 transition text-sm">
+                        <td class="py-3 px-4 font-bold text-slate-400">#${idx + 1}</td>
+                        <td class="py-3 px-4 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center ${hasAvatar ? '' : 'opacity-0'}">
+                                <img src="${avatarUrl}" alt="" class="w-full h-full object-cover">
+                            </div>
+                            <span class="font-semibold text-white">
+                                ${p.name} ${p.id === currentPlayerId ? '<span class="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded ml-1">You</span>':''}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-center text-slate-300">${p.jerseyNumber || '-'}</td>
+                        <td class="py-3 px-4 text-right font-bold text-yellow-400">${p.totalStars}</td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="openInventoryModal('${p.name}')" class="text-blue-400 hover:text-blue-300 underline font-medium text-xs">Inventory</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Render Game Challenge Levels Layout underneath inside Game Board 
             const gamesDiv = document.getElementById('games-list');
             gamesDiv.innerHTML = playerData.gameLevels.map(g => `
                 <div class="p-4 bg-slate-800 border border-slate-700/50 rounded-xl flex justify-between items-center shadow-sm">
