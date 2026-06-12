@@ -75,6 +75,32 @@
             <div class="mt-8">
                 <h3 class="text-xl font-bold mb-4">Available Challenges</h3>
                 <div id="games-list" class="grid gap-4"></div>
+                <div id="playbook-challenge-panel" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl max-w-xl mx-auto my-6 hidden">
+    <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-start">
+        <div>
+            <span class="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider border border-blue-500/20">Weekly Challenge</span>
+            <h3 id="pb-scenario-title" class="text-lg font-bold text-slate-100 mt-1">Playbook Canvas Loading...</h3>
+            <p id="pb-scenario-desc" class="text-xs text-slate-400 mt-0.5"></p>
+        </div>
+        <div id="pb-star-reward-chip" class="text-right"></div>
+    </div>
+    
+    <div class="overflow-x-auto w-full flex justify-center py-2">
+        <div id="rink-canvas-frame" class="relative w-[600px] h-[350px] bg-slate-950 rounded-xl border border-slate-700 select-none overflow-hidden shadow-inner flex-shrink-0" style="background-image: url('https://images.unsplash.com/photo-1518063319789-7217e6706b04?q=80&w=600&h=350&fit=crop'); background-size: cover; background-position: center;">
+            
+            <div id="draggable-token-node" class="absolute w-9 h-9 bg-blue-600 text-white font-extrabold rounded-full border-2 border-white flex items-center justify-center cursor-grab active:cursor-grabbing shadow-2xl z-30 select-none hidden" style="left: 0px; top: 0px;">X</div>
+            
+            <div id="dropzone-target-guide" class="absolute w-10 h-10 border-2 border-dashed border-emerald-400/60 bg-emerald-500/5 rounded-full pointer-events-none transform -translate-x-1/2 -translate-y-1/2 hidden" style="left: 0px; top: 0px;"></div>
+        </div>
+    </div>
+    
+    <div class="mt-4 pt-3 border-t border-slate-700/50 flex justify-between items-center gap-4">
+        <div id="pb-feedback-feedback" class="text-xs font-semibold text-slate-400"></div>
+        <button onclick="evaluatePlaybookPosition()" id="pb-submit-btn" class="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition shadow-md whitespace-nowrap">
+            Lock Tactics Position
+        </button>
+    </div>
+</div>
             </div>
         </div>
 
@@ -571,6 +597,13 @@
                     </div>
                 </div>
             `).join('');
+                    // --- ADD THIS BLOCK AT THE VERY BOTTOM OF THE FUNCTION ---
+            const playbookPanel = document.getElementById('playbook-challenge-panel');
+            if (playbookPanel) {
+                playbookPanel.classList.remove('hidden');
+                initPlaybookScenarioChallengeEngine();
+            }
+            // --- END OF ADDED BLOCK ---
         }
 
         function renderStore() {
@@ -867,6 +900,161 @@
                 submitBtn.innerText = "Submit Answers";
             }
         }
+        // Central Playbook State Tracker Variables
+let activeChallengeRef = null;
+let playbookDragData = { isDragging: false, currentX: 0, currentY: 0, startX: 0, startY: 0 };
+
+function initPlaybookScenarioChallengeEngine() {
+    if (!playerData.playbookChallenges || playerData.playbookChallenges.length === 0) {
+        document.getElementById('pb-scenario-title').innerText = "No Playbook Scenarios Loaded";
+        return;
+    }
+    
+    // Auto-select the first uncompleted challenge, or default to the most recent one
+    let target = playerData.playbookChallenges.find(c => !c.completed);
+    if (!target) target = playerData.playbookChallenges[playerData.playbookChallenges.length - 1];
+    
+    activeChallengeRef = target;
+    
+    // Display metadata text definitions to elements
+    document.getElementById('pb-scenario-title').innerText = target.scenario_title;
+    document.getElementById('pb-scenario-desc').innerText = target.description;
+    document.getElementById('pb-star-reward-chip').innerHTML = `
+        <span class="text-xs font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1 rounded-md inline-block">+${target.star_reward} Stars</span>
+    `;
+    
+    const token = document.getElementById('draggable-token-node');
+    const guide = document.getElementById('dropzone-target-guide');
+    const feedback = document.getElementById('pb-feedback-feedback');
+    const submitBtn = document.getElementById('pb-submit-btn');
+    
+    token.innerText = target.piece_type || "X";
+    feedback.className = "text-xs font-semibold text-slate-400";
+    
+    if (target.completed) {
+        feedback.innerText = "✓ Playbook Challenge Cleared for this week!";
+        feedback.classList.add("text-emerald-400");
+        submitBtn.disabled = true;
+        // Place token directly at final correct destination target coordinate
+        setTokenPosition(target.target_x, target.target_y);
+        guide.classList.add('hidden');
+        removeDragListeners();
+    } else {
+        feedback.innerText = "Drag the marker piece to the tactical position.";
+        submitBtn.disabled = false;
+        // Seed initial coordinate configuration cell bounds
+        setTokenPosition(target.initial_x, target.initial_y);
+        guide.classList.remove('hidden');
+        setGuidePosition(target.target_x, target.target_y);
+        setupDragAndDropInteractions();
+    }
+}
+
+function setTokenPosition(x, y) {
+    const token = document.getElementById('draggable-token-node');
+    playbookDragData.currentX = parseInt(x);
+    playbookDragData.currentY = parseInt(y);
+    token.style.left = `${playbookDragData.currentX - 18}px`; // Subtract radius offset (half of w-9)
+    token.style.top = `${playbookDragData.currentY - 18}px`;
+    token.classList.remove('hidden');
+}
+
+function setGuidePosition(x, y) {
+    const guide = document.getElementById('dropzone-target-guide');
+    guide.style.left = `${parseInt(x)}px`;
+    guide.style.top = `${parseInt(y)}px`;
+}
+
+function setupDragAndDropInteractions() {
+    const token = document.getElementById('draggable-token-node');
+    
+    // Reset any existing listener attachments
+    token.onpointerdown = startPlaybookDrag;
+}
+
+function removeDragListeners() {
+    const token = document.getElementById('draggable-token-node');
+    token.onpointerdown = null;
+}
+
+function startPlaybookDrag(e) {
+    e.preventDefault();
+    playbookDragData.isDragging = true;
+    
+    playbookDragData.startX = e.clientX - playbookDragData.currentX;
+    playbookDragData.startY = e.clientY - playbookDragData.currentY;
+    
+    document.onpointermove = executePlaybookDrag;
+    document.onpointerup = stopPlaybookDrag;
+}
+
+function executePlaybookDrag(e) {
+    if (!playbookDragData.isDragging) return;
+    
+    const frame = document.getElementById('rink-canvas-frame');
+    const rect = frame.getBoundingClientRect();
+    
+    // Calculate raw mouse tracking placement relative to container constraints
+    let computedX = e.clientX - playbookDragData.startX;
+    let computedY = e.clientY - playbookDragData.startY;
+    
+    // Clamp movement boundary limits inside our 600x350 box layout envelope
+    playbookDragData.currentX = Math.max(18, Math.min(582, computedX));
+    playbookDragData.currentY = Math.max(18, Math.min(332, computedY));
+    
+    const token = document.getElementById('draggable-token-node');
+    token.style.left = `${playbookDragData.currentX - 18}px`;
+    token.style.top = `${playbookDragData.currentY - 18}px`;
+}
+
+function stopPlaybookDrag() {
+    playbookDragData.isDragging = false;
+    document.onpointermove = null;
+    document.onpointerup = null;
+}
+
+async function evaluatePlaybookPosition() {
+    if (!activeChallengeRef) return;
+    
+    // Math Core Step: Calculate distance error vector matrix variance 
+    const dx = playbookDragData.currentX - parseInt(activeChallengeRef.target_x);
+    const dy = playbookDragData.currentY - parseInt(activeChallengeRef.target_y);
+    const absoluteDistance = Math.sqrt(dx * dx + dy * dy);
+    
+    // Allow an acceptable drop radius threshold (e.g., 30px target window box padding accuracy)
+    const passed = absoluteDistance <= 30;
+    
+    const submitBtn = document.getElementById('pb-submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerText = "Locking Alignment Vector...";
+
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            body: new URLSearchParams({
+                action: 'submitPlaybookChallenge',
+                playerId: currentPlayerId,
+                challengeId: activeChallengeRef.id,
+                passed: passed ? "true" : "false"
+            })
+        });
+        const status = await res.json();
+        
+        if (passed) {
+            alert(`🎉 Tactical Position Cleared! Position confirmed within playbook margin limits. ${status.pointsAwarded ? `Earned +${status.starsEarned} Stars!` : 'Position logged.'}`);
+        } else {
+            alert(`❌ Out of Alignment! F1 placement leaves the passing channel open or fails breakout lock positioning variables. Readjust and try again!`);
+        }
+        
+        // Reload master data matrices state profiles from sheets API
+        await fetchDashboard();
+        initPlaybookScenarioChallengeEngine();
+    } catch(e) {
+        console.error(e);
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Lock Tactics Position";
+    }
+}
     </script>
 </body>
 </html>
