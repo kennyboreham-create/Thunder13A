@@ -249,13 +249,19 @@
             const container = document.getElementById('lessons-list');
             if (!playerData.lessons) return;
             
-            // 1. Isolate Workout content logic cleanly from standard modules
+            // 1. Intercept Custom Workout Checklist Tab
             if (currentTrainingCategory.toLowerCase() === 'workout') {
                 renderWeeklyWorkoutSection(container);
                 return;
             }
 
-            // 2. Standard Render Engine handling for Strategy and Skills
+            // 2. Intercept Custom Daily Skills Checklist Tab
+            if (currentTrainingCategory.toLowerCase() === 'skills') {
+                renderDailySkillsSection(container);
+                return;
+            }
+
+            // 3. Standard Render Engine handling for Strategy
             const filtered = playerData.lessons.filter(l => l.category && l.category.toLowerCase().trim() === currentTrainingCategory.toLowerCase());
 
             if (filtered.length === 0) {
@@ -285,6 +291,99 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        function renderDailySkillsSection(container) {
+            // Locate the dynamic date row reference entry inside the database array
+            const skillsLesson = playerData.lessons.find(l => l.id === 'L_DAILY_SKILLS');
+            const currentDateLabel = skillsLesson ? skillsLesson.title.toString().trim() : "Today";
+            
+            const isAlreadyCompleted = skillsLesson && skillsLesson.completed;
+
+            // State A: Routine already turned in for today
+            if (isAlreadyCompleted) {
+                container.innerHTML = `
+                    <div class="bg-slate-800/40 border border-emerald-500/20 rounded-2xl p-8 text-center max-w-md mx-auto shadow-xl">
+                        <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/20">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-100">Daily Skills Done!</h3>
+                        <p class="text-sm text-slate-400 mt-2">Repetitions locked in for ${currentDateLabel}. Your stars have been added to your vault. Wake up tomorrow for a fresh list!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // State B: Checklist items to perform
+            const skillItems = [
+                "50 Shots",
+                "100 Stickhandling Touches",
+                "10 Rock Paper Scissor Matches"
+            ];
+
+            container.innerHTML = `
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl max-w-xl mx-auto">
+                    <div class="border-b border-slate-700/60 pb-3 mb-4">
+                        <h3 class="text-xl font-bold text-blue-400">Daily Skills Tracking</h3>
+                        <p class="text-xs text-slate-400 mt-0.5">Earn 1 Star instantly per drill checklist target reached!</p>
+                    </div>
+                    
+                    <div class="grid gap-3 mb-6">
+                        ${skillItems.map((sk, index) => `
+                            <label class="flex items-center gap-3 p-3 bg-slate-900/60 hover:bg-slate-900 rounded-xl border border-slate-700/40 cursor-pointer select-none transition group">
+                                <input type="checkbox" value="1" data-index="${index}" class="skills-checkbox w-5 h-5 rounded border-slate-600 bg-slate-700 text-blue-500 focus:ring-0 focus:ring-offset-0 accent-blue-500">
+                                <div class="flex justify-between items-center w-full">
+                                    <span class="text-sm font-medium text-slate-200 group-hover:text-white">${sk}</span>
+                                    <span class="text-xs font-bold text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">+1 ⭐️</span>
+                                </div>
+                            </label>
+                        `).join('')}
+                    </div>
+                    
+                    <button onclick="submitDailySkills('${currentDateLabel}')" id="skills-submit-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition duration-200 shadow-lg shadow-blue-600/10 text-sm">
+                        Submit Daily Progress Report
+                    </button>
+                </div>
+            `;
+        }
+
+        async function submitDailySkills(dateLabel) {
+            const checkboxes = document.querySelectorAll('.skills-checkbox');
+            let totalEarnedStars = 0;
+            
+            checkboxes.forEach(cb => {
+                if (cb.checked) totalEarnedStars++;
+            });
+
+            if (totalEarnedStars === 0) {
+                alert("Please select at least one tracking step to submit your daily training report!");
+                return;
+            }
+
+            const submitBtn = document.getElementById('skills-submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Processing Routine Data...";
+
+            try {
+                // Generates unique activity lookup identity string: L_DAILY_SKILLS_2026-06-12
+                const pseudoActivityId = `L_DAILY_SKILLS_${dateLabel}`;
+                
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: new URLSearchParams({
+                        action: 'completeWorkoutModule', // Reuses the secure workout core backend function
+                        playerId: currentPlayerId,
+                        starBonus: totalEarnedStars,
+                        activityId: pseudoActivityId
+                    })
+                });
+                
+                fetchDashboard();
+            } catch(e) {
+                console.error(e);
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Submit Daily Progress Report";
+            }
         }
 
         function renderWeeklyWorkoutSection(container) {
