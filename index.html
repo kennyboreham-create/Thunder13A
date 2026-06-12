@@ -270,23 +270,53 @@
             storeDiv.innerHTML = playerData.storeSprites.map(s => {
                 const fallbackImg = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
                 const imgUrl = s.image_url ? s.image_url.trim() : fallbackImg;
+                
+                // Dynamic visual pill label badges depending on rarity constraints
+                let rarityLabel = "Common";
+                let rarityColor = "bg-slate-700 text-slate-300";
+                if (parseInt(s.rarity) === 2) { rarityLabel = "Rare (Max 2)"; rarityColor = "bg-blue-500/20 text-blue-400 border border-blue-500/30"; }
+                if (parseInt(s.rarity) === 1) { rarityLabel = "Legendary (Max 1)"; rarityColor = "bg-amber-500/20 text-amber-400 border border-amber-500/30"; }
+
+                // Action button generation step based on purchase availability rules
+                let actionButtonHtml = "";
+                if (s.soldOut) {
+                    actionButtonHtml = `<button class="bg-red-900/40 text-red-400/60 w-full py-2 rounded-lg font-bold text-sm cursor-not-allowed border border-red-900/30" disabled>Sold Out</button>`;
+                } else if (s.owned) {
+                    if (playerData.playerProfile.activeSpriteId === s.id) {
+                        actionButtonHtml = `<button class="bg-emerald-600 text-white w-full py-2 rounded-lg font-bold text-sm cursor-default" disabled>Equipped</button>`;
+                    } else {
+                        actionButtonHtml = `<button onclick="equip('${s.id}')" class="bg-slate-600 hover:bg-slate-500 text-white w-full py-2 rounded-lg font-bold text-sm transition">Equip</button>`;
+                    }
+                } else {
+                    actionButtonHtml = `<button onclick="buy('${s.id}')" class="bg-amber-600 hover:bg-amber-500 text-white w-full py-2 rounded-lg font-bold text-sm transition">Purchase</button>`;
+                }
 
                 return `
-                    <div class="p-4 bg-slate-800 border border-slate-700 rounded-xl flex flex-col items-center justify-between shadow-md group hover:border-slate-600 transition">
-                        <!-- Store Card Image Display Block -->
-                        <div class="w-24 h-24 rounded-full bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center mb-4 shadow-inner group-hover:scale-105 transition-transform duration-200">
+                    <div class="p-4 bg-slate-800 border border-slate-700 rounded-xl flex flex-col items-center justify-between shadow-md relative group hover:border-slate-600 transition">
+                        
+                        <!-- Rarity Label Tag Top-Left Banner Wrapper -->
+                        <span class="absolute top-2.5 left-2.5 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md ${rarityColor}">
+                            ${rarityLabel}
+                        </span>
+
+                        <!-- Remaining Stock Count Indicator Tag Top-Right -->
+                        ${(!s.owned && !s.soldOut && s.stockLeft !== undefined) ? `
+                            <span class="absolute top-2.5 right-2.5 text-[10px] font-bold bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/50">
+                                Left: ${s.stockLeft}
+                            </span>
+                        ` : ''}
+
+                        <div class="w-24 h-24 rounded-full bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center mb-4 mt-4 shadow-inner group-hover:scale-105 transition-transform duration-200">
                             <img src="${imgUrl}" alt="${s.sprite_name}" class="w-full h-full object-cover">
                         </div>
+                        
                         <div class="text-center w-full mb-4">
                             <p class="font-bold text-base text-slate-100 truncate">${s.sprite_name}</p>
                             <p class="text-sm text-yellow-400 font-semibold flex items-center justify-center gap-1">⭐️ ${s.cost_in_stars} Stars</p>
                         </div>
+                        
                         <div class="w-full">
-                        ${s.owned ? 
-                            (playerData.playerProfile.activeSpriteId === s.id ? 
-                                `<button class="bg-emerald-600 text-white w-full py-2 rounded-lg font-bold text-sm cursor-default" disabled>Equipped</button>` : 
-                                `<button onclick="equip('${s.id}')" class="bg-slate-600 hover:bg-slate-500 text-white w-full py-2 rounded-lg font-bold text-sm transition">Equip</button>`) : 
-                            `<button onclick="buy('${s.id}')" class="bg-amber-600 hover:bg-amber-500 text-white w-full py-2 rounded-lg font-bold text-sm transition">Purchase</button>`}
+                            ${actionButtonHtml}
                         </div>
                     </div>
                 `;
