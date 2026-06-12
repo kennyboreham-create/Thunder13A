@@ -347,10 +347,12 @@
                 uniqueLessonIdsInTests.forEach(lId => {
                     const correspondingLesson = playerData.lessons.find(l => l.id === lId);
                     
-                    // Look into the lessons payload map to see if the backend identified a matching 'TEST_L001' entry log
-                    // falling under the strategy categorization rules
-                    const targetTestKey = `TEST_${lId.toString().trim()}`;
-                    const isTestPassed = playerData.lessons.some(l => l.id === targetTestKey && l.completed === true);
+                    // --- FIX: Create the exact activity signature the database uses (e.g., "TEST_L001") ---
+                    const targetTestSignature = `TEST_${lId.toString().trim()}`;
+                    
+                    // Search through the user's completed activity history array to find a match
+                    // This guarantees that if it exists in 'player_progress', it will flag true instantly!
+                    const isTestPassed = playerData.lessons.some(l => l.id === targetTestSignature && l.completed === true);
                     
                     const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
 
