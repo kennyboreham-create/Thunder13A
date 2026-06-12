@@ -771,9 +771,17 @@
                         </div>
                         <div class="p-6 overflow-y-auto space-y-6 flex-1">
                             ${targetQuestions.map((q, qIndex) => {
-                                const choices = q.options.split(',').map(opt => opt.trim());
+                                // SAFE CHECK: Ensure options exist and turn them into a clean array safely
+                                const rawOptions = q.options ? q.options.toString() : "";
+                                const choices = rawOptions.split(',')
+                                    .map(opt => opt.trim())
+                                    .filter(opt => opt !== ""); // Skips accidental trailing commas
+                                
+                                // Fallback correct answer trim rule
+                                const correctAnswer = q.correct_answer ? q.correct_answer.toString().trim() : "";
+
                                 return `
-                                    <div class="space-y-2.5 question-block" data-qid="${q.id}" data-correct="${q.correct_answer.trim()}">
+                                    <div class="space-y-2.5 question-block" data-qid="${q.id}" data-correct="${correctAnswer}">
                                         <p class="text-sm font-semibold text-slate-200"><span class="text-indigo-400 font-mono">Q${qIndex+1}.</span> ${q.question}</p>
                                         <div class="grid gap-2">
                                             ${choices.map(choice => `
