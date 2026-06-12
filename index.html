@@ -279,11 +279,12 @@
             const container = document.getElementById('lessons-list');
             if (!playerData.lessons) return;
             
-            // Hide the playbook challenge rink when looking at workouts/strategy
+            // Safety check: Hide the playbook challenge rink when looking at workouts/skills/strategy
             if (document.getElementById('playbook-challenge-panel')) {
                 document.getElementById('playbook-challenge-panel').classList.add('hidden');
             }
             
+            // Route tracking views to their respective specialized rendering sub-components
             if (currentTrainingCategory.toLowerCase() === 'workout') {
                 renderWeeklyWorkoutSection(container);
                 return;
@@ -294,10 +295,10 @@
                 return;
             }
 
-            // --- STRATEGY RENDERING ENGINE WITH ACTIVE FILTER CONTROL ---
-            const filterValue = document.getElementById('strategy-status-filter').value; // 'all', 'todo', or 'completed'
+            // --- STRATEGY CATEGORY BLOCK RENDERING ENGINE WITH FILTER CONTROL ---
+            const filterValue = document.getElementById('strategy-status-filter').value; // Evaluates: 'all', 'todo', or 'completed'
             
-            // 1. Filter out strategy lessons matching our target category row structures
+            // 1. Gather all base strategy lessons from the synchronized payload database array
             let filteredLessons = playerData.lessons.filter(l => l.category && l.category.toString().trim().toLowerCase() === 'strategy');
             
             if (filteredLessons.length === 0) {
@@ -305,28 +306,28 @@
                 return;
             }
 
-            // Sort lessons so incomplete ones stay up top
+            // Sort lessons so incomplete ones stay up top for the player
             filteredLessons.sort((a, b) => a.completed - b.completed);
 
             let htmlOutput = "";
 
-            // 2. Loop and construct standard strategy content modules
+            // 2. Map and append standard Strategy Media Lessons
             filteredLessons.forEach(l => {
                 const videoUrl = l.video_url ? l.video_url.trim() : "";
-                const isComplete = l.completed;
+                const isLessonComplete = l.completed;
 
-                // Status Filter validation check routine
-                if (filterValue === 'todo' && isComplete) return;
-                if (filterValue === 'completed' && !isComplete) return;
+                // Verify status filter settings rules criteria
+                if (filterValue === 'todo' && isLessonComplete) return;
+                if (filterValue === 'completed' && !isLessonComplete) return;
 
                 htmlOutput += `
-                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${isComplete ? 'opacity-60' : ''}">
+                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${isLessonComplete ? 'opacity-60' : ''}">
                         <div>
-                            <p class="font-bold ${isComplete ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
+                            <p class="font-bold ${isLessonComplete ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
                             <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
                         </div>
                         <div class="flex items-center gap-3">
-                        ${isComplete ? 
+                        ${isLessonComplete ? 
                             `
                             <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>
                             ${videoUrl !== "" ? `<button onclick="window.open('${videoUrl}', '_blank')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold">Watch Again</button>` : ''}
@@ -338,18 +339,22 @@
                 `;
             });
 
-            // 3. Extract and construct matching Exam Test elements 
+            // 3. Map and append Strategy Exam Quizzes independently below the lessons
             if (playerData.tests) {
+                // Collect a single unique list of reference lesson keys available inside your quiz spreadsheet tab
                 const uniqueLessonIdsInTests = [...new Set(playerData.tests.map(t => t.lesson_id))];
                 
                 uniqueLessonIdsInTests.forEach(lId => {
                     const correspondingLesson = playerData.lessons.find(l => l.id === lId);
                     
-                    // Critical Step: A test is marked complete if its matching strategy lesson logic loop flags it as completed
-                    const isTestPassed = correspondingLesson ? correspondingLesson.completed : false;
+                    // Look into the lessons payload map to see if the backend identified a matching 'TEST_L001' entry log
+                    // falling under the strategy categorization rules
+                    const targetTestKey = `TEST_${lId.toString().trim()}`;
+                    const isTestPassed = playerData.lessons.some(l => l.id === targetTestKey && l.completed === true);
+                    
                     const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
 
-                    // Status Filter validation check routine for the tests
+                    // Verify status filter settings rules criteria for quizzes
                     if (filterValue === 'todo' && isTestPassed) return;
                     if (filterValue === 'completed' && !isTestPassed) return;
 
@@ -376,9 +381,9 @@
                 });
             }
 
-            // Fallback if filters hide everything in the current view state configuration
+            // Fallback display context if filter choices hide all elements on screen completely
             if (htmlOutput === "") {
-                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No strategy elements found matching this filter state.</p>`;
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No strategy elements found matching this filter selection.</p>`;
             } else {
                 container.innerHTML = htmlOutput;
             }
