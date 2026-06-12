@@ -288,15 +288,19 @@
         }
 
         function renderWeeklyWorkoutSection(container) {
-            // Find our dynamic sheet row lesson reference entry
+            // 1. Locate the master workout row asset passed down from the database array
             const workoutLesson = playerData.lessons.find(l => l.id === 'L_WEEKLY_WORKOUT');
-            // If sheet calculation isn't ready, default smoothly to standard numerical track
-            const currentWeekLabel = workoutLesson ? (isNaN(workoutLesson.title) ? workoutLesson.title : "Week " + workoutLesson.title) : "Weekly Workout";
             
-            // Check progress database using a standardized dynamic tag matching key string string: 'WORKOUT_Week 1'
-            const trackingKey = `WORKOUT_${currentWeekLabel}`;
+            // 2. Safely clean and normalize the title text string from the sheet cell
+            let rawTitle = workoutLesson ? workoutLesson.title.toString().trim() : "";
+            
+            // 3. Fallback math check: If the sheet passes a raw number like "1", transform it to "Week 1"
+            const currentWeekLabel = isNaN(rawTitle) || rawTitle === "" ? (rawTitle || "Weekly Workout") : "Week " + rawTitle;
+            
+            // 4. Read the completion state processed by the backend engine maps
             const isAlreadyCompleted = workoutLesson && workoutLesson.completed;
 
+            // 5. State Banner A: If the user has already submitted this week's workout routine
             if (isAlreadyCompleted) {
                 container.innerHTML = `
                     <div class="bg-slate-800/40 border border-emerald-500/20 rounded-2xl p-8 text-center max-w-md mx-auto shadow-xl">
@@ -310,7 +314,7 @@
                 return;
             }
 
-            // Define list workout arrays with raw tracking values
+            // 6. State Banner B: If the player needs to complete their exercises
             const exerciseItems = [
                 "20 Pushups",
                 "30 Squats",
