@@ -166,7 +166,6 @@
 
         function renderLessonsList() {
             const container = document.getElementById('lessons-list');
-            // Matches spreadsheet category strings
             const filtered = playerData.lessons.filter(l => l.category && l.category.toLowerCase().trim() === currentTrainingCategory.toLowerCase());
 
             if(filtered.length === 0) {
@@ -174,18 +173,37 @@
                 return;
             }
 
-            container.innerHTML = filtered.map(l => `
-                <div class="p-4 bg-slate-800 border border-slate-700/50 rounded-xl flex justify-between items-center shadow-sm">
-                    <div>
-                        <p class="font-bold text-slate-100">${l.title}</p>
-                        <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
+            container.innerHTML = filtered.map(l => {
+                // Safe check: default to empty string if video_url is missing
+                const videoUrl = l.video_url ? l.video_url.trim() : "";
+
+                return `
+                    <div class="p-4 bg-slate-800 border border-slate-700/50 rounded-xl flex justify-between items-center shadow-sm">
+                        <div>
+                            <p class="font-bold text-slate-100">${l.title}</p>
+                            <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
+                        </div>
+                        <div>
+                        ${l.completed ? 
+                            '<span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>' : 
+                            `<button onclick="handleLessonCompletion('${l.id}', '${videoUrl}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">Complete</button>`
+                        }
+                        </div>
                     </div>
-                    ${l.completed ? 
-                        '<span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>' : 
-                        `<button onclick="completeActivity('${l.id}', 'LESSON')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">Complete</button>`
-                    }
-                </div>
-            `).join('');
+                `;
+            }).join('');
+        }
+
+        function handleLessonCompletion(lessonId, videoUrl) {
+            // 1. If a video link exists in the spreadsheet row, open it instantly in a new window tab
+            if (videoUrl && videoUrl !== "") {
+                window.open(videoUrl, '_blank');
+            } else {
+                alert("Note: No video link was provided for this lesson row in the Google Sheet, but your stars are being tracked!");
+            }
+
+            // 2. Run the star addition transaction logic onto the Google Sheet database
+            completeActivity(lessonId, 'LESSON');
         }
 
         function renderGameBoard() {
