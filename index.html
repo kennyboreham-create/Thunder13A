@@ -8,6 +8,7 @@
 </head>
 <body class="bg-slate-900 text-white min-h-screen">
 
+    <!-- Login Screen -->
     <div id="login-screen" class="flex flex-col items-center justify-center h-screen">
         <h1 class="text-4xl font-bold mb-6 text-blue-400">Hockey Trainer</h1>
         <input type="text" id="login-id" placeholder="Player ID" class="p-2 mb-2 rounded text-black w-64">
@@ -16,6 +17,7 @@
         <p id="login-msg" class="mt-4 text-red-400 max-w-md text-center whitespace-pre-line"></p>
     </div>
 
+    <!-- Dashboard -->
     <div id="dashboard" class="hidden p-6 max-w-4xl mx-auto">
         <header class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
             <div class="flex items-center gap-4">
@@ -30,14 +32,17 @@
             <div class="text-lg">Stars: <span id="star-count" class="text-yellow-400 font-bold">0</span></div>
         </header>
 
+        <!-- Dynamic Incoming Alerts Banner Panel -->
         <div id="trade-alerts-container" class="mb-6 hidden grid gap-2"></div>
 
+        <!-- Main Navigation Tabs -->
         <div class="flex gap-6 mb-6 border-b border-slate-800 pb-2 text-lg font-medium">
             <button onclick="showMainTab('training')" id="tab-btn-training" class="text-blue-400 border-b-2 border-blue-400 pb-2 px-1">Training</button>
             <button onclick="showMainTab('gameboard')" id="tab-btn-gameboard" class="text-slate-400 hover:text-white pb-2 px-1">Game Board</button>
             <button onclick="showMainTab('store')" id="tab-btn-store" class="text-slate-400 hover:text-white pb-2 px-1">Store</button>
         </div>
 
+        <!-- TRAINING SECTION -->
         <div id="training-section" class="main-section">
             <div class="flex gap-3 mb-6 bg-slate-800 p-1.5 rounded-lg w-fit">
                 <button onclick="filterLessons('Strategy')" id="sub-btn-Strategy" class="px-4 py-1.5 rounded bg-blue-600 font-medium text-sm">Strategy</button>
@@ -47,6 +52,7 @@
             <div id="lessons-list" class="grid gap-4"></div>
         </div>
 
+        <!-- GAME BOARD SECTION -->
         <div id="gameboard-section" class="main-section hidden">
             <div class="bg-slate-800 rounded-xl p-6 shadow-xl">
                 <h3 class="text-xl font-bold mb-4 text-blue-400 flex items-center gap-2">🏆 Team Leaderboard</h3>
@@ -72,12 +78,14 @@
             </div>
         </div>
 
+        <!-- STORE SECTION -->
         <div id="store-section" class="main-section hidden">
             <h3 class="text-xl font-bold mb-4">Sprite Store</h3>
             <div id="store-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
         </div>
     </div>
 
+    <!-- Inventory Inspection Modal Popup -->
     <div id="inventory-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700 shadow-2xl">
             <div class="flex justify-between items-start mb-4">
@@ -91,6 +99,7 @@
         </div>
     </div>
 
+    <!-- Trade Offer Selection Drawer Overlay Modal -->
     <div id="trade-select-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-slate-800 rounded-xl p-6 max-w-sm w-full border border-slate-700 shadow-2xl text-center">
             <h3 class="text-lg font-bold text-amber-400 mb-1">Propose a Trade</h3>
@@ -108,7 +117,6 @@
         let currentPlayerId = "";
         let currentTrainingCategory = "Strategy";
 
-        // Global volatile references to map cross-modal tracking values
         let activeTradeTargetPlayerId = "";
         let activeTradeTargetSpriteId = "";
 
@@ -126,7 +134,9 @@
                 const data = await resp.json();
 
                 if (data.success) {
-                    currentPlayerId = id;
+                    currentPlayerId = id.toString().trim();
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('dashboard').classList.remove('hidden');
                     fetchDashboard();
                 } else {
                     msg.innerText = data.message || "Invalid credentials.";
@@ -141,23 +151,24 @@
                 const resp = await fetch(`${API_URL}?action=getDashboard&playerId=${currentPlayerId}`);
                 playerData = await resp.json();
                 
-                if (playerData.success) {
-                    document.getElementById('login-screen').classList.add('hidden');
-                    document.getElementById('dashboard').classList.remove('hidden');
+                if (playerData && playerData.success) {
                     renderDashboard();
+                } else {
+                    console.error("Failed to fetch player context data structure.");
                 }
             } catch (error) {
-                console.error("Dashboard error:", error);
+                console.error("Dashboard engine query error:", error);
             }
         }
 
         function renderDashboard() {
-            document.getElementById('player-name').innerText = playerData.playerProfile.name;
-            document.getElementById('player-jersey').innerText = `Jersey #${playerData.playerProfile.jerseyNumber}`;
-            document.getElementById('star-count').innerText = playerData.playerProfile.totalStars;
+            // Safe assignment fallbacks to protect layout execution execution loop
+            document.getElementById('player-name').innerText = playerData.playerProfile?.name || "Player";
+            document.getElementById('player-jersey').innerText = `Jersey #${playerData.playerProfile?.jerseyNumber || '00'}`;
+            document.getElementById('star-count').innerText = playerData.playerProfile?.totalStars || 0;
 
-            const activeId = playerData.playerProfile.activeSpriteId;
-            const activeSprite = playerData.storeSprites.find(s => s.id.toString() === activeId.toString());
+            const activeId = playerData.playerProfile?.activeSpriteId;
+            const activeSprite = playerData.storeSprites?.find(s => s.id?.toString() === activeId?.toString());
             
             const avatarContainer = document.getElementById('player-avatar-container');
             const avatarImg = document.getElementById('player-avatar-img');
@@ -169,10 +180,11 @@
                 avatarContainer.classList.add('hidden');
             }
 
-            renderTradeAlerts();
-            renderLessonsList();
-            renderGameBoard();
-            renderStore();
+            // Render submodules sequence wraps safely inside catch locks
+            try { renderTradeAlerts(); } catch(e) { console.error("Alert module fail", e); }
+            try { renderLessonsList(); } catch(e) { console.error("Lessons module fail", e); }
+            try { renderGameBoard(); } catch(e) { console.error("GameBoard module fail", e); }
+            try { renderStore(); } catch(e) { console.error("Store module fail", e); }
         }
 
         function renderTradeAlerts() {
@@ -182,23 +194,24 @@
                 return;
             }
 
-            const incomingTrades = playerData.activeTrades.filter(t => t.receiver_id.toString() === currentPlayerId.toString());
-            if (incomingTrades.length === 0) {
+            // Make evaluation logic strings clean and trimmed
+            const incomingTrades = playerData.activeTrades.filter(t => t.receiver_id?.toString().trim() === currentPlayerId.toString().trim());
+            if (!incomingTrades || incomingTrades.length === 0) {
                 container.classList.add('hidden');
                 return;
             }
 
             container.classList.remove('hidden');
             container.innerHTML = incomingTrades.map(t => {
-                const senderName = (playerData.leaderboard.find(p => p.id.toString() === t.sender_id.toString()) || {name: "Someone"}).name;
-                const giveSprite = (playerData.storeSprites.find(s => s.id.toString() === t.offered_sprite_id.toString()) || {sprite_name: "Default"}).sprite_name;
-                const takeSprite = (playerData.storeSprites.find(s => s.id.toString() === t.requested_sprite_id.toString()) || {sprite_name: "Default"}).sprite_name;
+                const senderName = (playerData.leaderboard?.find(p => p.id?.toString().trim() === t.sender_id?.toString().trim()) || {name: "Another Player"}).name;
+                const giveSprite = (playerData.storeSprites?.find(s => s.id?.toString().trim() === t.offered_sprite_id?.toString().trim()) || {sprite_name: "Default"}).sprite_name;
+                const takeSprite = (playerData.storeSprites?.find(s => s.id?.toString().trim() === t.requested_sprite_id?.toString().trim()) || {sprite_name: "Default"}).sprite_name;
 
                 return `
                     <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md">
                         <div>
                             <p class="text-sm font-bold text-amber-400">🤝 Trade Proposal Received!</p>
-                            <p class="text-xs text-slate-200 mt-0.5"><b>${senderName}</b> wants to give you <b>${giveSprite}</b> in exchange for your <b>${takeSprite}</b>.</p>
+                            <p class="text-xs text-slate-200 mt-0.5"><b>${senderName}</b> offers <b>${giveSprite}</b> in exchange for your <b>${takeSprite}</b>.</p>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto">
                             <button onclick="resolveTrade('${t.id}', 'acceptTrade')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex-1 sm:flex-none">Accept</button>
@@ -234,6 +247,7 @@
 
         function renderLessonsList() {
             const container = document.getElementById('lessons-list');
+            if(!playerData.lessons) return;
             const filtered = playerData.lessons.filter(l => l.category && l.category.toLowerCase().trim() === currentTrainingCategory.toLowerCase());
 
             if(filtered.length === 0) {
@@ -270,8 +284,9 @@
 
         function renderGameBoard() {
             const leaderboardBody = document.getElementById('leaderboard-body');
+            if(!playerData.leaderboard) return;
             leaderboardBody.innerHTML = playerData.leaderboard.map((p, idx) => {
-                const spriteMatch = playerData.storeSprites.find(s => s.id.toString() === p.activeSpriteId.toString());
+                const spriteMatch = playerData.storeSprites?.find(s => s.id?.toString() === p.activeSpriteId?.toString());
                 const avatarUrl = (spriteMatch && spriteMatch.image_url) ? spriteMatch.image_url : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
                 const hasAvatar = !!(spriteMatch && spriteMatch.image_url);
 
@@ -283,7 +298,7 @@
                                 <img src="${avatarUrl}" alt="" class="w-full h-full object-cover">
                             </div>
                             <span class="font-semibold text-white">
-                                ${p.name} ${p.id === currentPlayerId ? '<span class="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded ml-1">You</span>':''}
+                                ${p.name} ${p.id?.toString().trim() === currentPlayerId ? '<span class="text-xs bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded ml-1">You</span>':''}
                             </span>
                         </td>
                         <td class="py-3 px-4 text-center text-slate-300">${p.jerseyNumber || '-'}</td>
@@ -296,6 +311,7 @@
             }).join('');
 
             const gamesDiv = document.getElementById('games-list');
+            if(!playerData.gameLevels) return;
             gamesDiv.innerHTML = playerData.gameLevels.map(g => `
                 <div class="p-4 bg-slate-800 border border-slate-700/50 rounded-xl flex justify-between items-center shadow-sm">
                     <div>
@@ -315,6 +331,7 @@
 
         function renderStore() {
             const storeDiv = document.getElementById('store-list');
+            if(!playerData.storeSprites) return;
             storeDiv.innerHTML = playerData.storeSprites.map(s => {
                 const fallbackImg = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
                 const imgUrl = s.image_url ? s.image_url.trim() : fallbackImg;
@@ -328,7 +345,7 @@
                 if (s.soldOut) {
                     actionButtonHtml = `<button class="bg-red-900/40 text-red-400/60 w-full py-2 rounded-lg font-bold text-sm cursor-not-allowed border border-red-900/30" disabled>Sold Out</button>`;
                 } else if (s.owned) {
-                    if (playerData.playerProfile.activeSpriteId === s.id) {
+                    if (playerData.playerProfile?.activeSpriteId?.toString() === s.id?.toString()) {
                         actionButtonHtml = `<button class="bg-emerald-600 text-white w-full py-2 rounded-lg font-bold text-sm cursor-default" disabled>Equipped</button>`;
                     } else {
                         actionButtonHtml = `<button onclick="equip('${s.id}')" class="bg-slate-600 hover:bg-slate-500 text-white w-full py-2 rounded-lg font-bold text-sm transition">Equip</button>`;
@@ -381,25 +398,24 @@
         }
 
         function openInventoryModal(targetPlayerId) {
-            const targetPlayer = playerData.leaderboard.find(p => p.id.toString() === targetPlayerId.toString());
+            const targetPlayer = playerData.leaderboard?.find(p => p.id?.toString().trim() === targetPlayerId.toString().trim());
             if (!targetPlayer) return;
 
             document.getElementById('modal-player-name').innerText = `${targetPlayer.name}'s Inventory`;
             const listContainer = document.getElementById('modal-inventory-list');
             
-            const isMe = (targetPlayerId.toString() === currentPlayerId.toString());
+            const isMe = (targetPlayerId.toString().trim() === currentPlayerId.toString().trim());
 
             if (!targetPlayer.ownedSprites || targetPlayer.ownedSprites.length === 0) {
                 listContainer.innerHTML = `<p class="text-sm text-slate-500 italic p-2 text-center">No sprites unlocked yet.</p>`;
             } else {
                 listContainer.innerHTML = targetPlayer.ownedSprites.map(sId => {
-                    const item = playerData.storeSprites.find(s => s.id.toString() === sId.toString()) || { sprite_name: "Default Card", image_url: "" };
+                    const item = playerData.storeSprites?.find(s => s.id?.toString() === sId.toString()) || { sprite_name: "Default Card", image_url: "" };
                     const fallbackImg = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
                     const imgUrl = item.image_url ? item.image_url.trim() : fallbackImg;
 
-                    // Evaluate if an outgoing transaction record already blocks this item line
                     const isPending = playerData.activeTrades && playerData.activeTrades.some(t => 
-                        t.status === "PENDING" && t.requested_sprite_id.toString() === sId.toString() && t.receiver_id.toString() === targetPlayerId.toString()
+                        t.status === "PENDING" && t.requested_sprite_id?.toString() === sId.toString() && t.receiver_id?.toString() === targetPlayerId.toString()
                     );
 
                     let actionMarkup = `<span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded border border-emerald-500/20 font-bold">Unlocked</span>`;
@@ -432,22 +448,20 @@
             document.getElementById('inventory-modal').classList.add('hidden');
         }
 
-        // Open the selection list showing what *I* own to offer them
         function openTradeOfferSelection(targetPlayerId, targetSpriteId) {
             activeTradeTargetPlayerId = targetPlayerId;
             activeTradeTargetSpriteId = targetSpriteId;
 
-            // Close the player inspection panel to show the layout workspace clear
             closeInventoryModal();
 
-            const myProfileMatch = playerData.leaderboard.find(p => p.id.toString() === currentPlayerId.toString());
+            const myProfileMatch = playerData.leaderboard?.find(p => p.id?.toString().trim() === currentPlayerId.toString().trim());
             const optionsContainer = document.getElementById('my-trade-options-list');
 
             if (!myProfileMatch || !myProfileMatch.ownedSprites || myProfileMatch.ownedSprites.length === 0) {
                 optionsContainer.innerHTML = `<p class="text-xs text-red-400 italic">You don't own any tradeable items!</p>`;
             } else {
                 optionsContainer.innerHTML = myProfileMatch.ownedSprites.map(sId => {
-                    const item = playerData.storeSprites.find(s => s.id.toString() === sId.toString()) || { sprite_name: "Default", image_url: "" };
+                    const item = playerData.storeSprites?.find(s => s.id?.toString() === sId.toString()) || { sprite_name: "Default", image_url: "" };
                     return `
                         <button onclick="submitTradeProposal('${sId}')" class="w-full p-2.5 bg-slate-900 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center gap-3 text-left transition group">
                             <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-600 overflow-hidden flex items-center justify-center">
