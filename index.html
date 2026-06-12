@@ -813,19 +813,21 @@
             let correctCount = 0;
             let allAnswered = true;
 
-            blocks.forEach(b => {
-                const qId = b.getAttribute('data-qid');
+            // Direct element scanning rather than relying on shared string IDs
+            blocks.forEach((b) => {
                 const correctVal = b.getAttribute('data-correct');
-                const selected = b.querySelector(`input[name="answer_${qId}"]:checked`);
                 
-                if(!selected) {
+                // Find ANY checked radio button inside this specific question block container
+                const selected = b.querySelector('input[type="radio"]:checked');
+                
+                if (!selected) {
                     allAnswered = false;
-                } else if(selected.value === correctVal) {
+                } else if (selected.value === correctVal) {
                     correctCount++;
                 }
             });
 
-            if(!allAnswered) {
+            if (!allAnswered) {
                 alert("Please answer all questions before submitting!");
                 return;
             }
@@ -852,7 +854,7 @@
                 
                 document.getElementById('quiz-modal-overlay').remove();
                 
-                if(passed) {
+                if (passed) {
                     alert(`🎉 Perfect 100%! Score: ${scorePct}%. ${status.pointsAwarded ? '10 Stars added to your account!' : 'Result recorded (Stars previously claimed).'}`);
                 } else {
                     alert(`❌ Review Strategy Patterns! You scored ${scorePct}%. Remember, you need 100% accuracy to earn the 10-star reward bounty. Try again!`);
