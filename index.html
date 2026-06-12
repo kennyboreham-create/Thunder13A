@@ -266,9 +266,9 @@
                 "100 Jumping Jacks"
             ];
             
-            // Generate custom tracking signatures using the sheet baseline title context
             let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
-            const weekContext = baseWorkoutLesson ? baseWorkoutLesson.title : "Current Week";
+            // Force conversion to a string using String() to prevent integer crash errors
+            const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
 
             let html = `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
@@ -304,7 +304,7 @@
             container.innerHTML = html;
         }
 
-        // --- GRANULAR SKILLS CHECKBOX SECTION ---
+       // --- GRANULAR SKILLS CHECKBOX SECTION ---
         function renderGranularSkillsSection(container) {
             const skillsExercises = [
                 "100 Stickhandling Touches",
@@ -312,7 +312,8 @@
             ];
 
             let baseSkillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
-            const dateContext = baseSkillsLesson ? baseSkillsLesson.title : "Today";
+            // Force conversion to a string here as well just to be perfectly safe
+            const dateContext = baseSkillsLesson ? String(baseSkillsLesson.title) : "Today";
 
             let html = `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
