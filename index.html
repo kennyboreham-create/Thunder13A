@@ -73,7 +73,14 @@
                     <button onclick="switchCategoryView('gameboard')" id="tab-gameboard" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Gameboard</button>
                     <button onclick="switchCategoryView('store')" id="tab-store" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Store</button>
                 </nav>
-
+                <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
+                    <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
+                        <option value="all" selected>All Strategy Content</option>
+                        <option value="todo">To Do</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
                 <div id="lessons-list" class="grid gap-3"></div>
             </div>
 
@@ -224,12 +231,31 @@
             const gameboardView = document.getElementById('gameboard-view-container');
             const storeView = document.getElementById('store-view-container');
             const playbookPanel = document.getElementById('playbook-challenge-panel');
+            const strategyFilterBar = document.getElementById('strategy-filter-bar'); // <-- Target this line entry
 
             // Default State Resets
             lessonsList.classList.add('hidden');
             gameboardView.classList.add('hidden');
             storeView.classList.add('hidden');
             playbookPanel.classList.add('hidden');
+            strategyFilterBar.classList.add('hidden'); // <-- Keep tucked hidden by default
+
+            if (targetTab === 'gameboard') {
+                gameboardView.classList.remove('hidden');
+                playbookPanel.classList.remove('hidden');
+                renderTeamLeaderboardLayout();
+                initPlaybookScenarioChallengeEngine();
+            } else if (targetTab === 'store') {
+                storeView.classList.remove('hidden');
+                renderStoreInventoryLayout();
+            } else {
+                lessonsList.classList.remove('hidden');
+                // Reveal the filter dropdown ONLY if browsing strategy panels
+                if (targetTab === 'strategy') {
+                    strategyFilterBar.classList.remove('hidden');
+                }
+                renderLessonsList();
+            }
 
             if (targetTab === 'gameboard') {
                 gameboardView.classList.remove('hidden');
@@ -249,10 +275,14 @@
             switchCategoryView(currentTrainingCategory);
         }
 
-        // --- VIEW MODULE A: LESSONS & CUSTOM MODULE CHECKS ---
         function renderLessonsList() {
             const container = document.getElementById('lessons-list');
             if (!playerData.lessons) return;
+            
+            // Hide the playbook challenge rink when looking at workouts/strategy
+            if (document.getElementById('playbook-challenge-panel')) {
+                document.getElementById('playbook-challenge-panel').classList.add('hidden');
+            }
             
             if (currentTrainingCategory.toLowerCase() === 'workout') {
                 renderWeeklyWorkoutSection(container);
@@ -264,25 +294,39 @@
                 return;
             }
 
-            // Fallback rendering structure matching Strategy
-            const filtered = playerData.lessons.filter(l => l.category && l.category.toLowerCase().trim() === currentTrainingCategory.toLowerCase());
-            if (filtered.length === 0) {
-                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded-xl border border-slate-800">No content uploaded for this training grid yet.</p>`;
+            // --- STRATEGY RENDERING ENGINE WITH ACTIVE FILTER CONTROL ---
+            const filterValue = document.getElementById('strategy-status-filter').value; // 'all', 'todo', or 'completed'
+            
+            // 1. Filter out strategy lessons matching our target category row structures
+            let filteredLessons = playerData.lessons.filter(l => l.category && l.category.toString().trim().toLowerCase() === 'strategy');
+            
+            if (filteredLessons.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded-xl border border-slate-800">No strategy content loaded yet.</p>`;
                 return;
             }
 
-            const sortedLessons = filtered.sort((a, b) => a.completed - b.completed);
+            // Sort lessons so incomplete ones stay up top
+            filteredLessons.sort((a, b) => a.completed - b.completed);
 
-            let htmlOutput = sortedLessons.map(l => {
+            let htmlOutput = "";
+
+            // 2. Loop and construct standard strategy content modules
+            filteredLessons.forEach(l => {
                 const videoUrl = l.video_url ? l.video_url.trim() : "";
-                return `
-                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${l.completed ? 'opacity-60' : ''}">
+                const isComplete = l.completed;
+
+                // Status Filter validation check routine
+                if (filterValue === 'todo' && isComplete) return;
+                if (filterValue === 'completed' && !isComplete) return;
+
+                htmlOutput += `
+                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${isComplete ? 'opacity-60' : ''}">
                         <div>
-                            <p class="font-bold ${l.completed ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
+                            <p class="font-bold ${isComplete ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
                             <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
                         </div>
                         <div class="flex items-center gap-3">
-                        ${l.completed ? 
+                        ${isComplete ? 
                             `
                             <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>
                             ${videoUrl !== "" ? `<button onclick="window.open('${videoUrl}', '_blank')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold">Watch Again</button>` : ''}
@@ -292,33 +336,52 @@
                         </div>
                     </div>
                 `;
-            }).join('');
+            });
 
-            // Inject Theory tests if working on strategy panels
-            if (currentTrainingCategory.toLowerCase() === 'strategy' && playerData.tests) {
-                const linkedLessonIds = [...new Set(playerData.tests.map(t => t.lesson_id))];
-                linkedLessonIds.forEach(lId => {
+            // 3. Extract and construct matching Exam Test elements 
+            if (playerData.tests) {
+                const uniqueLessonIdsInTests = [...new Set(playerData.tests.map(t => t.lesson_id))];
+                
+                uniqueLessonIdsInTests.forEach(lId => {
                     const correspondingLesson = playerData.lessons.find(l => l.id === lId);
+                    
+                    // Critical Step: A test is marked complete if its matching strategy lesson logic loop flags it as completed
+                    const isTestPassed = correspondingLesson ? correspondingLesson.completed : false;
                     const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
-                    const alreadyPassed = playerData.lessons.find(l => l.id === lId && l.completed);
+
+                    // Status Filter validation check routine for the tests
+                    if (filterValue === 'todo' && isTestPassed) return;
+                    if (filterValue === 'completed' && !isTestPassed) return;
 
                     htmlOutput += `
-                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/40 transition">
+                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/40 transition ${isTestPassed ? 'opacity-60' : ''}">
                             <div>
                                 <div class="flex items-center gap-2">
                                     <span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-indigo-500/20">Exam Assess</span>
-                                    <p class="font-bold text-slate-100">${labelText}</p>
+                                    <p class="font-bold ${isTestPassed ? 'text-slate-400 line-through' : 'text-slate-100'}">${labelText}</p>
                                 </div>
                                 <p class="text-xs text-yellow-500 font-medium mt-0.5">+10 Stars <span class="text-slate-400">(Requires 100%)</span></p>
                             </div>
-                            <button onclick="openQuizModal('${lId}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">
-                                ${alreadyPassed ? "Retry Challenge" : "Take Test"}
-                            </button>
+                            <div class="flex items-center gap-3">
+                            ${isTestPassed ? 
+                                `
+                                <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Passed ✓</span>
+                                <button onclick="openQuizModal('${lId}')" class="text-indigo-400 hover:text-indigo-300 text-xs underline font-semibold">Review Exam</button>
+                                ` : 
+                                `<button onclick="openQuizModal('${lId}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">Take Test</button>`
+                            }
+                            </div>
                         </div>
                     `;
                 });
             }
-            container.innerHTML = htmlOutput;
+
+            // Fallback if filters hide everything in the current view state configuration
+            if (htmlOutput === "") {
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No strategy elements found matching this filter state.</p>`;
+            } else {
+                container.innerHTML = htmlOutput;
+            }
         }
 
         async function handleLessonCompletion(lessonId, url) {
