@@ -8,7 +8,6 @@
 </head>
 <body class="bg-slate-900 text-white min-h-screen">
 
-    <!-- Login Screen -->
     <div id="login-screen" class="flex flex-col items-center justify-center h-screen">
         <h1 class="text-4xl font-bold mb-6 text-blue-400">Hockey Trainer</h1>
         <input type="text" id="login-id" placeholder="Player ID" class="p-2 mb-2 rounded text-black w-64">
@@ -17,7 +16,6 @@
         <p id="login-msg" class="mt-4 text-red-400 max-w-md text-center whitespace-pre-line"></p>
     </div>
 
-    <!-- Dashboard -->
     <div id="dashboard" class="hidden p-6 max-w-4xl mx-auto">
         <header class="flex justify-between items-center mb-8 border-b border-slate-700 pb-4">
             <div class="flex items-center gap-4">
@@ -32,14 +30,14 @@
             <div class="text-lg">Stars: <span id="star-count" class="text-yellow-400 font-bold">0</span></div>
         </header>
 
-        <!-- Main Navigation Tabs -->
+        <div id="trade-alerts-container" class="mb-6 hidden grid gap-2"></div>
+
         <div class="flex gap-6 mb-6 border-b border-slate-800 pb-2 text-lg font-medium">
             <button onclick="showMainTab('training')" id="tab-btn-training" class="text-blue-400 border-b-2 border-blue-400 pb-2 px-1">Training</button>
             <button onclick="showMainTab('gameboard')" id="tab-btn-gameboard" class="text-slate-400 hover:text-white pb-2 px-1">Game Board</button>
             <button onclick="showMainTab('store')" id="tab-btn-store" class="text-slate-400 hover:text-white pb-2 px-1">Store</button>
         </div>
 
-        <!-- TRAINING SECTION -->
         <div id="training-section" class="main-section">
             <div class="flex gap-3 mb-6 bg-slate-800 p-1.5 rounded-lg w-fit">
                 <button onclick="filterLessons('Strategy')" id="sub-btn-Strategy" class="px-4 py-1.5 rounded bg-blue-600 font-medium text-sm">Strategy</button>
@@ -49,7 +47,6 @@
             <div id="lessons-list" class="grid gap-4"></div>
         </div>
 
-        <!-- GAME BOARD SECTION -->
         <div id="gameboard-section" class="main-section hidden">
             <div class="bg-slate-800 rounded-xl p-6 shadow-xl">
                 <h3 class="text-xl font-bold mb-4 text-blue-400 flex items-center gap-2">🏆 Team Leaderboard</h3>
@@ -75,14 +72,12 @@
             </div>
         </div>
 
-        <!-- STORE SECTION -->
         <div id="store-section" class="main-section hidden">
             <h3 class="text-xl font-bold mb-4">Sprite Store</h3>
             <div id="store-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
         </div>
     </div>
 
-    <!-- Inventory Inspection Modal Popup -->
     <div id="inventory-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div class="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700 shadow-2xl">
             <div class="flex justify-between items-start mb-4">
@@ -96,12 +91,26 @@
         </div>
     </div>
 
+    <div id="trade-select-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 rounded-xl p-6 max-w-sm w-full border border-slate-700 shadow-2xl text-center">
+            <h3 class="text-lg font-bold text-amber-400 mb-1">Propose a Trade</h3>
+            <p class="text-xs text-slate-400 mb-4">Select one of your sprites to offer in exchange:</p>
+            <div id="my-trade-options-list" class="grid gap-2 max-h-60 overflow-y-auto mb-6 pr-1"></div>
+            <button onclick="closeTradeSelectModal()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs px-4 py-2 rounded-lg transition w-full">Cancel Offer</button>
+        </div>
+    </div>
+
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec";
+        // PASTE YOUR LIVE WEB APP URL DEPLOYMENT GOOGLE APPS SCRIPT STRING HERE
+        const API_URL = "YOUR_WEB_APP_URL_HERE";
 
         let playerData = {};
         let currentPlayerId = "";
         let currentTrainingCategory = "Strategy";
+
+        // Global volatile references to map cross-modal tracking values
+        let activeTradeTargetPlayerId = "";
+        let activeTradeTargetSpriteId = "";
 
         async function login() {
             const id = document.getElementById('login-id').value;
@@ -160,9 +169,52 @@
                 avatarContainer.classList.add('hidden');
             }
 
+            renderTradeAlerts();
             renderLessonsList();
             renderGameBoard();
             renderStore();
+        }
+
+        function renderTradeAlerts() {
+            const container = document.getElementById('trade-alerts-container');
+            if (!playerData.activeTrades || playerData.activeTrades.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            const incomingTrades = playerData.activeTrades.filter(t => t.receiver_id.toString() === currentPlayerId.toString());
+            if (incomingTrades.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+            container.innerHTML = incomingTrades.map(t => {
+                const senderName = (playerData.leaderboard.find(p => p.id.toString() === t.sender_id.toString()) || {name: "Someone"}).name;
+                const giveSprite = (playerData.storeSprites.find(s => s.id.toString() === t.offered_sprite_id.toString()) || {sprite_name: "Default"}).sprite_name;
+                const takeSprite = (playerData.storeSprites.find(s => s.id.toString() === t.requested_sprite_id.toString()) || {sprite_name: "Default"}).sprite_name;
+
+                return `
+                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md">
+                        <div>
+                            <p class="text-sm font-bold text-amber-400">🤝 Trade Proposal Received!</p>
+                            <p class="text-xs text-slate-200 mt-0.5"><b>${senderName}</b> wants to give you <b>${giveSprite}</b> in exchange for your <b>${takeSprite}</b>.</p>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="resolveTrade('${t.id}', 'acceptTrade')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex-1 sm:flex-none">Accept</button>
+                            <button onclick="resolveTrade('${t.id}', 'denyTrade')" class="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold px-3 py-1.5 rounded-lg transition flex-1 sm:flex-none">Decline</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function resolveTrade(id, actionRoute) {
+            await fetch(API_URL, { 
+                method: 'POST', 
+                body: new URLSearchParams({ action: actionRoute, playerId: currentPlayerId, tradeId: id })
+            });
+            fetchDashboard();
         }
 
         function filterLessons(category) {
@@ -212,17 +264,13 @@
         }
 
         function handleLessonCompletion(lessonId, videoUrl) {
-            if (videoUrl && videoUrl !== "") {
-                window.open(videoUrl, '_blank');
-            }
+            if (videoUrl && videoUrl !== "") window.open(videoUrl, '_blank');
             completeActivity(lessonId, 'LESSON');
         }
 
         function renderGameBoard() {
             const leaderboardBody = document.getElementById('leaderboard-body');
-            let sortedPlayers = [playerData.playerProfile]; 
-
-            leaderboardBody.innerHTML = sortedPlayers.map((p, idx) => {
+            leaderboardBody.innerHTML = playerData.leaderboard.map((p, idx) => {
                 const spriteMatch = playerData.storeSprites.find(s => s.id.toString() === p.activeSpriteId.toString());
                 const avatarUrl = (spriteMatch && spriteMatch.image_url) ? spriteMatch.image_url : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
                 const hasAvatar = !!(spriteMatch && spriteMatch.image_url);
@@ -241,7 +289,7 @@
                         <td class="py-3 px-4 text-center text-slate-300">${p.jerseyNumber || '-'}</td>
                         <td class="py-3 px-4 text-right font-bold text-yellow-400">${p.totalStars}</td>
                         <td class="py-3 px-4 text-center">
-                            <button onclick="openInventoryModal('${p.name}')" class="text-blue-400 hover:text-blue-300 underline font-medium text-xs">Inventory</button>
+                            <button onclick="openInventoryModal('${p.id}')" class="text-blue-400 hover:text-blue-300 underline font-medium text-xs">Inventory</button>
                         </td>
                     </tr>
                 `;
@@ -271,13 +319,11 @@
                 const fallbackImg = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
                 const imgUrl = s.image_url ? s.image_url.trim() : fallbackImg;
                 
-                // Dynamic visual pill label badges depending on rarity constraints
                 let rarityLabel = "Common";
                 let rarityColor = "bg-slate-700 text-slate-300";
                 if (parseInt(s.rarity) === 2) { rarityLabel = "Rare (Max 2)"; rarityColor = "bg-blue-500/20 text-blue-400 border border-blue-500/30"; }
                 if (parseInt(s.rarity) === 1) { rarityLabel = "Legendary (Max 1)"; rarityColor = "bg-amber-500/20 text-amber-400 border border-amber-500/30"; }
 
-                // Action button generation step based on purchase availability rules
                 let actionButtonHtml = "";
                 if (s.soldOut) {
                     actionButtonHtml = `<button class="bg-red-900/40 text-red-400/60 w-full py-2 rounded-lg font-bold text-sm cursor-not-allowed border border-red-900/30" disabled>Sold Out</button>`;
@@ -293,31 +339,16 @@
 
                 return `
                     <div class="p-4 bg-slate-800 border border-slate-700 rounded-xl flex flex-col items-center justify-between shadow-md relative group hover:border-slate-600 transition">
-                        
-                        <!-- Rarity Label Tag Top-Left Banner Wrapper -->
-                        <span class="absolute top-2.5 left-2.5 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md ${rarityColor}">
-                            ${rarityLabel}
-                        </span>
-
-                        <!-- Remaining Stock Count Indicator Tag Top-Right -->
-                        ${(!s.owned && !s.soldOut && s.stockLeft !== undefined) ? `
-                            <span class="absolute top-2.5 right-2.5 text-[10px] font-bold bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/50">
-                                Left: ${s.stockLeft}
-                            </span>
-                        ` : ''}
-
+                        <span class="absolute top-2.5 left-2.5 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md ${rarityColor}">${rarityLabel}</span>
+                        ${(!s.owned && !s.soldOut && s.stockLeft !== undefined) ? `<span class="absolute top-2.5 right-2.5 text-[10px] font-bold bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-700/50">Left: ${s.stockLeft}</span>` : ''}
                         <div class="w-24 h-24 rounded-full bg-slate-900 border border-slate-700 overflow-hidden flex items-center justify-center mb-4 mt-4 shadow-inner group-hover:scale-105 transition-transform duration-200">
                             <img src="${imgUrl}" alt="${s.sprite_name}" class="w-full h-full object-cover">
                         </div>
-                        
                         <div class="text-center w-full mb-4">
                             <p class="font-bold text-base text-slate-100 truncate">${s.sprite_name}</p>
                             <p class="text-sm text-yellow-400 font-semibold flex items-center justify-center gap-1">⭐️ ${s.cost_in_stars} Stars</p>
                         </div>
-                        
-                        <div class="w-full">
-                            ${actionButtonHtml}
-                        </div>
+                        <div class="w-full">${actionButtonHtml}</div>
                     </div>
                 `;
             }).join('');
@@ -349,29 +380,47 @@
             fetchDashboard();
         }
 
-        function openInventoryModal(playerName) {
-            document.getElementById('modal-player-name').innerText = `${playerName}'s Inventory`;
+        function openInventoryModal(targetPlayerId) {
+            const targetPlayer = playerData.leaderboard.find(p => p.id.toString() === targetPlayerId.toString());
+            if (!targetPlayer) return;
+
+            document.getElementById('modal-player-name').innerText = `${targetPlayer.name}'s Inventory`;
             const listContainer = document.getElementById('modal-inventory-list');
             
-            const ownedItems = playerData.storeSprites.filter(s => s.owned);
+            const isMe = (targetPlayerId.toString() === currentPlayerId.toString());
 
-            if(ownedItems.length === 0) {
-                listContainer.innerHTML = `<p class="text-sm text-slate-500 italic p-2 text-center">No custom sprites unlocked yet.</p>`;
+            if (!targetPlayer.ownedSprites || targetPlayer.ownedSprites.length === 0) {
+                listContainer.innerHTML = `<p class="text-sm text-slate-500 italic p-2 text-center">No sprites unlocked yet.</p>`;
             } else {
-                listContainer.innerHTML = ownedItems.map(item => {
+                listContainer.innerHTML = targetPlayer.ownedSprites.map(sId => {
+                    const item = playerData.storeSprites.find(s => s.id.toString() === sId.toString()) || { sprite_name: "Default Card", image_url: "" };
                     const fallbackImg = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
                     const imgUrl = item.image_url ? item.image_url.trim() : fallbackImg;
 
+                    // Evaluate if an outgoing transaction record already blocks this item line
+                    const isPending = playerData.activeTrades && playerData.activeTrades.some(t => 
+                        t.status === "PENDING" && t.requested_sprite_id.toString() === sId.toString() && t.receiver_id.toString() === targetPlayerId.toString()
+                    );
+
+                    let actionMarkup = `<span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded border border-emerald-500/20 font-bold">Unlocked</span>`;
+                    
+                    if (!isMe) {
+                        if (isPending) {
+                            actionMarkup = `<span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-1 rounded border border-amber-500/20 font-bold animate-pulse">Pending...</span>`;
+                        } else {
+                            actionMarkup = `<button onclick="openTradeOfferSelection('${targetPlayerId}', '${sId}')" class="bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition shadow">Trade</button>`;
+                        }
+                    }
+
                     return `
-                        <div class="p-3 bg-slate-900/60 rounded-xl flex justify-between items-center border border-slate-700/40 shadow-sm">
+                        <div class="p-2.5 bg-slate-900/60 rounded-xl flex justify-between items-center border border-slate-700/40 shadow-sm">
                             <div class="flex items-center gap-3">
-                                <!-- Dynamic Avatar inside Leaderboard Inventory Inspector -->
                                 <div class="w-10 h-10 rounded-full bg-slate-800 border border-slate-600 overflow-hidden flex items-center justify-center">
                                     <img src="${imgUrl}" alt="" class="w-full h-full object-cover">
                                 </div>
                                 <span class="text-sm font-semibold text-slate-100">${item.sprite_name}</span>
                             </div>
-                            <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-md border border-emerald-500/20 font-bold">Unlocked</span>
+                            <div>${actionMarkup}</div>
                         </div>
                     `;
                 }).join('');
@@ -381,6 +430,55 @@
 
         function closeInventoryModal() {
             document.getElementById('inventory-modal').classList.add('hidden');
+        }
+
+        // Open the selection list showing what *I* own to offer them
+        function openTradeOfferSelection(targetPlayerId, targetSpriteId) {
+            activeTradeTargetPlayerId = targetPlayerId;
+            activeTradeTargetSpriteId = targetSpriteId;
+
+            // Close the player inspection panel to show the layout workspace clear
+            closeInventoryModal();
+
+            const myProfileMatch = playerData.leaderboard.find(p => p.id.toString() === currentPlayerId.toString());
+            const optionsContainer = document.getElementById('my-trade-options-list');
+
+            if (!myProfileMatch || !myProfileMatch.ownedSprites || myProfileMatch.ownedSprites.length === 0) {
+                optionsContainer.innerHTML = `<p class="text-xs text-red-400 italic">You don't own any tradeable items!</p>`;
+            } else {
+                optionsContainer.innerHTML = myProfileMatch.ownedSprites.map(sId => {
+                    const item = playerData.storeSprites.find(s => s.id.toString() === sId.toString()) || { sprite_name: "Default", image_url: "" };
+                    return `
+                        <button onclick="submitTradeProposal('${sId}')" class="w-full p-2.5 bg-slate-900 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center gap-3 text-left transition group">
+                            <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-600 overflow-hidden flex items-center justify-center">
+                                <img src="${item.image_url || ''}" class="w-full h-full object-cover">
+                            </div>
+                            <span class="text-sm font-semibold text-slate-200 group-hover:text-white">${item.sprite_name}</span>
+                        </button>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('trade-select-modal').classList.remove('hidden');
+        }
+
+        function closeTradeSelectModal() {
+            document.getElementById('trade-select-modal').classList.add('hidden');
+        }
+
+        async function submitTradeProposal(myOfferedSpriteId) {
+            closeTradeSelectModal();
+            await fetch(API_URL, {
+                method: 'POST',
+                body: new URLSearchParams({
+                    action: 'proposeTrade',
+                    playerId: currentPlayerId,
+                    targetPlayerId: activeTradeTargetPlayerId,
+                    offerSpriteId: myOfferedSpriteId,
+                    requestSpriteId: activeTradeTargetSpriteId
+                })
+            });
+            fetchDashboard();
         }
 
         function showMainTab(tabId) {
