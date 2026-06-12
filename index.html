@@ -70,7 +70,7 @@
                     <button onclick="switchCategoryView('strategy')" id="tab-strategy" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Strategy</button>
                     <button onclick="switchCategoryView('workout')" id="tab-workout" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Workout</button>
                     <button onclick="switchCategoryView('skills')" id="tab-skills" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Skills</button>
-                    <button onclick="switchCategoryView('gameboard')" id="tab-gameboard" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Gameboard</button>
+                   
                     <button onclick="switchCategoryView('store')" id="tab-store" class="flex-1 py-2.5 text-center font-bold text-xs rounded-lg uppercase tracking-wider transition whitespace-nowrap">Store</button>
                 </nav>
                 <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
@@ -84,15 +84,7 @@
                 <div id="lessons-list" class="grid gap-3"></div>
             </div>
 
-            <div id="playbook-challenge-panel" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl max-w-xl mx-auto hidden">
-                <div class="border-b border-slate-700/60 pb-3 mb-4 flex justify-between items-start">
-                    <div>
-                        <span class="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider border border-blue-500/20">Weekly Challenge</span>
-                        <h3 id="pb-scenario-title" class="text-lg font-bold text-slate-100 mt-1">Playbook Canvas Loading...</h3>
-                        <p id="pb-scenario-desc" class="text-xs text-slate-400 mt-0.5"></p>
-                    </div>
-                    <div id="pb-star-reward-chip" class="text-right"></div>
-                </div>
+            
                 
                 <div class="overflow-x-auto w-full flex justify-center py-2">
                     <div id="rink-canvas-frame" class="relative w-[600px] h-[350px] bg-slate-950 rounded-xl border border-slate-700 select-none overflow-hidden shadow-inner flex-shrink-0" style="background-image: url('https://images.unsplash.com/photo-1518063319789-7217e6706b04?q=80&w=600&h=350&fit=crop'); background-size: cover; background-position: center;">
@@ -230,7 +222,7 @@
             const lessonsList = document.getElementById('lessons-list');
             const gameboardView = document.getElementById('gameboard-view-container');
             const storeView = document.getElementById('store-view-container');
-            const playbookPanel = document.getElementById('playbook-challenge-panel');
+           
             const strategyFilterBar = document.getElementById('strategy-filter-bar'); // <-- Target this line entry
 
             // Default State Resets
