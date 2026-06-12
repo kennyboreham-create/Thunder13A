@@ -6,19 +6,10 @@
     <title>Hockey Team Training Portal</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-        body {
-            background-color: #0b1329;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #1e293b;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #475569;
-            border-radius: 3px;
-        }
+        body { background-color: #0b1329; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
     </style>
 </head>
 <body class="text-slate-100 font-sans min-h-screen flex flex-col antialiased">
@@ -33,7 +24,7 @@
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-md w-full shadow-2xl text-center">
             <div class="w-16 h-16 bg-blue-600/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 002-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             </div>
             <h1 class="text-2xl font-black tracking-tight mb-1 text-white uppercase">Locker Room Gate</h1>
             <p class="text-xs text-slate-400 mb-6">Enter credentials to synchronize dashboard telemetry</p>
@@ -118,8 +109,7 @@
                                     <th class="pb-3 text-right pr-2">Total Stars</th>
                                 </tr>
                             </thead>
-                            <tbody id="leaderboard-table-body" class="divide-y divide-slate-800/50">
-                                </tbody>
+                            <tbody id="leaderboard-table-body" class="divide-y divide-slate-800/50"></tbody>
                         </table>
                     </div>
                 </div>
@@ -138,8 +128,7 @@
                 <h3 id="quiz-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Tactical Quiz Assessment</h3>
                 <button onclick="closeQuizModal()" class="text-slate-400 hover:text-white transition font-bold text-xl px-2">×</button>
             </div>
-            <div id="quiz-modal-body" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
-                </div>
+            <div id="quiz-modal-body" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6"></div>
             <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end gap-3">
                 <button onclick="closeQuizModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Cancel</button>
                 <button onclick="evaluateActiveQuizAnswers()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition shadow-md shadow-indigo-600/10">Submit Answers</button>
@@ -160,9 +149,7 @@
                     alert(data.message || "Session data fetch sync break occurred.");
                     logSystemOut();
                 }
-            } catch (err) {
-                console.error("Master read hook matrix fault:", err);
-            }
+            } catch (err) { console.error("Master read hook matrix fault:", err); }
         }
 
         function renderApplicationDashboardLayout() {
@@ -181,17 +168,17 @@
             
             if (currentTrainingCategory.toLowerCase() === 'workout') {
                 document.getElementById('strategy-filter-bar').classList.add('hidden');
-                renderWeeklyWorkoutSection(container);
+                renderGranularWorkoutSection(container);
                 return;
             }
 
             if (currentTrainingCategory.toLowerCase() === 'skills') {
                 document.getElementById('strategy-filter-bar').classList.add('hidden');
-                renderDailySkillsSection(container);
+                renderGranularSkillsSection(container);
                 return;
             }
 
-            // --- STRATEGY CATEGORY BLOCK RENDERING ENGINE WITH FILTER CONTROL ---
+            // --- STRATEGY CATEGORY BLOCK RENDERING ---
             document.getElementById('strategy-filter-bar').classList.remove('hidden');
             const filterValue = document.getElementById('strategy-status-filter').value; 
             
@@ -203,7 +190,6 @@
             }
 
             filteredLessons.sort((a, b) => a.completed - b.completed);
-
             let htmlOutput = "";
 
             filteredLessons.forEach(l => {
@@ -232,16 +218,12 @@
                 `;
             });
 
-            // 3. Map and append Strategy Exam Quizzes independently below the lessons
             if (playerData.tests) {
                 const uniqueLessonIdsInTests = [...new Set(playerData.tests.map(t => t.lesson_id))];
-                
                 uniqueLessonIdsInTests.forEach(lId => {
                     const correspondingLesson = playerData.lessons.find(l => l.id === lId);
-                    
                     const matchingTestData = playerData.tests.find(t => t.lesson_id === lId);
                     const isTestPassed = matchingTestData ? matchingTestData.completed === true : false;
-                    
                     const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
 
                     if (filterValue === 'todo' && isTestPassed) return;
@@ -270,75 +252,113 @@
                 });
             }
 
-            if (htmlOutput === "") {
-                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No strategy elements found matching this filter selection.</p>`;
-            } else {
-                container.innerHTML = htmlOutput;
-            }
+            container.innerHTML = htmlOutput === "" ? `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No matching strategy items found.</p>` : htmlOutput;
         }
 
-        function renderWeeklyWorkoutSection(container) {
-            let workoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
-            if (!workoutLesson) {
-                container.innerHTML = `<p class="text-slate-500 italic text-center p-4">Workout module blueprint not found.</p>`;
-                return;
-            }
-            const weekId = `L_WEEKLY_WORKOUT_${isNaN(workoutLesson.title) ? workoutLesson.title : "Week " + workoutLesson.title}`;
-            const isCompleted = workoutLesson.completed;
+        // --- GRANULAR WORKOUT CHECKBOX SECTION ---
+        function renderGranularWorkoutSection(container) {
+            const workoutExercises = [
+                "20 Pushups",
+                "30 Squats",
+                "20 Lunges",
+                "30 jumps",
+                "10 Burpee's",
+                "100 Jumping Jacks"
+            ];
+            
+            // Generate custom tracking signatures using the sheet baseline title context
+            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
+            const weekContext = baseWorkoutLesson ? baseWorkoutLesson.title : "Current Week";
 
-            container.innerHTML = `
+            let html = `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-                    <div class="flex justify-between items-start border-b border-slate-800 pb-4">
-                        <div>
-                            <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Weekly Bounty Tracker</span>
-                            <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">${workoutLesson.title}</h3>
-                        </div>
-                        <span class="text-xs text-yellow-500 font-bold bg-yellow-500/10 px-3 py-1 rounded-full border border-yellow-500/20">+${workoutLesson.star_reward || 15} Stars</span>
+                    <div>
+                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Granular Training Set</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Weekly Workouts (${weekContext})</h3>
+                        <p class="text-xs text-slate-400 mt-1">Check off each training unit as you complete it. Earning +2 Stars per unit!</p>
                     </div>
-                    <div class="grid grid-cols-2 gap-3 text-sm">
-                        <div class="p-3 bg-slate-950 rounded-xl border border-slate-800"><p class="text-xs text-slate-500 font-bold uppercase">🤸 Core Set</p><p class="font-extrabold text-white mt-0.5">50 Pushups / 50 Squats</p></div>
-                        <div class="p-3 bg-slate-950 rounded-xl border border-slate-800"><p class="text-xs text-slate-500 font-bold uppercase">🏃 Agility Set</p><p class="font-extrabold text-white mt-0.5">50 Lunges / 50 Jumping Jacks</p></div>
-                    </div>
-                    <div class="pt-2 flex justify-end">
-                        ${isCompleted ? 
-                            `<span class="bg-emerald-500/10 text-emerald-400 text-xs px-4 py-2 rounded-xl font-bold border border-emerald-500/20">✓ Task Cleared This Week</span>` :
-                            `<button onclick="submitTrackerModuleCompletion('${weekId}', '${workoutLesson.star_reward || 15}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-lg shadow-emerald-600/10">Claim Workout Star Bonus</button>`
-                        }
-                    </div>
-                </div>
+                    <div class="space-y-2 pt-2">
             `;
+
+            workoutExercises.forEach(ex => {
+                const activityKey = `WORKOUT_${ex.replace(/\s+/g, '_')}_${weekContext.replace(/\s+/g, '_')}`;
+                const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
+
+                html += `
+                    <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" 
+                                   ${isChecked ? 'checked disabled' : ''} 
+                                   onchange="submitIndividualItemProgress('${activityKey}', 2)"
+                                   class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
+                        </div>
+                        <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
+                            ${isChecked ? 'Cleared' : '+2 ★'}
+                        </span>
+                    </label>
+                `;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
         }
 
-        function renderDailySkillsSection(container) {
-            let skillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
-            if (!skillsLesson) {
-                container.innerHTML = `<p class="text-slate-500 italic text-center p-4">Daily skills profile model blueprint missing.</p>`;
-                return;
-            }
-            const dailyId = `L_DAILY_SKILLS_${skillsLesson.title.toString().trim()}`;
-            const isCompleted = skillsLesson.completed;
+        // --- GRANULAR SKILLS CHECKBOX SECTION ---
+        function renderGranularSkillsSection(container) {
+            const skillsExercises = [
+                "100 Stickhandling Touches",
+                "50 Shots"
+            ];
 
-            container.innerHTML = `
+            let baseSkillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
+            const dateContext = baseSkillsLesson ? baseSkillsLesson.title : "Today";
+
+            let html = `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-                    <div class="flex justify-between items-start border-b border-slate-800 pb-4">
-                        <div>
-                            <span class="bg-amber-500/10 text-amber-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-amber-500/20">Daily Skills Tracker</span>
-                            <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">${skillsLesson.title}</h3>
-                        </div>
-                        <span class="text-xs text-yellow-500 font-bold bg-yellow-500/10 px-3 py-1 rounded-full border border-yellow-500/20">+${skillsLesson.star_reward || 5} Stars</span>
+                    <div>
+                        <span class="bg-amber-500/10 text-amber-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-amber-500/20">Daily Calibration</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Skills Drills (${dateContext})</h3>
+                        <p class="text-xs text-slate-400 mt-1">Complete your technical elements to claim +2 Stars per unit!</p>
                     </div>
-                    <div class="grid grid-cols-2 gap-3 text-sm">
-                        <div class="p-3 bg-slate-950 rounded-xl border border-slate-800"><p class="text-xs text-slate-500 font-bold uppercase">🏒 Stickhandling</p><p class="font-extrabold text-white mt-0.5">100 Quick Touches</p></div>
-                        <div class="p-3 bg-slate-950 rounded-xl border border-slate-800"><p class="text-xs text-slate-500 font-bold uppercase">🎯 Shooting Rink</p><p class="font-extrabold text-white mt-0.5">50 Focused Wrist Shots</p></div>
-                    </div>
-                    <div class="pt-2 flex justify-end">
-                        ${isCompleted ? 
-                            `<span class="bg-emerald-500/10 text-emerald-400 text-xs px-4 py-2 rounded-xl font-bold border border-emerald-500/20">✓ Daily Requirements Met</span>` :
-                            `<button onclick="submitTrackerModuleCompletion('${dailyId}', '${skillsLesson.star_reward || 5}')" class="bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-lg shadow-amber-600/10">Log Daily Work Completion</button>`
-                        }
-                    </div>
-                </div>
+                    <div class="space-y-2 pt-2">
             `;
+
+            skillsExercises.forEach(ex => {
+                const activityKey = `SKILLS_${ex.replace(/\s+/g, '_')}_${dateContext.replace(/\s+/g, '_')}`;
+                const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
+
+                html += `
+                    <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" 
+                                   ${isChecked ? 'checked disabled' : ''} 
+                                   onchange="submitIndividualItemProgress('${activityKey}', 2)"
+                                   class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
+                        </div>
+                        <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
+                            ${isChecked ? 'Cleared' : '+2 ★'}
+                        </span>
+                    </label>
+                `;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        // Action function that handles writing the checked element instantly to the database matrix
+        async function submitIndividualItemProgress(activityKey, starBonus) {
+            try {
+                const response = await fetch(`${API_URL}?action=completeWorkoutModule&playerId=${currentAuthId}&activityId=${activityKey}&starBonus=${starBonus}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    fetchSynchronizedDataEngine(); // Triggers live state repaint re-rendering everything securely
+                } else {
+                    alert(res.message);
+                }
+            } catch (err) { console.error(err); }
         }
 
         async function handleLessonCompletion(lessonId, videoUrl) {
@@ -346,23 +366,7 @@
             try {
                 const response = await fetch(`${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=LESSON&activityId=${lessonId}`, { method: 'POST' });
                 const res = await response.json();
-                if (res.success) {
-                    fetchSynchronizedDataEngine();
-                } else {
-                    alert(res.message);
-                }
-            } catch (err) { console.error(err); }
-        }
-
-        async function submitTrackerModuleCompletion(targetActivityId, bonus) {
-            try {
-                const response = await fetch(`${API_URL}?action=completeWorkoutModule&playerId=${currentAuthId}&activityId=${targetActivityId}&starBonus=${bonus}`, { method: 'POST' });
-                const res = await response.json();
-                if (res.success) {
-                    fetchSynchronizedDataEngine();
-                } else {
-                    alert(res.message);
-                }
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
             } catch (err) { console.error(err); }
         }
 
@@ -373,11 +377,11 @@
             tbody.innerHTML = playerData.leaderboard.map((player, idx) => {
                 const isMe = player.id.toString().trim() === currentAuthId.toString().trim();
                 return `
-                    <tr class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-l-3 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/30 transition">
+                    <tr class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/30 transition">
                         <td class="py-3.5 pl-3 font-mono text-xs">${idx + 1}</td>
                         <td class="py-3.5 flex items-center gap-2">
                             <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
-                            <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black tracking-wide uppercase px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
+                            <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
                         </td>
                         <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
                         <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
@@ -397,7 +401,6 @@
                         <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${s.id}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-3 mt-1">
                         <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${s.name}</p>
                         <p class="text-[10px] text-slate-500 font-bold mt-1">Stock Left: ${s.stockLeft}</p>
-                        
                         <div class="w-full mt-4">
                             ${s.owned ? 
                                 `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
@@ -442,7 +445,7 @@
             titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Tactical Quiz Assessment";
             
             if (activeQuizQuestionsCache.length === 0) {
-                bodyEl.innerHTML = `<p class="text-slate-500 italic text-center p-4">No exam sheet configurations registered for this layout lesson key structure.</p>`;
+                bodyEl.innerHTML = `<p class="text-slate-500 italic text-center p-4">No exam sheet configurations registered.</p>`;
                 document.getElementById('quiz-modal').classList.remove('hidden');
                 return;
             }
@@ -464,9 +467,7 @@
             document.getElementById('quiz-modal').classList.remove('hidden');
         }
 
-        function closeQuizModal() {
-            document.getElementById('quiz-modal').classList.add('hidden');
-        }
+        function closeQuizModal() { document.getElementById('quiz-modal').classList.add('hidden'); }
 
         async function evaluateActiveQuizAnswers() {
             let correctCount = 0;
@@ -481,10 +482,7 @@
                 }
             });
 
-            if (missingAnswerGuard) {
-                alert("Please answer all questions before submitting your exam.");
-                return;
-            }
+            if (missingAnswerGuard) { alert("Please answer all questions."); return; }
 
             const perfectScoreEarned = correctCount === total;
             const scorePercent = Math.round((correctCount / total) * 100);
@@ -492,34 +490,23 @@
             try {
                 const response = await fetch(`${API_URL}?action=submitTestResult&playerId=${currentAuthId}&lessonId=${activeQuizLessonTarget}&score=${scorePercent}&passed=${perfectScoreEarned}`, { method: 'POST' });
                 const res = await response.json();
-                
                 if (res.success) {
-                    if (perfectScoreEarned) {
-                        alert(`🎉 Perfect Score! 100% Correct. You earned +10 Stars!`);
-                    } else {
-                        alert(`Quiz Finished. Result: ${scorePercent}% (${correctCount}/${total} Correct). 100% required to pass and claim rewards. Try again!`);
-                    }
+                    if (perfectScoreEarned) { alert(`🎉 Perfect Score! 100% Correct. You earned +10 Stars!`); } 
+                    else { alert(`Quiz Finished. Result: ${scorePercent}%. 100% required to pass. Try again!`); }
                     closeQuizModal();
                     fetchSynchronizedDataEngine();
                 }
             } catch (err) { console.error(err); }
         }
 
-        // --- NAVIGATION AND AUTH PLATFORM HOOKS ---
         function switchCategoryView(targetTab) {
             currentTrainingCategory = targetTab;
             
-            // Adjust Nav Highlight Classes
             ['strategy', 'workout', 'skills', 'gameboard', 'store'].forEach(tab => {
                 const el = document.getElementById(`nav-${tab}`);
-                if (tab === targetTab) {
-                    el.className = "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer";
-                } else {
-                    el.className = "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer";
-                }
+                el.className = tab === targetTab ? "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer" : "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer";
             });
 
-            // Toggle Layout Views
             const lessonsList = document.getElementById('lessons-list');
             const gameboardView = document.getElementById('gameboard-view-container');
             const storeView = document.getElementById('store-view-container');
@@ -555,7 +542,6 @@
             try {
                 const response = await fetch(`${API_URL}?action=login&playerId=${idInput}&password=${encodeURIComponent(passInput)}`, { method: 'POST' });
                 const res = await response.json();
-                
                 if (res.success) {
                     currentAuthId = idInput;
                     localStorage.setItem('hockey_player_id', idInput);
@@ -563,29 +549,21 @@
                     document.getElementById('app-viewport').classList.remove('hidden');
                     fetchSynchronizedDataEngine();
                 } else {
-                    errorEl.innerText = res.message;
-                    errorEl.classList.remove('hidden');
-                    btn.innerText = "Verify Credentials";
+                    errorEl.innerText = res.message; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
                 }
             } catch (err) {
-                errorEl.innerText = "Network connection failed to access gateway.";
-                errorEl.classList.remove('hidden');
-                btn.innerText = "Verify Credentials";
+                errorEl.innerText = "Network connection failed."; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
             }
         }
 
         function logSystemOut() {
             localStorage.removeItem('hockey_player_id');
-            currentAuthId = "";
-            playerData = {};
-            document.getElementById('auth-player-id').value = "";
-            document.getElementById('auth-password').value = "";
+            currentAuthId = ""; playerData = {};
+            document.getElementById('auth-player-id').value = ""; document.getElementById('auth-password').value = "";
             document.getElementById('login-btn').innerText = "Verify Credentials";
-            document.getElementById('app-viewport').classList.add('hidden');
-            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('app-viewport').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden');
         }
 
-        // AUTO INITIALIZE ON REFRESH
         if (currentAuthId) {
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('app-viewport').classList.remove('hidden');
