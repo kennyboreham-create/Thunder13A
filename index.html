@@ -1075,10 +1075,12 @@
             document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
             fetchSynchronizedDataEngine();
         }
-        // --- FIXED LIVE CELEBRATION TIMELINE NEWS COMPILER ---
+        // --- LIVE CELEBRATION TIMELINE NEWS COMPILER ---
         function renderTeamNewsWireLayout() {
             const container = document.getElementById('news-activity-timeline');
-            if (!container) return;
+            if (!container) {
+                return; // Safe return: Inside a function block
+            }
 
             let activities = [];
 
@@ -1100,7 +1102,7 @@
                     
                     if (statusStr === 'ACCEPTED') {
                         activities.push({
-                            weight: 5000 + index, // Boost accepted deals to the top
+                            weight: 5000 + index, 
                             icon: "🤝",
                             badge: "TRADE COMPLETED",
                             badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
@@ -1124,7 +1126,6 @@
                     const totalStars = parseInt(player.totalStars) || 0;
                     const cleanScore = parseInt(player.score) || 0;
 
-                    // Removed strict minimums (score > 0, stars > 50) so EVERY player shows up
                     activities.push({
                         weight: 2000 + cleanScore + index,
                         icon: "🏒",
@@ -1152,7 +1153,6 @@
                     const stockLeft = sprite.stockLeft !== undefined ? sprite.stockLeft : rarity;
                     const name = sprite.sprite_name || sprite.name || `Asset ${sprite.id}`;
                     
-                    // If items have been purchased or stock has dropped
                     if (stockLeft < rarity) {
                         activities.push({
                             weight: 500 + index,
@@ -1165,17 +1165,17 @@
                 });
             }
 
-            // SORT TIMELINE: Highest weight score floats to the top
+            // SORT TIMELINE
             activities.sort((a, b) => b.weight - a.weight);
 
-            // RENDER LOGIC
+            // RENDER LOGIC OUT TO HTML TARGET CONTAINER
             if (activities.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-10 bg-slate-950/40 border border-slate-800 rounded-xl">
                         <p class="text-slate-500 text-xs italic">No matching activities found inside local memory arrays.</p>
                         <p class="text-[10px] text-slate-600 mt-1 font-mono">Leaderboard Length: ${playerData.leaderboard ? playerData.leaderboard.length : 0} | Trades Length: ${playerData.activeTrades ? playerData.activeTrades.length : 0}</p>
                     </div>`;
-                return;
+                return; // Safe return: Inside function block boundary
             }
 
             container.innerHTML = activities.slice(0, 30).map(item => `
@@ -1189,7 +1189,7 @@
                     </div>
                 </div>
             `).join('');
-        }
+        } // Make sure this bracket is directly closing your function!
 
             // 3. FALLBACK GENERATOR FOR SIMULATED LIVE PURCHASES (If sheets lack direct order records)
             // This reads your store state and creates automated notices for item ownership to make the feed feel incredibly active
