@@ -529,19 +529,47 @@
 
         function closeInventoryModal() { document.getElementById('inventory-modal').classList.add('hidden'); }
 
-        // --- TRADE PROPOSAL DRAFT MODAL SLIP ---
+        // --- FIXED TRADE PROPOSAL DRAFT MODAL SLIP ---
         function openTradeProposalSlip(targetPlayerId, targetSpriteId) {
             tradeTargetPlayerId = targetPlayerId;
             tradeTargetSpriteId = targetSpriteId;
 
             const select = document.getElementById('trade-offer-selector');
-            const myProfileSprites = playerData.playerProfile.ownedSprites || [];
+            
+            // Extract your owned inventory array
+            const myProfileSprites = (playerData.playerProfile && playerData.playerProfile.ownedSprites) ? 
+                                      playerData.playerProfile.ownedSprites : [];
 
             if (myProfileSprites.length === 0) {
+                // Safe absolute fallback if inventory arrays haven't loaded yet
                 select.innerHTML = `<option value="S001">Starter Avatar (S001)</option>`;
             } else {
-                select.innerHTML = myProfileSprites.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+                select.innerHTML = myProfileSprites.map(item => {
+                    // 1. Extract raw ID safely whether item is an object or a plain string
+                    const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
+                    const cleanId = spriteId.toString().trim();
+                    
+                    if (cleanId === "") return "";
+
+                    // 2. Cross-reference against store catalog dataset to find real name
+                    const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
+                    
+                    // 3. Resolve the human-readable label matching your spreadsheet keys
+                    let nameLabel = "Unknown Sprite";
+                    if (cleanId === "S001") {
+                        nameLabel = "Starter Avatar";
+                    } else if (typeof item === 'object' && item !== null && item.name) {
+                        nameLabel = item.name;
+                    } else if (sData) {
+                        nameLabel = sData.sprite_name || sData.name || `Sprite ${cleanId}`;
+                    } else {
+                        nameLabel = `Sprite ${cleanId}`;
+                    }
+
+                    return `<option value="${cleanId}">${nameLabel} (${cleanId})</option>`;
+                }).join('');
             }
+            
             document.getElementById('trade-proposal-modal').classList.remove('hidden');
         }
 
