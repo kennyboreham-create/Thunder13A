@@ -436,7 +436,7 @@
         let activeQuizQuestionsCache = [];
         let activeQuizLessonTarget = "";
 
-        // --- QUIZ EXAMINATION CONTROLLER ACTIONS (FIXED UNDEFINED CASING) ---
+        // --- QUIZ EXAMINATION CONTROLLER ACTIONS (BULLETPROOF CASING & HEADERS) ---
         function openQuizModal(lessonId) {
             activeQuizLessonTarget = lessonId;
             activeQuizQuestionsCache = playerData.tests.filter(t => t.lesson_id.toString().trim() === lessonId.toString().trim());
@@ -454,13 +454,13 @@
             }
 
             bodyEl.innerHTML = activeQuizQuestionsCache.map((q, idx) => {
-                // Auto-fallback mapping to handle both lowercase or UPPERCASE Google Sheet column headers safely
-                const questionText = q.question || q.QUESTION || "Missing Question Text";
-                const optA = q.option_a || q.OPTION_A || "";
-                const optB = q.option_b || q.OPTION_B || "";
-                const optC = q.option_c || q.OPTION_C || "";
-                const optD = q.option_d || q.OPTION_D || "";
-                const qId = q.id || q.ID;
+                // Multi-fallback parsing mapping to handle ANY variations of sheet column spellings
+                const questionText = q.question || q.QUESTION || q.Text || q.text || "Missing Question Text";
+                const optA = q.option_a || q.OPTION_A || q.a || q.A || "";
+                const optB = q.option_b || q.OPTION_B || q.b || q.B || "";
+                const optC = q.option_c || q.OPTION_C || q.c || q.C || "";
+                const optD = q.option_d || q.OPTION_D || q.d || q.D || "";
+                const qId = q.id || q.ID || idx;
 
                 return `
                     <div class="space-y-2.5 pb-4 border-b border-slate-800 last:border-0">
@@ -478,15 +478,16 @@
             document.getElementById('quiz-modal').classList.remove('hidden');
         }
 
-        // --- EVALUATE ANSWERS SUBMISSION (UPDATED FOR UPPERCASE FALLBACK) ---
+        // --- EVALUATE ANSWERS SUBMISSION (FALLBACK CHECKER) ---
         async function evaluateActiveQuizAnswers() {
             let correctCount = 0;
             let total = activeQuizQuestionsCache.length;
             let missingAnswerGuard = false;
 
-            activeQuizQuestionsCache.forEach(q => {
-                const qId = q.id || q.ID;
-                const correctAns = q.correct_answer || q.CORRECT_ANSWER || "";
+            activeQuizQuestionsCache.forEach((q, idx) => {
+                const qId = q.id || q.ID || idx;
+                // Checks for correct_answer, CORRECT_ANSWER, answer, or ANSWER headers
+                const correctAns = q.correct_answer || q.CORRECT_ANSWER || q.answer || q.ANSWER || "";
                 
                 const selected = document.querySelector(`input[name="q_${qId}"]:checked`);
                 if (!selected) { missingAnswerGuard = true; return; }
