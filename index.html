@@ -1075,7 +1075,7 @@
             document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
             fetchSynchronizedDataEngine();
         }
-        // --- LIVE CELEBRATION TIMELINE NEWS COMPILER ---
+        // --- FIXED LIVE CELEBRATION TIMELINE NEWS COMPILER ---
         function renderTeamNewsWireLayout() {
             const container = document.getElementById('news-activity-timeline');
             if (!container) return;
@@ -1086,57 +1086,110 @@
             const findSpriteName = (id) => {
                 if (!id) return "Premium Sprite";
                 const clean = id.toString().trim().toUpperCase();
-                if (clean === "S001") return "Starter Avatar";
+                if (clean === "S001" || clean === "1") return "Starter Avatar";
                 const s = playerData.storeSprites ? playerData.storeSprites.find(item => item.id.toString().trim().toUpperCase() === clean) : null;
                 return s ? (s.sprite_name || s.name) : `Sprite (${id})`;
             };
 
-            // 1. EXTRACT SUCCESSFUL TRADES
-            if (playerData.activeTrades) {
-                playerData.activeTrades.forEach(trade => {
-                    if (trade.status.toString().trim().toUpperCase() === 'ACCEPTED') {
-                        // Create a pseudo-timestamp or use the trade ID number to establish ordering
-                        const timestampWeight = parseInt(trade.id.replace(/\D/g, '')) || 0;
-                        
+            // 1. EXTRACT ALL TRADES (PENDING AND ACCEPTED)
+            if (playerData.activeTrades && playerData.activeTrades.length > 0) {
+                playerData.activeTrades.forEach((trade, index) => {
+                    const statusStr = trade.status.toString().trim().toUpperCase();
+                    const offerName = findSpriteName(trade.offered_id);
+                    const requestName = findSpriteName(trade.requested_sprite_id);
+                    
+                    if (statusStr === 'ACCEPTED') {
                         activities.push({
-                            weight: timestampWeight,
+                            weight: 5000 + index, // Boost accepted deals to the top
                             icon: "🤝",
                             badge: "TRADE COMPLETED",
-                            badgeClass: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-                            message: `Player <span class="text-slate-200 font-bold">${trade.sender_id}</span> successfully swapped <span class="text-blue-400 font-semibold">${findSpriteName(trade.offered_id)}</span> with Player <span class="text-slate-200 font-bold">${trade.receiver_id}</span> for <span class="text-purple-400 font-semibold">${findSpriteName(trade.requested_sprite_id)}</span>.`
+                            badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                            message: `Player <span class="text-slate-200 font-bold">${trade.sender_id}</span> successfully swapped <span class="text-blue-400 font-semibold">${offerName}</span> with Player <span class="text-slate-200 font-bold">${trade.receiver_id}</span> for <span class="text-purple-400 font-semibold">${requestName}</span>.`
+                        });
+                    } else if (statusStr === 'PENDING') {
+                        activities.push({
+                            weight: 4000 + index,
+                            icon: "⚖️",
+                            badge: "NEW PROPOSAL",
+                            badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                            message: `Player <span class="text-slate-200 font-bold">${trade.sender_id}</span> proposed a contract swap: Offering <span class="text-blue-400 font-semibold">${offerName}</span> for Player <span class="text-slate-200 font-bold">${trade.receiver_id}</span>'s <span class="text-indigo-400 font-semibold">${requestName}</span>.`
                         });
                     }
                 });
             }
 
-            // 2. EXTRACT COMPLETED DRILLS & TRAINING ACHIEVEMENTS
-            if (playerData.leaderboard) {
-                playerData.leaderboard.forEach(player => {
-                    // Check if they completed high workouts or have star accomplishments
+            // 2. EXTRACT EVERY PLAYER PROFILE FROM LEADERBOARD
+            if (playerData.leaderboard && playerData.leaderboard.length > 0) {
+                playerData.leaderboard.forEach((player, index) => {
                     const totalStars = parseInt(player.totalStars) || 0;
                     const cleanScore = parseInt(player.score) || 0;
 
-                    if (cleanScore > 0) {
-                        activities.push({
-                            weight: cleanScore * 10, // weight by score magnitude
-                            icon: "🏒",
-                            badge: "SKILL MILESTONE",
-                            badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                            message: `<span class="text-white font-extrabold">${player.name}</span> climbed the charts to achieve a tracking performance total of <span class="text-emerald-400 font-bold">${cleanScore} points</span>!`
-                        });
-                    }
+                    // Removed strict minimums (score > 0, stars > 50) so EVERY player shows up
+                    activities.push({
+                        weight: 2000 + cleanScore + index,
+                        icon: "🏒",
+                        badge: "ROSTER STATUS",
+                        badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                        message: `<span class="text-white font-extrabold">${player.name}</span> is active on the training grid with an overall tracking score of <span class="text-blue-400 font-bold">${cleanScore} points</span>!`
+                    });
 
-                    if (totalStars > 50) {
+                    if (totalStars > 0) {
                         activities.push({
-                            weight: totalStars,
+                            weight: 1000 + totalStars + index,
                             icon: "⭐",
-                            badge: "STAR RICHES",
+                            badge: "WALLET BANK",
                             badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-                            message: `<span class="text-white font-extrabold">${player.name}</span> crossed a massive milestone bank balance holding <span class="text-amber-300 font-mono font-bold">${totalStars} Stars</span>!`
+                            message: `<span class="text-white font-extrabold">${player.name}</span> currently commands a balance of <span class="text-amber-300 font-mono font-bold">${totalStars} Stars</span> available for marketplace spend.`
                         });
                     }
                 });
             }
+
+            // 3. EXTRACT STORE INVENTORY EVENTS
+            if (playerData.storeSprites && playerData.storeSprites.length > 0) {
+                playerData.storeSprites.forEach((sprite, index) => {
+                    const rarity = parseInt(sprite.rarity) || 999;
+                    const stockLeft = sprite.stockLeft !== undefined ? sprite.stockLeft : rarity;
+                    const name = sprite.sprite_name || sprite.name || `Asset ${sprite.id}`;
+                    
+                    // If items have been purchased or stock has dropped
+                    if (stockLeft < rarity) {
+                        activities.push({
+                            weight: 500 + index,
+                            icon: "🛍️",
+                            badge: "MARKET UPGRADE",
+                            badgeClass: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+                            message: `The locker room store updated stock levels for <span class="text-slate-200 font-bold">${name}</span>. Only <span class="text-rose-400 font-bold">${stockLeft} units</span> remain available.`
+                        });
+                    }
+                });
+            }
+
+            // SORT TIMELINE: Highest weight score floats to the top
+            activities.sort((a, b) => b.weight - a.weight);
+
+            // RENDER LOGIC
+            if (activities.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 bg-slate-950/40 border border-slate-800 rounded-xl">
+                        <p class="text-slate-500 text-xs italic">No matching activities found inside local memory arrays.</p>
+                        <p class="text-[10px] text-slate-600 mt-1 font-mono">Leaderboard Length: ${playerData.leaderboard ? playerData.leaderboard.length : 0} | Trades Length: ${playerData.activeTrades ? playerData.activeTrades.length : 0}</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = activities.slice(0, 30).map(item => `
+                <div class="p-3 bg-slate-900 border border-slate-800/80 rounded-xl flex items-start gap-3 shadow-sm">
+                    <span class="text-base bg-slate-950 border border-slate-800 p-1.5 rounded-lg shrink-0">${item.icon}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded border ${item.badgeClass}">${item.badge}</span>
+                        </div>
+                        <p class="text-xs text-slate-300 font-sans mt-1 leading-relaxed">${item.message}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
 
             // 3. FALLBACK GENERATOR FOR SIMULATED LIVE PURCHASES (If sheets lack direct order records)
             // This reads your store state and creates automated notices for item ownership to make the feed feel incredibly active
