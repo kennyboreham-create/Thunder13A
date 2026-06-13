@@ -15,10 +15,11 @@
 <body class="text-slate-100 font-sans min-h-screen flex flex-col antialiased">
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec"; 
+        const API_URL = "YOUR_SCRIPT_URL_HERE"; 
         let playerData = {};
         let currentAuthId = localStorage.getItem('hockey_player_id') || "";
         let currentTrainingCategory = "strategy"; 
+        let activeSubTab = "standings"; // Tracking subbuttons inside leaderboard main view
     </script>
 
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
@@ -94,8 +95,14 @@
 
             <div id="lessons-list" class="space-y-3"></div>
 
-            <div id="gameboard-view-container" class="hidden space-y-6">
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+            <div id="gameboard-view-container" class="hidden space-y-4">
+                
+                <div class="flex gap-2 border-b border-slate-800 pb-3">
+                    <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer">Leaderboard Standings</button>
+                    <button onclick="switchSubTab('lineup')" id="sub-tab-lineup" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer">Starting Lineup</button>
+                </div>
+
+                <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
                     <h3 class="text-lg font-black uppercase text-white tracking-tight mb-4 flex items-center gap-2">
                         <span class="text-yellow-500">🏆</span> Team Standings Leaderboard
                     </h3>
@@ -113,6 +120,14 @@
                         </table>
                     </div>
                 </div>
+
+                <div id="sub-view-lineup" class="hidden space-y-4">
+                    <div class="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-900/30 p-6 rounded-2xl shadow-xl">
+                        <h3 class="text-xl font-black uppercase text-white tracking-tight">🏒 Starting Lineup</h3>
+                        <p class="text-xs text-slate-400 mt-1">Claim a card slot in the starting line! Evict the occupant by buying them out. The buyout price climbs by +1 Star with every capture.</p>
+                    </div>
+                    <div id="lineup-slots-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+                </div>
             </div>
 
             <div id="store-view-container" class="hidden">
@@ -120,6 +135,23 @@
             </div>
 
         </main>
+    </div>
+
+    <div id="lineup-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full shadow-2xl p-6 space-y-4">
+            <div>
+                <h3 class="font-black text-white text-base uppercase tracking-tight">Deploy Roster Card</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Select an owned sprite to represent you in this slot.</p>
+            </div>
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Your Card Inventory:</label>
+                <select id="lineup-sprite-selector" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-bold text-slate-200 focus:outline-none focus:border-blue-500 transition"></select>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeLineupModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Cancel</button>
+                <button onclick="confirmLineupSlotPurchase()" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-5 py-2 rounded-xl text-xs transition shadow-lg shadow-blue-600/10">Confirm Buyout</button>
+            </div>
+        </div>
     </div>
 
     <div id="quiz-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -159,7 +191,12 @@
             document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
             document.getElementById('user-avatar-display').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${p.activeSpriteId}`;
             
-            renderLessonsList();
+            if (currentTrainingCategory === 'gameboard') {
+                if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
+                else renderStartingLineupLayout();
+            } else {
+                renderLessonsList();
+            }
         }
 
         function renderLessonsList() {
@@ -178,7 +215,6 @@
                 return;
             }
 
-            // --- STRATEGY CATEGORY BLOCK RENDERING ---
             document.getElementById('strategy-filter-bar').classList.remove('hidden');
             const filterValue = document.getElementById('strategy-status-filter').value; 
             
@@ -255,14 +291,13 @@
             container.innerHTML = htmlOutput === "" ? `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No matching strategy items found.</p>` : htmlOutput;
         }
 
-        // --- GRANULAR WORKOUT CHECKBOX SECTION (FIXED BURPEE ID) ---
         function renderGranularWorkoutSection(container) {
             const workoutExercises = [
                 "20 Pushups",
                 "30 Squats",
                 "20 Lunges",
                 "30 Jumps",
-                "10 Burpees", // Cleaned apostrophe here
+                "10 Burpees", 
                 "100 Jumping Jacks"
             ];
             
@@ -280,7 +315,6 @@
             `;
 
             workoutExercises.forEach(ex => {
-                // Sanitize the ID: replace spaces with underscores AND strip out any rogue apostrophes
                 const cleanExName = ex.replace(/'/g, "").replace(/\s+/g, '_');
                 const activityKey = `WORKOUT_${cleanExName}_${weekContext.replace(/\s+/g, '_')}`;
                 const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
@@ -305,7 +339,6 @@
             container.innerHTML = html;
         }
 
-       // --- GRANULAR SKILLS CHECKBOX SECTION ---
         function renderGranularSkillsSection(container) {
             const skillsExercises = [
                 "100 Stickhandling Touches",
@@ -313,7 +346,6 @@
             ];
 
             let baseSkillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
-            // Force conversion to a string here as well just to be perfectly safe
             const dateContext = baseSkillsLesson ? String(baseSkillsLesson.title) : "Today";
 
             let html = `
@@ -350,16 +382,11 @@
             container.innerHTML = html;
         }
 
-        // Action function that handles writing the checked element instantly to the database matrix
         async function submitIndividualItemProgress(activityKey, starBonus) {
             try {
                 const response = await fetch(`${API_URL}?action=completeWorkoutModule&playerId=${currentAuthId}&activityId=${activityKey}&starBonus=${starBonus}`, { method: 'POST' });
                 const res = await response.json();
-                if (res.success) {
-                    fetchSynchronizedDataEngine(); // Triggers live state repaint re-rendering everything securely
-                } else {
-                    alert(res.message);
-                }
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
             } catch (err) { console.error(err); }
         }
 
@@ -390,6 +417,87 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        // --- STARTING LINEUP LAYOUT MODAL LOGIC ---
+        let selectedSlotToPurchase = null;
+
+        function renderStartingLineupLayout() {
+            const grid = document.getElementById('lineup-slots-grid');
+            if (!playerData.gameboardSlots) return;
+
+            grid.innerHTML = playerData.gameboardSlots.map(slot => {
+                const hasOccupant = slot.playerId && slot.playerId.trim() !== "";
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
+                        <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
+                        
+                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
+                        
+                        <div class="min-h-[44px] flex flex-col justify-center">
+                            <p class="text-xs font-black text-white uppercase tracking-wide leading-tight">${hasOccupant ? slot.playerName : 'Empty Slot'}</p>
+                            ${hasOccupant ? `<p class="text-[9px] text-slate-400 font-bold mt-0.5">Jersey #${slot.jerseyNumber} • ${slot.spriteName}</p>` : '<p class="text-[9px] text-slate-500 font-medium">Available Position</p>'}
+                        </div>
+
+                        <button onclick="openLineupModal('${slot.slotId}')" class="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black py-2 rounded-xl transition shadow-md shadow-blue-600/5 cursor-pointer">
+                            🛒 Buyout (${slot.currentCost} ★)
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openLineupModal(slotId) {
+            selectedSlotToPurchase = slotId;
+            const selector = document.getElementById('lineup-sprite-selector');
+            const owned = playerData.playerProfile.ownedSprites || [];
+
+            if (owned.length === 0) {
+                selector.innerHTML = `<option value="S001">Starter Avatar</option>`;
+            } else {
+                selector.innerHTML = owned.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+            }
+            document.getElementById('lineup-modal').classList.remove('hidden');
+        }
+
+        function closeLineupModal() { document.getElementById('lineup-modal').classList.add('hidden'); selectedSlotToPurchase = null; }
+
+        async function confirmLineupSlotPurchase() {
+            if (!selectedSlotToPurchase) return;
+            const spriteId = document.getElementById('lineup-sprite-selector').value;
+
+            try {
+                const response = await fetch(`${API_URL}?action=buyLineupSlot&playerId=${currentAuthId}&slotId=${selectedSlotToPurchase}&spriteId=${spriteId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    closeLineupModal();
+                    fetchSynchronizedDataEngine();
+                } else {
+                    alert(res.message);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function switchSubTab(subTab) {
+            activeSubTab = subTab;
+            const btnStandings = document.getElementById('sub-tab-standings');
+            const btnLineup = document.getElementById('sub-tab-lineup');
+            const viewStandings = document.getElementById('sub-view-standings');
+            const viewLineup = document.getElementById('sub-view-lineup');
+
+            if (subTab === 'standings') {
+                btnStandings.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
+                btnLineup.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
+                viewStandings.classList.remove('hidden');
+                viewLineup.classList.add('hidden');
+                renderTeamLeaderboardLayout();
+            } else {
+                btnStandings.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
+                btnLineup.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
+                viewStandings.classList.add('hidden');
+                viewLineup.classList.remove('hidden');
+                renderStartingLineupLayout();
+            }
         }
 
         function renderStoreInventoryLayout() {
@@ -432,11 +540,6 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- QUIZ EXAMINATION CONTROLLER ACTIONS ---
-        let activeQuizQuestionsCache = [];
-        let activeQuizLessonTarget = "";
-
-        // --- QUIZ EXAMINATION CONTROLLER ACTIONS (BULLETPROOF CASING & HEADERS) ---
         function openQuizModal(lessonId) {
             activeQuizLessonTarget = lessonId;
             activeQuizQuestionsCache = playerData.tests.filter(t => t.lesson_id.toString().trim() === lessonId.toString().trim());
@@ -454,7 +557,6 @@
             }
 
             bodyEl.innerHTML = activeQuizQuestionsCache.map((q, idx) => {
-                // Multi-fallback parsing mapping to handle ANY variations of sheet column spellings
                 const questionText = q.question || q.QUESTION || q.Text || q.text || "Missing Question Text";
                 const optA = q.option_a || q.OPTION_A || q.a || q.A || "";
                 const optB = q.option_b || q.OPTION_B || q.b || q.B || "";
@@ -478,7 +580,8 @@
             document.getElementById('quiz-modal').classList.remove('hidden');
         }
 
-        // --- EVALUATE ANSWERS SUBMISSION (FALLBACK CHECKER) ---
+        document.getElementById('quiz-modal').classList.add('hidden');
+
         async function evaluateActiveQuizAnswers() {
             let correctCount = 0;
             let total = activeQuizQuestionsCache.length;
@@ -486,7 +589,6 @@
 
             activeQuizQuestionsCache.forEach((q, idx) => {
                 const qId = q.id || q.ID || idx;
-                // Checks for correct_answer, CORRECT_ANSWER, answer, or ANSWER headers
                 const correctAns = q.correct_answer || q.CORRECT_ANSWER || q.answer || q.ANSWER || "";
                 
                 const selected = document.querySelector(`input[name="q_${qId}"]:checked`);
@@ -497,38 +599,6 @@
             });
 
             if (missingAnswerGuard) { alert("Please answer all questions before submitting."); return; }
-
-            const perfectScoreEarned = correctCount === total;
-            const scorePercent = Math.round((correctCount / total) * 100);
-
-            try {
-                const response = await fetch(`${API_URL}?action=submitTestResult&playerId=${currentAuthId}&lessonId=${activeQuizLessonTarget}&score=${scorePercent}&passed=${perfectScoreEarned}`, { method: 'POST' });
-                const res = await response.json();
-                if (res.success) {
-                    if (perfectScoreEarned) { alert(`🎉 Perfect Score! 100% Correct. You earned +10 Stars!`); } 
-                    else { alert(`Quiz Finished. Result: ${scorePercent}%. 100% required to pass. Try again!`); }
-                    closeQuizModal();
-                    fetchSynchronizedDataEngine();
-                }
-            } catch (err) { console.error(err); }
-        }
-
-        function closeQuizModal() { document.getElementById('quiz-modal').classList.add('hidden'); }
-
-        async function evaluateActiveQuizAnswers() {
-            let correctCount = 0;
-            let total = activeQuizQuestionsCache.length;
-            let missingAnswerGuard = false;
-
-            activeQuizQuestionsCache.forEach(q => {
-                const selected = document.querySelector(`input[name="q_${q.id}"]:checked`);
-                if (!selected) { missingAnswerGuard = true; return; }
-                if (selected.value.trim().toUpperCase() === q.correct_answer.toString().trim().toUpperCase()) {
-                    correctCount++;
-                }
-            });
-
-            if (missingAnswerGuard) { alert("Please answer all questions."); return; }
 
             const perfectScoreEarned = correctCount === total;
             const scorePercent = Math.round((correctCount / total) * 100);
@@ -564,7 +634,7 @@
             if (targetTab === 'gameboard') {
                 gameboardView.classList.remove('hidden');
                 document.getElementById('strategy-filter-bar').classList.add('hidden');
-                renderTeamLeaderboardLayout();
+                switchSubTab(activeSubTab); 
             } else if (targetTab === 'store') {
                 storeView.classList.remove('hidden');
                 document.getElementById('strategy-filter-bar').classList.add('hidden');
