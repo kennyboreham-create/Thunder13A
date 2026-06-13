@@ -654,29 +654,6 @@
             }
         }
 
-            // RENDER ARCHIVED HISTORY LEDGER
-            if (historyTrades.length === 0) {
-                historyContainer.innerHTML = `<p class="text-slate-500 text-xs italic text-center p-3">No archived market transaction receipts discovered inside historical logs.</p>`;
-            } else {
-                historyContainer.innerHTML = historyTrades.map(t => {
-                    const statusStr = t.status.toString().trim().toUpperCase();
-                    let badgeColor = "bg-slate-950 text-slate-500 border-slate-800";
-                    if (statusStr === 'ACCEPTED') badgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-                    if (statusStr === 'DECLINED') badgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-
-                    return `
-                        <div class="p-3.5 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between opacity-70">
-                            <div>
-                                <p class="text-xs font-bold text-slate-300">Contract Ticket <span class="font-mono text-slate-400">${t.id}</span></p>
-                                <p class="text-[11px] text-slate-400 mt-0.5">Swapped <span class="font-mono">${t.offer_sprite_id}</span> for <span class="font-mono">${t.request_sprite_id}</span></p>
-                            </div>
-                            <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border ${badgeColor}">${statusStr}</span>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
         async function resolveTradeProposal(tradeId, actionType) {
             try {
                 const response = await fetch(`${API_URL}?action=${actionType}&playerId=${currentAuthId}&tradeId=${tradeId}`, { method: 'POST' });
