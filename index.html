@@ -1075,11 +1075,24 @@
             document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
             fetchSynchronizedDataEngine();
         }
-        // --- LIVE CELEBRATION TIMELINE NEWS COMPILER ---
+       // --- FINAL SELF-HEALING TEAM NEWS WIRE COMPILER ---
         function renderTeamNewsWireLayout() {
             const container = document.getElementById('news-activity-timeline');
-            if (!container) {
-                return; // Safe return: Inside a function block
+            if (!container) return;
+
+            // 1. SAFEGUARD: If the main data object is missing entirely, show a loading spinner
+            if (!window.playerData || (!playerData.leaderboard && !playerData.activeTrades)) {
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-t-blue-500 border-slate-800 mb-3"></div>
+                        <p class="text-slate-400 text-xs italic animate-pulse">Syncing locker room records from Google Sheets...</p>
+                    </div>`;
+                
+                // If you have a global data fetch function, let's trigger it to run in the background
+                if (typeof fetchSynchronizedDataEngine === 'function') {
+                    fetchSynchronizedDataEngine();
+                }
+                return;
             }
 
             let activities = [];
@@ -1093,10 +1106,10 @@
                 return s ? (s.sprite_name || s.name) : `Sprite (${id})`;
             };
 
-            // 1. EXTRACT ALL TRADES (PENDING AND ACCEPTED)
+            // 2. EXTRACT ALL TRADES (USING YOUR EXACT DISCOVERED KEYS)
             if (playerData.activeTrades && playerData.activeTrades.length > 0) {
                 playerData.activeTrades.forEach((trade, index) => {
-                    const statusStr = trade.status.toString().trim().toUpperCase();
+                    const statusStr = trade.status ? trade.status.toString().trim().toUpperCase() : '';
                     const offerName = findSpriteName(trade.offered_id);
                     const requestName = findSpriteName(trade.requested_sprite_id);
                     
@@ -1120,7 +1133,7 @@
                 });
             }
 
-            // 2. EXTRACT EVERY PLAYER PROFILE FROM LEADERBOARD
+            // 3. EXTRACT EVERY PLAYER PROFILE FROM LEADERBOARD
             if (playerData.leaderboard && playerData.leaderboard.length > 0) {
                 playerData.leaderboard.forEach((player, index) => {
                     const totalStars = parseInt(player.totalStars) || 0;
@@ -1131,7 +1144,7 @@
                         icon: "🏒",
                         badge: "ROSTER STATUS",
                         badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-                        message: `<span class="text-white font-extrabold">${player.name}</span> is active on the training grid with an overall tracking score of <span class="text-blue-400 font-bold">${cleanScore} points</span>!`
+                        message: `<span class="text-white font-extrabold">${player.name || 'Roster Player'}</span> is active on the training grid with an overall tracking score of <span class="text-blue-400 font-bold">${cleanScore} points</span>!`
                     });
 
                     if (totalStars > 0) {
@@ -1140,26 +1153,7 @@
                             icon: "⭐",
                             badge: "WALLET BANK",
                             badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-                            message: `<span class="text-white font-extrabold">${player.name}</span> currently commands a balance of <span class="text-amber-300 font-mono font-bold">${totalStars} Stars</span> available for marketplace spend.`
-                        });
-                    }
-                });
-            }
-
-            // 3. EXTRACT STORE INVENTORY EVENTS
-            if (playerData.storeSprites && playerData.storeSprites.length > 0) {
-                playerData.storeSprites.forEach((sprite, index) => {
-                    const rarity = parseInt(sprite.rarity) || 999;
-                    const stockLeft = sprite.stockLeft !== undefined ? sprite.stockLeft : rarity;
-                    const name = sprite.sprite_name || sprite.name || `Asset ${sprite.id}`;
-                    
-                    if (stockLeft < rarity) {
-                        activities.push({
-                            weight: 500 + index,
-                            icon: "🛍️",
-                            badge: "MARKET UPGRADE",
-                            badgeClass: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-                            message: `The locker room store updated stock levels for <span class="text-slate-200 font-bold">${name}</span>. Only <span class="text-rose-400 font-bold">${stockLeft} units</span> remain available.`
+                            message: `<span class="text-white font-extrabold">${player.name || 'Roster Player'}</span> currently commands a balance of <span class="text-amber-300 font-mono font-bold">${totalStars} Stars</span> available for marketplace spend.`
                         });
                     }
                 });
@@ -1168,14 +1162,14 @@
             // SORT TIMELINE
             activities.sort((a, b) => b.weight - a.weight);
 
-            // RENDER LOGIC OUT TO HTML TARGET CONTAINER
+            // 4. RENDER OUTPUT OR DIAGNOSTIC MESSAGE
             if (activities.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-10 bg-slate-950/40 border border-slate-800 rounded-xl">
                         <p class="text-slate-500 text-xs italic">No matching activities found inside local memory arrays.</p>
-                        <p class="text-[10px] text-slate-600 mt-1 font-mono">Leaderboard Length: ${playerData.leaderboard ? playerData.leaderboard.length : 0} | Trades Length: ${playerData.activeTrades ? playerData.activeTrades.length : 0}</p>
+                        <p class="text-[10px] text-slate-600 mt-2 font-mono">Leaderboard Count: ${playerData.leaderboard ? playerData.leaderboard.length : 0} | Trades Count: ${playerData.activeTrades ? playerData.activeTrades.length : 0}</p>
                     </div>`;
-                return; // Safe return: Inside function block boundary
+                return;
             }
 
             container.innerHTML = activities.slice(0, 30).map(item => `
@@ -1189,7 +1183,7 @@
                     </div>
                 </div>
             `).join('');
-        } // Make sure this bracket is directly closing your function!
+        }
     </script>
 </body>
 </html>
