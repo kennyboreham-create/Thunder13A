@@ -255,19 +255,18 @@
             container.innerHTML = htmlOutput === "" ? `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No matching strategy items found.</p>` : htmlOutput;
         }
 
-        // --- GRANULAR WORKOUT CHECKBOX SECTION ---
+        // --- GRANULAR WORKOUT CHECKBOX SECTION (FIXED BURPEE ID) ---
         function renderGranularWorkoutSection(container) {
             const workoutExercises = [
                 "20 Pushups",
                 "30 Squats",
                 "20 Lunges",
-                "30 jumps",
-                "10 Burpee's",
+                "30 Jumps",
+                "10 Burpees", // Cleaned apostrophe here
                 "100 Jumping Jacks"
             ];
             
             let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
-            // Force conversion to a string using String() to prevent integer crash errors
             const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
 
             let html = `
@@ -281,7 +280,9 @@
             `;
 
             workoutExercises.forEach(ex => {
-                const activityKey = `WORKOUT_${ex.replace(/\s+/g, '_')}_${weekContext.replace(/\s+/g, '_')}`;
+                // Sanitize the ID: replace spaces with underscores AND strip out any rogue apostrophes
+                const cleanExName = ex.replace(/'/g, "").replace(/\s+/g, '_');
+                const activityKey = `WORKOUT_${cleanExName}_${weekContext.replace(/\s+/g, '_')}`;
                 const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
 
                 html += `
@@ -435,6 +436,7 @@
         let activeQuizQuestionsCache = [];
         let activeQuizLessonTarget = "";
 
+        // --- QUIZ EXAMINATION CONTROLLER ACTIONS (FIXED UNDEFINED CASING) ---
         function openQuizModal(lessonId) {
             activeQuizLessonTarget = lessonId;
             activeQuizQuestionsCache = playerData.tests.filter(t => t.lesson_id.toString().trim() === lessonId.toString().trim());
@@ -452,20 +454,62 @@
             }
 
             bodyEl.innerHTML = activeQuizQuestionsCache.map((q, idx) => {
+                // Auto-fallback mapping to handle both lowercase or UPPERCASE Google Sheet column headers safely
+                const questionText = q.question || q.QUESTION || "Missing Question Text";
+                const optA = q.option_a || q.OPTION_A || "";
+                const optB = q.option_b || q.OPTION_B || "";
+                const optC = q.option_c || q.OPTION_C || "";
+                const optD = q.option_d || q.OPTION_D || "";
+                const qId = q.id || q.ID;
+
                 return `
                     <div class="space-y-2.5 pb-4 border-b border-slate-800 last:border-0">
-                        <p class="text-sm font-bold text-slate-100 flex gap-2"><span class="text-indigo-400 font-mono">${idx + 1}.</span> ${q.question}</p>
+                        <p class="text-sm font-bold text-slate-100 flex gap-2"><span class="text-indigo-400 font-mono">${idx + 1}.</span> ${questionText}</p>
                         <div class="grid grid-cols-1 gap-2 pl-4">
-                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${q.id}" value="A" class="accent-indigo-500"> <span>${q.option_a}</span></label>
-                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${q.id}" value="B" class="accent-indigo-500"> <span>${q.option_b}</span></label>
-                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${q.id}" value="C" class="accent-indigo-500"> <span>${q.option_c}</span></label>
-                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${q.id}" value="D" class="accent-indigo-500"> <span>${q.option_d}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="A" class="accent-indigo-500"> <span>${optA}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="B" class="accent-indigo-500"> <span>${optB}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="C" class="accent-indigo-500"> <span>${optC}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="D" class="accent-indigo-500"> <span>${optD}</span></label>
                         </div>
                     </div>
                 `;
             }).join('');
 
             document.getElementById('quiz-modal').classList.remove('hidden');
+        }
+
+        // --- EVALUATE ANSWERS SUBMISSION (UPDATED FOR UPPERCASE FALLBACK) ---
+        async function evaluateActiveQuizAnswers() {
+            let correctCount = 0;
+            let total = activeQuizQuestionsCache.length;
+            let missingAnswerGuard = false;
+
+            activeQuizQuestionsCache.forEach(q => {
+                const qId = q.id || q.ID;
+                const correctAns = q.correct_answer || q.CORRECT_ANSWER || "";
+                
+                const selected = document.querySelector(`input[name="q_${qId}"]:checked`);
+                if (!selected) { missingAnswerGuard = true; return; }
+                if (selected.value.trim().toUpperCase() === correctAns.toString().trim().toUpperCase()) {
+                    correctCount++;
+                }
+            });
+
+            if (missingAnswerGuard) { alert("Please answer all questions before submitting."); return; }
+
+            const perfectScoreEarned = correctCount === total;
+            const scorePercent = Math.round((correctCount / total) * 100);
+
+            try {
+                const response = await fetch(`${API_URL}?action=submitTestResult&playerId=${currentAuthId}&lessonId=${activeQuizLessonTarget}&score=${scorePercent}&passed=${perfectScoreEarned}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    if (perfectScoreEarned) { alert(`🎉 Perfect Score! 100% Correct. You earned +10 Stars!`); } 
+                    else { alert(`Quiz Finished. Result: ${scorePercent}%. 100% required to pass. Try again!`); }
+                    closeQuizModal();
+                    fetchSynchronizedDataEngine();
+                }
+            } catch (err) { console.error(err); }
         }
 
         function closeQuizModal() { document.getElementById('quiz-modal').classList.add('hidden'); }
