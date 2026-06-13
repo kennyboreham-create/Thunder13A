@@ -1079,20 +1079,31 @@
             document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
             fetchSynchronizedDataEngine();
         }
-       // --- FINAL SELF-HEALING TEAM NEWS WIRE COMPILER ---
+       // --- COMPLETE ENGINE RENDERER FOR LOCKER ROOM WIRE ---
         function renderTeamNewsWireLayout() {
-            const container = document.getElementById('news-activity-timeline');
-            if (!container) return;
+            const panel = document.getElementById('sub-view-news');
+            if (!panel) return;
 
-            // 1. SAFEGUARD: If the main data object is missing entirely, show a loading spinner
+            // Header Layout Definition Template
+            const headerMarkup = `
+                <div class="bg-gradient-to-r from-slate-900 to-indigo-950/40 border border-slate-800 p-5 rounded-2xl shadow-xl mb-4">
+                    <h3 class="text-base font-black uppercase text-white tracking-tight flex items-center gap-2">📢 Locker Room Wire</h3>
+                    <p class="text-slate-400 text-xs mt-0.5">Real-time tracker celebrating training performance totals, team item trading deals, and custom storefront upgrades.</p>
+                </div>
+                <div id="news-activity-timeline" class="space-y-3 max-h-[600px] overflow-y-auto pr-1"></div>
+            `;
+
+            // Force immediate construction of the header template framework
+            panel.innerHTML = headerMarkup;
+            const container = document.getElementById('news-activity-timeline');
+
+            // 1. SAFEGUARD: Check if global sync records have initialized down to the client layout browser
             if (!window.playerData || (!playerData.leaderboard && !playerData.activeTrades)) {
                 container.innerHTML = `
                     <div class="text-center py-12">
                         <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-t-blue-500 border-slate-800 mb-3"></div>
                         <p class="text-slate-400 text-xs italic animate-pulse">Syncing locker room records from Google Sheets...</p>
                     </div>`;
-                
-                // If you have a global data fetch function, let's trigger it to run in the background
                 if (typeof fetchSynchronizedDataEngine === 'function') {
                     fetchSynchronizedDataEngine();
                 }
@@ -1101,7 +1112,7 @@
 
             let activities = [];
 
-            // Helper to pull sprite name safely
+            // Core name discovery utility loop
             const findSpriteName = (id) => {
                 if (!id) return "Premium Sprite";
                 const clean = id.toString().trim().toUpperCase();
@@ -1110,7 +1121,7 @@
                 return s ? (s.sprite_name || s.name) : `Sprite (${id})`;
             };
 
-            // 2. EXTRACT ALL TRADES (USING YOUR EXACT DISCOVERED KEYS)
+            // 2. COMPILE ACTIVE SHEET TRANSACTION SLIPS
             if (playerData.activeTrades && playerData.activeTrades.length > 0) {
                 playerData.activeTrades.forEach((trade, index) => {
                     const statusStr = trade.status ? trade.status.toString().trim().toUpperCase() : '';
@@ -1137,7 +1148,7 @@
                 });
             }
 
-            // 3. EXTRACT EVERY PLAYER PROFILE FROM LEADERBOARD
+            // 3. COMPILE ROSTER HIGHLIGHT RECORDS
             if (playerData.leaderboard && playerData.leaderboard.length > 0) {
                 playerData.leaderboard.forEach((player, index) => {
                     const totalStars = parseInt(player.totalStars) || 0;
@@ -1163,10 +1174,10 @@
                 });
             }
 
-            // SORT TIMELINE
+            // Sort timeline records chronologically via weight matrix scores
             activities.sort((a, b) => b.weight - a.weight);
 
-            // 4. RENDER OUTPUT OR DIAGNOSTIC MESSAGE
+            // 4. MAP DATA CARDS TO INNER TIMELINE CONTAINER
             if (activities.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-10 bg-slate-950/40 border border-slate-800 rounded-xl">
