@@ -427,7 +427,9 @@
             if (!playerData.gameboardSlots) return;
 
             grid.innerHTML = playerData.gameboardSlots.map(slot => {
-                const hasOccupant = slot.playerId && slot.playerId.trim() !== "";
+                // Robust verification: ensure playerId exists, isn't null, and isn't a blank string
+                const hasOccupant = slot.playerId !== undefined && slot.playerId !== null && slot.playerId.toString().trim() !== "";
+                
                 return `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
                         <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
