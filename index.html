@@ -466,7 +466,7 @@
             }).join('');
         }
 
-        // --- DYNAMIC ROSTER VAULT DISPLAY OVERLAY ---
+        // --- DYNAMIC ROSTER VAULT DISPLAY OVERLAY WITH FIXES ---
         function openPlayerInventoryModal(targetPlayerId) {
             const modal = document.getElementById('inventory-modal');
             const grid = document.getElementById('inventory-modal-grid');
@@ -478,27 +478,43 @@
             title.innerText = `${targetPlayer.name} - Vault Inventory`;
             const isMe = targetPlayerId.toString().trim() === currentAuthId.toString().trim();
 
-            // Handle clean inventory items reading mapping
-            const itemsOwned = targetPlayer.ownedSprites || ["S001"];
+            // Handle reading raw arrays or mapped array rows securely
+            const itemsOwned = targetPlayer.ownedSprites || [];
 
             if (itemsOwned.length === 0) {
                 grid.innerHTML = `<p class="col-span-full text-center py-8 text-slate-500 text-xs italic">This player doesn't have any sprites locked in their vault storage yet.</p>`;
             } else {
-                grid.innerHTML = itemsOwned.map(spriteId => {
-                    // Try to discover store catalog matching metadata data values
-                    const sData = playerData.storeSprites ? playerData.storeSprites.find(item => item.id.toString().trim() === spriteId.toString().trim()) : null;
-                    const nameLabel = spriteId === "S001" ? "Starter Avatar" : (sData ? (sData.sprite_name || sData.name) : `Custom Sprite (${spriteId})`);
+                grid.innerHTML = itemsOwned.map(item => {
+                    // Normalize checking whether the record is a raw ID string or an object payload
+                    const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
+                    const cleanId = spriteId.toString().trim();
+                    
+                    // Discover corresponding store metadata records
+                    const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
+                    
+                    // Clean Fallback Name Selector Pipeline matching your exact sheet key ('sprite_name')
+                    let nameLabel = "Unknown Sprite";
+                    if (cleanId === "S001") {
+                        nameLabel = "Starter Avatar";
+                    } else if (typeof item === 'object' && item !== null && item.name) {
+                        nameLabel = item.name;
+                    } else if (sData) {
+                        nameLabel = sData.sprite_name || sData.name || `Sprite ${cleanId}`;
+                    } else {
+                        nameLabel = `Sprite ${cleanId}`;
+                    }
+
                     const customImg = sData ? sData.image_url : "";
-                    const imgDisplay = customImg && customImg.trim() !== "" ? customImg.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${spriteId}`;
+                    const imgDisplay = customImg && customImg.trim() !== "" ? customImg.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanId}`;
 
                     return `
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col items-center text-center shadow">
                             <img src="${imgDisplay}" class="w-14 h-14 bg-slate-950 rounded-lg p-1 border border-slate-800 mb-2 object-contain">
-                            <p class="text-xs font-bold text-slate-100 truncate w-full px-1">${nameLabel}</p>
-                            <p class="text-[9px] font-mono text-slate-500 font-bold">${spriteId}</p>
+                            <p class="text-xs font-bold text-white truncate w-full px-1" title="${nameLabel}">${nameLabel}</p>
+                            <p class="text-[9px] font-mono text-slate-500 font-bold">${cleanId}</p>
                             
                             ${!isMe ? `
-                                <button onclick="openTradeProposalSlip('${targetPlayerId}', '${spriteId}')" class="w-full mt-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg transition tracking-wide uppercase cursor-pointer">
+                                <button onclick="openTradeProposalSlip('${targetPlayerId}', '${cleanId}')" class="w-full mt-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg transition tracking-wide uppercase cursor-pointer">
                                     🤝 Request Trade
                                 </button>
                             ` : `
@@ -758,8 +774,48 @@
             try {
                 const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
                 const res = await response.json();
-                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
-            } catch (err) { console.error(err); }
+                
+                if (res.success) {
+                    // Find the purchased sprite in our local store catalog data
+                    const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
+                    const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
+                    
+                    // Display premium success message alert tray
+                    alert(`🎉 Congrats! You successfully unlocked "${spriteName}"!`);
+                    
+                    // Local state mutation: instantly update ownership flag so it reflects without page reload
+                    playerData.storeSprites = playerData.storeSprites.map(s => {
+                        if (s.id.toString().trim() === spriteId.toString().trim()) {
+                            return { ...s, owned: true, stockLeft: s.stockLeft !== undefined ? Math.max(0, s.stockLeft - 1) : s.stockLeft };
+                        }
+                        return s;
+                    });
+
+                    // Add to your profile's owned inventory array list so it's instantly available for trading/equipping
+                    if (playerData.playerProfile && playerData.playerProfile.ownedSprites) {
+                        if (!playerData.playerProfile.ownedSprites.some(item => item.id === spriteId)) {
+                            playerData.playerProfile.ownedSprites.push({ id: spriteId, name: spriteName });
+                        }
+                    }
+
+                    // Deduct cost locally to instantly sync the top wallet star display bar
+                    if (purchasedSprite && playerData.playerProfile) {
+                        const cost = parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0;
+                        playerData.playerProfile.totalStars = Math.max(0, playerData.playerProfile.totalStars - cost);
+                    }
+
+                    // Force immediate UI re-renders across headers and stores
+                    renderApplicationDashboardLayout();
+                    renderStoreInventoryLayout();
+                    
+                    // Background sync with the sheet database to confirm everything matches up perfectly
+                    fetchSynchronizedDataEngine();
+                } else {
+                    alert(res.message || "Purchase processing error.");
+                }
+            } catch (err) { 
+                console.error("Store transaction fault handler:", err); 
+            }
         }
 
         async function executeAvatarProfileEquip(spriteId) {
