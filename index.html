@@ -1190,47 +1190,6 @@
                 </div>
             `).join('');
         } // Make sure this bracket is directly closing your function!
-
-            // 3. FALLBACK GENERATOR FOR SIMULATED LIVE PURCHASES (If sheets lack direct order records)
-            // This reads your store state and creates automated notices for item ownership to make the feed feel incredibly active
-            if (playerData.storeSprites && playerData.leaderboard) {
-                playerData.storeSprites.forEach((sprite, index) => {
-                    const rarity = parseInt(sprite.rarity) || 999;
-                    const stockLeft = sprite.stockLeft !== undefined ? sprite.stockLeft : rarity;
-                    
-                    if (stockLeft < rarity) {
-                        activities.push({
-                            weight: (rarity - stockLeft) * 100 + index,
-                            icon: "🛍️",
-                            badge: "MARKET LOCK",
-                            badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-                            message: `An item of <span class="text-slate-300 font-bold">${sprite.sprite_name || 'Premium'}</span> stock was locked in. Only <span class="text-rose-400 font-bold">${stockLeft} items remain</span> inside the regional store vault!`
-                        });
-                    }
-                });
-            }
-
-            // SORT TIMELINE ITEMS BY WEIGHT (Highest / Most Important / Latest first)
-            activities.sort((a, b) => b.weight - a.weight);
-
-            if (activities.length === 0) {
-                container.innerHTML = `<p class="text-slate-500 text-xs italic text-center py-6">The channel is quiet right now. Run drills or swap items to update the feed!</p>`;
-                return;
-            }
-
-            // RENDER OUTPUT ITEMS TO SCREEN
-            container.innerHTML = activities.slice(0, 25).map(item => `
-                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl flex items-start gap-3 transform hover:scale-[1.01] transition-all duration-200">
-                    <span class="text-lg bg-slate-900 border border-slate-800 p-1.5 rounded-lg shrink-0">${item.icon}</span>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded border ${item.badgeClass}">${item.badge}</span>
-                        </div>
-                        <p class="text-xs text-slate-300 font-sans mt-1 leading-relaxed">${item.message}</p>
-                    </div>
-                </div>
-            `).join('');
-        }
     </script>
 </body>
 </html>
