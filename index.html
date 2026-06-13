@@ -105,7 +105,7 @@
                     <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer">Leaderboard Standings</button>
                     <button onclick="switchSubTab('lineup')" id="sub-tab-lineup" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Starting Lineup</button>
                     <button onclick="switchSubTab('trading')" id="sub-tab-trading" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Locker Room Market</button>
-                    <button onclick="switchActiveApplicationTab('news-view')" id="tab-btn-news-view" class="px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white rounded-xl transition cursor-pointer">📢 Team News</button>
+                    <button onclick="switchSubTab('news')" id="sub-tab-news" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">📢 Locker Wire</button>
                 </div>
 
                 <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
@@ -801,48 +801,37 @@
         function switchSubTab(subTab) {
             activeSubTab = subTab;
             
-            // Register all 4 button anchors
-            const btnStandings = document.getElementById('sub-tab-standings');
-            const btnLineup = document.getElementById('sub-tab-lineup');
-            const btnTrading = document.getElementById('sub-tab-trading');
-            const btnNews = document.getElementById('sub-tab-news');
+            // Elements mapping array pairs
+            const tabs = [
+                { id: 'standings', btnId: 'sub-tab-standings', viewId: 'sub-view-standings', render: () => renderTeamLeaderboardLayout() },
+                { id: 'lineup',    btnId: 'sub-tab-lineup',    viewId: 'sub-view-lineup',    render: () => renderStartingLineupLayout() },
+                { id: 'trading',   btnId: 'sub-tab-trading',   viewId: 'sub-view-trading',   render: () => renderLockerRoomMarketLayout() },
+                { id: 'news',      btnId: 'sub-tab-news',      viewId: 'sub-view-news',      render: () => renderTeamNewsWireLayout() }
+            ];
             
-            // Register all 4 content view panels
-            const viewStandings = document.getElementById('sub-view-standings');
-            const viewLineup = document.getElementById('sub-view-lineup');
-            const viewTrading = document.getElementById('sub-view-trading');
-            const viewNews = document.getElementById('sub-view-news');
-
-            // 1. Reset and hide everything first to clean the canvas
-            viewStandings.classList.add('hidden'); 
-            viewLineup.classList.add('hidden'); 
-            viewTrading.classList.add('hidden');
-            if (viewNews) viewNews.classList.add('hidden');
-            
-            // 2. Clear active styling classes down to raw slate buttons
             const idleStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
-            btnStandings.className = btnLineup.className = btnTrading.className = btnNews.className = idleStyle;
-
-            // 3. Highlight selected view and compile its layout
             const activeStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
-            
-            if (subTab === 'standings') {
-                btnStandings.className = activeStyle;
-                viewStandings.classList.remove('hidden'); 
-                renderTeamLeaderboardLayout();
-            } else if (subTab === 'lineup') {
-                btnLineup.className = activeStyle;
-                viewLineup.classList.remove('hidden'); 
-                renderStartingLineupLayout();
-            } else if (subTab === 'trading') {
-                btnTrading.className = activeStyle;
-                viewTrading.classList.remove('hidden'); 
-                renderLockerRoomMarketLayout();
-            } else if (subTab === 'news') {
-                btnNews.className = activeStyle;
-                viewNews.classList.remove('hidden');
-                renderTeamNewsWireLayout(); // Compile timeline items immediately
-            }
+
+            // Loop through each tab setup defensively
+            tabs.forEach(tab => {
+                const btnEl = document.getElementById(tab.btnId);
+                const viewEl = document.getElementById(tab.viewId);
+
+                if (tab.id === subTab) {
+                    // Highlight selected element if found
+                    if (btnEl) btnEl.className = activeStyle;
+                    if (viewEl) viewEl.classList.remove('hidden');
+                    
+                    // Fire rendering data layout securely
+                    if (typeof tab.render === 'function') {
+                        try { tab.render(); } catch(e) { console.error(`Render error in ${tab.id}:`, e); }
+                    }
+                } else {
+                    // Reset unselected elements safely
+                    if (btnEl) btnEl.className = idleStyle;
+                    if (viewEl) viewEl.classList.add('hidden');
+                }
+            });
         }
 
         function renderStoreInventoryLayout() {
