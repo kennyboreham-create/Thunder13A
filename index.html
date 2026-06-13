@@ -527,31 +527,26 @@
             }
         }
 
-        // --- MAXIMUM-FALLBACK ORIGINAL SPRITE STOREFRONT GRID ---
+        // --- COMPLETE HIGH-FEATURE SPRITE STOREFRONT GRID ---
         function renderStoreInventoryLayout() {
             const grid = document.getElementById('sprite-store-grid');
             if (!playerData.storeSprites) return;
 
-            // Debugging tool: This prints your actual spreadsheet row keys inside your browser console (Press F12 to see it)
+            // Debugging tool: Inspect incoming structure keys in the browser console (F12)
             console.log("--- SYSTEM STORE SYNC TRANSMISSION INSPECTION ---");
             console.log("First item data structure received from Google Sheet:", playerData.storeSprites[0]);
 
             grid.innerHTML = playerData.storeSprites.map(s => {
-                // 1. Ultra-wide fallback search matrix for Names
-                const spriteName = s.name || s.NAME || s.Name || s.title || s.TITLE || s.Title || "Unknown Name";
+                // 1. Matches your EXACT spreadsheet keys ('sprite_name' and 'cost_in_stars')
+                const spriteName = s.sprite_name || s.name || s.NAME || "Unknown Name";
+                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || parseInt(s.COST) || 0;
                 
-                // 2. Ultra-wide fallback search matrix for Cost / Prices
-                const spriteCost = parseInt(s.cost) || parseInt(s.COST) || parseInt(s.Cost) || 
-                                   parseInt(s.price) || parseInt(s.PRICE) || parseInt(s.Price) || 0;
-                
-                // 3. Ultra-wide fallback search matrix for Rarity Limits
-                const totalQty = parseInt(s.rarity) || parseInt(s.RARITY) || parseInt(s.Rarity) || 
-                                 parseInt(s.qty) || parseInt(s.QTY) || parseInt(s.quantity) || 999;
-                
+                // 2. Rarity and Stock Counters
+                const totalQty = parseInt(s.rarity) || parseInt(s.RARITY) || 999;
                 const stockLeft = s.stockLeft !== undefined ? s.stockLeft : totalQty;
                 const isSoldOut = s.soldOut === true;
                 
-                // 4. Dynamic Rarity Tier Engine Labels
+                // 3. Dynamic Rarity Tier Engine Labels
                 let rarityLabel = "Common";
                 let rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
                 if (totalQty === 1) {
@@ -565,12 +560,13 @@
                     rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30";
                 }
 
-                // 5. Image Loader Parsing
-                const customImageSrc = s.image_url || s.url || s.IMAGE_URL || s.ImageUrl || s.Image || s.IMAGE || "";
+                // 4. Image Loader with DiceBear Pixel-Art/Bottts Fallbacks
+                const customImageSrc = s.image_url || s.url || "";
                 const finalImgDisplay = customImageSrc.trim() !== "" ? 
                     customImageSrc.trim() : 
                     `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
 
+                // 5. Calculate Stock Percentage for the Progress Bar
                 const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
 
                 return `
