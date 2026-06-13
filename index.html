@@ -527,68 +527,66 @@
             }
         }
 
-        // --- HIGH-FEATURE ORIGINAL SPRITE STOREFRONT GRID ---
+        // --- MAXIMUM-FALLBACK ORIGINAL SPRITE STOREFRONT GRID ---
         function renderStoreInventoryLayout() {
             const grid = document.getElementById('sprite-store-grid');
             if (!playerData.storeSprites) return;
 
+            // Debugging tool: This prints your actual spreadsheet row keys inside your browser console (Press F12 to see it)
+            console.log("--- SYSTEM STORE SYNC TRANSMISSION INSPECTION ---");
+            console.log("First item data structure received from Google Sheet:", playerData.storeSprites[0]);
+
             grid.innerHTML = playerData.storeSprites.map(s => {
-                // 1. Safely extract spreadsheet variables with explicit fallbacks
-                const spriteName = s.name || s.NAME || "Mystery Item";
-                const spriteCost = parseInt(s.cost) || parseInt(s.COST) || 0;
-                const totalQty = parseInt(s.rarity) || parseInt(s.RARITY) || 999;
+                // 1. Ultra-wide fallback search matrix for Names
+                const spriteName = s.name || s.NAME || s.Name || s.title || s.TITLE || s.Title || "Unknown Name";
+                
+                // 2. Ultra-wide fallback search matrix for Cost / Prices
+                const spriteCost = parseInt(s.cost) || parseInt(s.COST) || parseInt(s.Cost) || 
+                                   parseInt(s.price) || parseInt(s.PRICE) || parseInt(s.Price) || 0;
+                
+                // 3. Ultra-wide fallback search matrix for Rarity Limits
+                const totalQty = parseInt(s.rarity) || parseInt(s.RARITY) || parseInt(s.Rarity) || 
+                                 parseInt(s.qty) || parseInt(s.QTY) || parseInt(s.quantity) || 999;
+                
                 const stockLeft = s.stockLeft !== undefined ? s.stockLeft : totalQty;
                 const isSoldOut = s.soldOut === true;
                 
-                // 2. Dynamic Rarity Tier Engine
+                // 4. Dynamic Rarity Tier Engine Labels
                 let rarityLabel = "Common";
                 let rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
-                
                 if (totalQty === 1) {
                     rarityLabel = "👑 Legendary";
                     rarityColor = "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse";
-                } else if (totalQty === 2) {
+                } else if (totalQty <= 5) {
                     rarityLabel = "🔥 Epic";
                     rarityColor = "bg-purple-500/10 text-purple-400 border-purple-500/30";
-                } else if (totalQty === 3) {
+                } else if (totalQty <= 15) {
                     rarityLabel = "✨ Rare";
                     rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30";
-                } else if (totalQty === 4) {
-                    rarityLabel = "🍀 Uncommon";
-                    rarityColor = "bg-green-500/10 text-green-400 border-green-500/30";
-                } else {
-                    rarityLabel = "Common";
-                    rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
                 }
 
-                // 3. Smart Asset Rendering (Handles spreadsheet images OR fallbacks seamlessly)
-                // If your spreadsheet row has an 'image_url' or 'url' column, it will use it.
-                const customImageSrc = s.image_url || s.url || s.IMAGE_URL || "";
+                // 5. Image Loader Parsing
+                const customImageSrc = s.image_url || s.url || s.IMAGE_URL || s.ImageUrl || s.Image || s.IMAGE || "";
                 const finalImgDisplay = customImageSrc.trim() !== "" ? 
                     customImageSrc.trim() : 
-                    `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id}`;
+                    `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
 
-                // 4. Calculate Inventory Percentage Bar Width
                 const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
 
                 return `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
                         
-                        <!-- Premium Rarity Badge -->
                         <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">
                             ${rarityLabel}
                         </span>
 
-                        <!-- Roster Image Frame -->
                         <img src="${finalImgDisplay}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-2 mt-3 object-contain">
                         
-                        <!-- Text Properties -->
                         <div class="space-y-0.5">
                             <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${spriteName}</p>
-                            <p class="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest">${s.id}</p>
+                            <p class="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest">${s.id || 'No ID'}</p>
                         </div>
 
-                        <!-- Remaining Inventory Progress Bar Component -->
                         <div class="w-full mt-3 px-1">
                             <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 mb-1">
                                 <span>Stock Left</span>
@@ -599,7 +597,6 @@
                             </div>
                         </div>
 
-                        <!-- Transaction Execution Action Tray -->
                         <div class="w-full mt-4">
                             ${s.owned ? 
                                 `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
