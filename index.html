@@ -435,7 +435,7 @@
                         </td>
                         <!-- New Roster Status Indicator Column -->
                         <td class="py-3.5 text-center text-sm">
-                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border border-blue-500/20">🏒 Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
+                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border border-blue-500/20">🏒 Starting</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
                         </td>
                         <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
                         <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
@@ -527,6 +527,7 @@
             }
         }
 
+        // --- RESTORED ORIGINAL SPRITE STOREFRONT GRID ---
         function renderStoreInventoryLayout() {
             const grid = document.getElementById('sprite-store-grid');
             if (!playerData.storeSprites) return;
@@ -534,16 +535,14 @@
             grid.innerHTML = playerData.storeSprites.map(s => {
                 return `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
-                        <span class="absolute top-2 right-2 text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-slate-950/60 text-slate-400 border border-slate-800">${s.rarity} qty</span>
                         <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${s.id}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-3 mt-1">
                         <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${s.name}</p>
-                        <p class="text-[10px] text-slate-500 font-bold mt-1">Stock Left: ${s.stockLeft}</p>
+                        <p class="text-xs text-slate-400 mt-1 font-semibold">${s.owned ? 'Item Unlocked' : `${s.cost} Stars`}</p>
+                        
                         <div class="w-full mt-4">
                             ${s.owned ? 
                                 `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
-                                s.soldOut ? 
-                                `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
-                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${s.cost} ★)</button>`
+                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy Avatar</button>`
                             }
                         </div>
                     </div>
