@@ -105,6 +105,7 @@
                     <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer">Leaderboard Standings</button>
                     <button onclick="switchSubTab('lineup')" id="sub-tab-lineup" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Starting Lineup</button>
                     <button onclick="switchSubTab('trading')" id="sub-tab-trading" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Locker Room Market</button>
+                    <button onclick="switchActiveApplicationTab('news-view')" id="tab-btn-news-view" class="px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-400 hover:text-white rounded-xl transition cursor-pointer">📢 Team News</button>
                 </div>
 
                 <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
@@ -176,6 +177,20 @@
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="sprite-store-grid"></div>
             </div>
+            <div id="news-view-container" class="hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-md">
+                <div class="flex items-center gap-3 border-b border-slate-800 pb-3 mb-4">
+                    <span class="text-2xl">📢</span>
+                    <div>
+                        <h3 class="text-sm font-black uppercase text-white tracking-wide">Locker Room Wire</h3>
+                        <p class="text-[10px] text-slate-400">Real-time celebration tracker of team exercises, trading deals, and marketplace unlocks.</p>
+                    </div>
+                </div>
+
+                <div id="news-activity-timeline" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                    </div>
+            </div>
+</div>
 
         </main>
     </div>
@@ -260,6 +275,7 @@
             } catch (err) { console.error("Master read hook matrix fault:", err); }
         }
 
+        // --- UPDATED PORTAL LAYOUT REGULATOR MATRIX ---
         function renderApplicationDashboardLayout() {
             const p = playerData.playerProfile;
             document.getElementById('user-name-display').innerText = p.name;
@@ -270,7 +286,8 @@
             if (currentTrainingCategory === 'gameboard') {
                 if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
                 else if (activeSubTab === 'lineup') renderStartingLineupLayout();
-                else renderLockerRoomMarketLayout();
+                else if (activeSubTab === 'trading') renderLockerRoomMarketLayout();
+                else if (activeSubTab === 'news') renderTeamNewsWireLayout(); // Keeps information fresh on database sync reload passes
             } else {
                 renderLessonsList();
             }
@@ -783,27 +800,48 @@
 
         function switchSubTab(subTab) {
             activeSubTab = subTab;
+            
+            // Register all 4 button anchors
             const btnStandings = document.getElementById('sub-tab-standings');
             const btnLineup = document.getElementById('sub-tab-lineup');
             const btnTrading = document.getElementById('sub-tab-trading');
+            const btnNews = document.getElementById('sub-tab-news');
             
+            // Register all 4 content view panels
             const viewStandings = document.getElementById('sub-view-standings');
             const viewLineup = document.getElementById('sub-view-lineup');
             const viewTrading = document.getElementById('sub-view-trading');
+            const viewNews = document.getElementById('sub-view-news');
 
-            // Hide everything first
-            viewStandings.classList.add('hidden'); viewLineup.classList.add('hidden'); viewTrading.classList.add('hidden');
-            btnStandings.className = btnLineup.className = btnTrading.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
+            // 1. Reset and hide everything first to clean the canvas
+            viewStandings.classList.add('hidden'); 
+            viewLineup.classList.add('hidden'); 
+            viewTrading.classList.add('hidden');
+            if (viewNews) viewNews.classList.add('hidden');
+            
+            // 2. Clear active styling classes down to raw slate buttons
+            const idleStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
+            btnStandings.className = btnLineup.className = btnTrading.className = btnNews.className = idleStyle;
 
+            // 3. Highlight selected view and compile its layout
+            const activeStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
+            
             if (subTab === 'standings') {
-                btnStandings.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
-                viewStandings.classList.remove('hidden'); renderTeamLeaderboardLayout();
+                btnStandings.className = activeStyle;
+                viewStandings.classList.remove('hidden'); 
+                renderTeamLeaderboardLayout();
             } else if (subTab === 'lineup') {
-                btnLineup.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
-                viewLineup.classList.remove('hidden'); renderStartingLineupLayout();
-            } else {
-                btnTrading.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
-                viewTrading.classList.remove('hidden'); renderLockerRoomMarketLayout();
+                btnLineup.className = activeStyle;
+                viewLineup.classList.remove('hidden'); 
+                renderStartingLineupLayout();
+            } else if (subTab === 'trading') {
+                btnTrading.className = activeStyle;
+                viewTrading.classList.remove('hidden'); 
+                renderLockerRoomMarketLayout();
+            } else if (subTab === 'news') {
+                btnNews.className = activeStyle;
+                viewNews.classList.remove('hidden');
+                renderTeamNewsWireLayout(); // Compile timeline items immediately
             }
         }
 
@@ -1047,6 +1085,109 @@
         if (currentAuthId) {
             document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
             fetchSynchronizedDataEngine();
+        }
+        // --- LIVE CELEBRATION TIMELINE NEWS COMPILER ---
+        function renderTeamNewsWireLayout() {
+            const container = document.getElementById('news-activity-timeline');
+            if (!container) return;
+
+            let activities = [];
+
+            // Helper to pull sprite name safely
+            const findSpriteName = (id) => {
+                if (!id) return "Premium Sprite";
+                const clean = id.toString().trim().toUpperCase();
+                if (clean === "S001") return "Starter Avatar";
+                const s = playerData.storeSprites ? playerData.storeSprites.find(item => item.id.toString().trim().toUpperCase() === clean) : null;
+                return s ? (s.sprite_name || s.name) : `Sprite (${id})`;
+            };
+
+            // 1. EXTRACT SUCCESSFUL TRADES
+            if (playerData.activeTrades) {
+                playerData.activeTrades.forEach(trade => {
+                    if (trade.status.toString().trim().toUpperCase() === 'ACCEPTED') {
+                        // Create a pseudo-timestamp or use the trade ID number to establish ordering
+                        const timestampWeight = parseInt(trade.id.replace(/\D/g, '')) || 0;
+                        
+                        activities.push({
+                            weight: timestampWeight,
+                            icon: "🤝",
+                            badge: "TRADE COMPLETED",
+                            badgeClass: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+                            message: `Player <span class="text-slate-200 font-bold">${trade.sender_id}</span> successfully swapped <span class="text-blue-400 font-semibold">${findSpriteName(trade.offered_id)}</span> with Player <span class="text-slate-200 font-bold">${trade.receiver_id}</span> for <span class="text-purple-400 font-semibold">${findSpriteName(trade.requested_sprite_id)}</span>.`
+                        });
+                    }
+                });
+            }
+
+            // 2. EXTRACT COMPLETED DRILLS & TRAINING ACHIEVEMENTS
+            if (playerData.leaderboard) {
+                playerData.leaderboard.forEach(player => {
+                    // Check if they completed high workouts or have star accomplishments
+                    const totalStars = parseInt(player.totalStars) || 0;
+                    const cleanScore = parseInt(player.score) || 0;
+
+                    if (cleanScore > 0) {
+                        activities.push({
+                            weight: cleanScore * 10, // weight by score magnitude
+                            icon: "🏒",
+                            badge: "SKILL MILESTONE",
+                            badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                            message: `<span class="text-white font-extrabold">${player.name}</span> climbed the charts to achieve a tracking performance total of <span class="text-emerald-400 font-bold">${cleanScore} points</span>!`
+                        });
+                    }
+
+                    if (totalStars > 50) {
+                        activities.push({
+                            weight: totalStars,
+                            icon: "⭐",
+                            badge: "STAR RICHES",
+                            badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                            message: `<span class="text-white font-extrabold">${player.name}</span> crossed a massive milestone bank balance holding <span class="text-amber-300 font-mono font-bold">${totalStars} Stars</span>!`
+                        });
+                    }
+                });
+            }
+
+            // 3. FALLBACK GENERATOR FOR SIMULATED LIVE PURCHASES (If sheets lack direct order records)
+            // This reads your store state and creates automated notices for item ownership to make the feed feel incredibly active
+            if (playerData.storeSprites && playerData.leaderboard) {
+                playerData.storeSprites.forEach((sprite, index) => {
+                    const rarity = parseInt(sprite.rarity) || 999;
+                    const stockLeft = sprite.stockLeft !== undefined ? sprite.stockLeft : rarity;
+                    
+                    if (stockLeft < rarity) {
+                        activities.push({
+                            weight: (rarity - stockLeft) * 100 + index,
+                            icon: "🛍️",
+                            badge: "MARKET LOCK",
+                            badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                            message: `An item of <span class="text-slate-300 font-bold">${sprite.sprite_name || 'Premium'}</span> stock was locked in. Only <span class="text-rose-400 font-bold">${stockLeft} items remain</span> inside the regional store vault!`
+                        });
+                    }
+                });
+            }
+
+            // SORT TIMELINE ITEMS BY WEIGHT (Highest / Most Important / Latest first)
+            activities.sort((a, b) => b.weight - a.weight);
+
+            if (activities.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 text-xs italic text-center py-6">The channel is quiet right now. Run drills or swap items to update the feed!</p>`;
+                return;
+            }
+
+            // RENDER OUTPUT ITEMS TO SCREEN
+            container.innerHTML = activities.slice(0, 25).map(item => `
+                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl flex items-start gap-3 transform hover:scale-[1.01] transition-all duration-200">
+                    <span class="text-lg bg-slate-900 border border-slate-800 p-1.5 rounded-lg shrink-0">${item.icon}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded border ${item.badgeClass}">${item.badge}</span>
+                        </div>
+                        <p class="text-xs text-slate-300 font-sans mt-1 leading-relaxed">${item.message}</p>
+                    </div>
+                </div>
+            `).join('');
         }
     </script>
 </body>
