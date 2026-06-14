@@ -267,11 +267,11 @@
         function switchCategoryView(category) {
             currentTrainingCategory = category;
             
-            // Register primary view panes
+            // Map keys exactly to corresponding HTML layout container targets
             const views = {
                 strategy: document.getElementById('lessons-list'),
-                workout: document.getElementById('lessons-list'), // Shares list panel
-                skills: document.getElementById('lessons-list'),  // Shares list panel
+                workout: document.getElementById('lessons-list'), 
+                skills: document.getElementById('lessons-list'),  
                 gameboard: document.getElementById('gameboard-view-container'),
                 store: document.getElementById('store-view-container'),
                 news: document.getElementById('news-view-container')
@@ -300,9 +300,12 @@
                 activeBtn.className = "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer";
             }
 
-            if (views[category]) views[category].classList.remove('hidden');
+            // Unhide master parent container node
+            if (views[category]) {
+                views[category].classList.remove('hidden');
+            }
 
-            // Initialize rendering loops based on selection
+            // Route inner display sequences
             if (category === 'gameboard') {
                 switchSubTab(activeSubTab);
             } else if (category === 'store') {
@@ -341,7 +344,7 @@
 
             // Apply selected visual modifications
             if (buttons[subTab]) buttons[subTab].className = activeStyle;
-            if (subPanels[subTab]) subPanels[subTab].classList.remove('hidden'); // UNHIDE FIRST
+            if (subPanels[subTab]) subPanels[subTab].classList.remove('hidden'); // UNHIDE SUB-PANEL FIRST
 
             // Execute standalone scripts safely without null element blockage
             switch (subTab) {
@@ -370,7 +373,6 @@
 
         // --- SECURE TIMELINE NEWS COMPILER FEED ---
         function renderTeamNewsWireLayout() {
-            // Find active target containers in both active and backup structures
             const container = document.getElementById('news-activity-timeline') || document.getElementById('news-activity-timeline-backup');
             if (!container) return;
 
@@ -384,7 +386,6 @@
                 return s ? (s.sprite_name || s.name) : `Sprite (${id})`;
             };
 
-            // Process Open/Accepted Trade Sequences
             if (playerData.activeTrades && playerData.activeTrades.length > 0) {
                 playerData.activeTrades.forEach((trade, index) => {
                     const statusStr = trade.status ? trade.status.toString().trim().toUpperCase() : '';
@@ -411,7 +412,6 @@
                 });
             }
 
-            // Process Standings Metrics Profiles
             if (playerData.leaderboard && playerData.leaderboard.length > 0) {
                 playerData.leaderboard.forEach((player, index) => {
                     const totalStars = parseInt(player.totalStars) || 0;
@@ -461,20 +461,15 @@
         function renderApplicationDashboardLayout() {
             if (!window.playerData) return;
 
-            // Header Display Balances Sync Pass
             const userStarsText = document.getElementById('user-stars-display');
             if (userStarsText && playerData.currentUserProfile) {
                 userStarsText.textContent = parseInt(playerData.currentUserProfile.totalStars) || 0;
             }
 
-            const primaryHub = currentTrainingCategory || 'strategy';
-            if (primaryHub === 'gameboard') {
-                if (typeof switchSubTab === 'function') {
-                    switchSubTab(activeSubTab);
-                }
+            if (currentTrainingCategory === 'gameboard') {
+                switchSubTab(activeSubTab);
             }
 
-            // Real-time Loop Check for Active Locker Wire Displays
             const wirePanel = document.getElementById('sub-view-news');
             if (wirePanel && !wirePanel.classList.contains('hidden')) {
                 renderTeamNewsWireLayout();
@@ -482,7 +477,6 @@
         }
 
         // --- STUB AUTHENTICATION PLACEHOLDERS ---
-        // Insert or keep your active spreadsheet connection loops here
         function attemptSystemLogin() {
             const idInput = document.getElementById('auth-player-id').value.trim();
             if(!idInput) return;
@@ -490,7 +484,6 @@
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('app-viewport').classList.remove('hidden');
             
-            // Mock empty data structure to bypass fallback blockers during script initialization
             window.playerData = { currentUserProfile: { totalStars: 15 }, leaderboard: [], activeTrades: [] };
             renderApplicationDashboardLayout();
             switchCategoryView('gameboard');
@@ -502,7 +495,6 @@
             document.getElementById('auth-screen').classList.remove('hidden');
         }
 
-        // Check if user session registry is pre-authenticated
         window.addEventListener('DOMContentLoaded', () => {
             if (currentAuthId) {
                 document.getElementById('auth-screen').classList.add('hidden');
