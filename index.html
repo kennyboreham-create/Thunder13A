@@ -108,24 +108,17 @@
                     <button onclick="switchSubTab('news')" id="sub-tab-news" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">📢 Locker Wire</button>
                 </div>
 
-                <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-                    <div class="mb-4">
-                        <h3 class="text-base font-black uppercase text-white tracking-tight flex items-center gap-2">🏆 Team Rankings</h3>
-                        <p class="text-slate-400 text-xs mt-0.5">Click on any teammate's row to inspect their card collection vault and request asset trades!</p>
+                <div id="sub-view-standings" class="space-y-4">
+                    
+                    <div class="mt-8 border-t border-slate-800/80 pt-6">
+                        <div class="bg-gradient-to-r from-slate-900 to-indigo-950/40 border border-slate-800 p-5 rounded-2xl shadow-xl mb-4">
+                            <h3 class="text-base font-black uppercase text-white tracking-tight flex items-center gap-2">📢 Locker Room Wire</h3>
+                            <p class="text-slate-400 text-xs mt-0.5">Real-time tracker celebrating training performance totals, team item trading deals, and custom storefront upgrades.</p>
+                        </div>
+                        
+                        <div id="news-activity-timeline" class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                            </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm">
-                            <thead>
-                                <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase font-bold tracking-wider">
-                                    <th class="pb-3 pl-2">Rank</th>
-                                    <th class="pb-3">Player</th>
-                                    <th class="pb-3 text-center">Status</th>
-                                    <th class="pb-3">Jersey</th>
-                                    <th class="pb-3 text-right pr-2">Total Stars</th>
-                                </tr>
-                            </thead>
-                            <tbody id="leaderboard-table-body" class="divide-y divide-slate-800/50"></tbody>
-                        </table>
                     </div>
                 </div>
 
@@ -503,6 +496,8 @@
                     </tr>
                 `;
             }).join('');
+            // Add this right inside the bottom of your existing renderTeamLeaderboardLayout function:
+            renderTeamNewsWireLayout();
         }
 
         // --- DYNAMIC ROSTER VAULT DISPLAY OVERLAY WITH FIXES ---
@@ -1082,146 +1077,95 @@
        // --- COMPLETE BULLETPROOF ENGINE RENDERER FOR LOCKER ROOM WIRE ---
         let newsWireIntervalRetryTracker = null;
 
+        // --- SECURE SYSTEM TIMELINE NEWS COMPILER ---
         function renderTeamNewsWireLayout() {
-            const panel = document.getElementById('sub-view-news');
-            if (!panel) return;
-
-            // Clear any old active checking routines to prevent memory stack overflows
-            if (newsWireIntervalRetryTracker) {
-                clearInterval(newsWireIntervalRetryTracker);
-                newsWireIntervalRetryTracker = null;
-            }
-
-            // Standard Header Layout template string frame
-            const headerMarkup = `
-                <div class="bg-gradient-to-r from-slate-900 to-indigo-950/40 border border-slate-800 p-5 rounded-2xl shadow-xl mb-4">
-                    <h3 class="text-base font-black uppercase text-white tracking-tight flex items-center gap-2">📢 Locker Room Wire</h3>
-                    <p class="text-slate-400 text-xs mt-0.5">Real-time tracker celebrating training performance totals, team item trading deals, and custom storefront upgrades.</p>
-                </div>
-                <div id="news-activity-timeline" class="space-y-3 max-h-[600px] overflow-y-auto pr-1"></div>
-            `;
-
-            // STEP 1: Instantly inject the header layout elements so the tab never stays blank!
-            panel.innerHTML = headerMarkup;
             const container = document.getElementById('news-activity-timeline');
-            if (!container) return;
+            if (!container) return; // Exit safely if the tab isn't mounted yet
 
-            // STEP 2: LOCAL SUB-ROUTINE COMPILER
-            const executeTimelineCompilationEngine = () => {
-                // Check if your synchronization object has fully initialized arrays
-                if (!window.playerData || (!playerData.leaderboard && !playerData.activeTrades)) {
-                    container.innerHTML = `
-                        <div class="text-center py-12">
-                            <div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-t-blue-500 border-slate-800 mb-3"></div>
-                            <p class="text-slate-400 text-[10px] italic animate-pulse">Synchronizing team tracking records from spreadsheet lines...</p>
-                        </div>`;
-                    return false; // Signal that synchronization is still loading
-                }
+            let activities = [];
 
-                let activities = [];
-
-                // Inner inline helper to extract core matching catalogue keys securely
-                const findSpriteName = (id) => {
-                    if (!id) return "Premium Sprite";
-                    const clean = id.toString().trim().toUpperCase();
-                    if (clean === "S001" || clean === "1") return "Starter Avatar";
-                    const s = playerData.storeSprites ? playerData.storeSprites.find(item => item.id.toString().trim().toUpperCase() === clean) : null;
-                    return s ? (s.sprite_name || s.name) : `Sprite (${id})`;
-                };
-
-                // Compile Spreadsheet Trade Operations
-                if (playerData.activeTrades && playerData.activeTrades.length > 0) {
-                    playerData.activeTrades.forEach((trade, index) => {
-                        const statusStr = trade.status ? trade.status.toString().trim().toUpperCase() : '';
-                        const offerName = findSpriteName(trade.offered_id);
-                        const requestName = findSpriteName(trade.requested_sprite_id);
-                        
-                        if (statusStr === 'ACCEPTED') {
-                            activities.push({
-                                weight: 5000 + index, 
-                                icon: "🤝",
-                                badge: "TRADE COMPLETED",
-                                badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                                message: `Player <span class="text-slate-200 font-bold">${trade.sender_id}</span> successfully swapped <span class="text-blue-400 font-semibold">${offerName}</span> with Player <span class="text-slate-200 font-bold">${trade.receiver_id}</span> for <span class="text-purple-400 font-semibold">${requestName}</span>.`
-                            });
-                        } else if (statusStr === 'PENDING') {
-                            activities.push({
-                                weight: 4000 + index,
-                                icon: "⚖️",
-                                badge: "NEW PROPOSAL",
-                                badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-                                message: `Player <span class="text-slate-200 font-bold">${trade.sender_id}</span> proposed a contract swap: Offering <span class="text-blue-400 font-semibold">${offerName}</span> for Player <span class="text-slate-200 font-bold">${trade.receiver_id}</span>'s <span class="text-indigo-400 font-semibold">${requestName}</span>.`
-                            });
-                        }
-                    });
-                }
-
-                // Compile Leaderboard Core Milestones
-                if (playerData.leaderboard && playerData.leaderboard.length > 0) {
-                    playerData.leaderboard.forEach((player, index) => {
-                        const totalStars = parseInt(player.totalStars) || 0;
-                        const cleanScore = parseInt(player.score) || 0;
-
-                        activities.push({
-                            weight: 2000 + cleanScore + index,
-                            icon: "🏒",
-                            badge: "ROSTER STATUS",
-                            badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-                            message: `<span class="text-white font-extrabold">${player.name || 'Roster Player'}</span> is active on the training grid with an overall tracking score of <span class="text-blue-400 font-bold">${cleanScore} points</span>!`
-                        });
-
-                        if (totalStars > 0) {
-                            activities.push({
-                                weight: 1000 + totalStars + index,
-                                icon: "⭐",
-                                badge: "WALLET BANK",
-                                badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-                                message: `<span class="text-white font-extrabold">${player.name || 'Roster Player'}</span> currently commands a balance of <span class="text-amber-300 font-mono font-bold">${totalStars} Stars</span> available for marketplace spend.`
-                            });
-                        }
-                    });
-                }
-
-                // Sort activities chronologically by weight magnitude
-                activities.sort((a, b) => b.weight - a.weight);
-
-                // Render compiled dynamic output array rows out to HTML elements
-                if (activities.length === 0) {
-                    container.innerHTML = `
-                        <div class="text-center py-10 bg-slate-950/40 border border-slate-800 rounded-xl">
-                            <p class="text-slate-500 text-xs italic">No matching activities found inside local memory arrays.</p>
-                            <p class="text-[10px] text-slate-600 mt-2 font-mono">Leaderboard Size: ${playerData.leaderboard ? playerData.leaderboard.length : 0} | Active Trades: ${playerData.activeTrades ? playerData.activeTrades.length : 0}</p>
-                        </div>`;
-                } else {
-                    container.innerHTML = activities.slice(0, 30).map(item => `
-                        <div class="p-3 bg-slate-900 border border-slate-800/80 rounded-xl flex items-start gap-3 shadow-sm">
-                            <span class="text-base bg-slate-950 border border-slate-800 p-1.5 rounded-lg shrink-0">${item.icon}</span>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded border ${item.badgeClass}">${item.badge}</span>
-                                </div>
-                                <p class="text-xs text-slate-300 font-sans mt-1 leading-relaxed">${item.message}</p>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-                
-                return true; // Signal that rendering completed successfully
+            // Safe dictionary helper to process avatar IDs
+            const findSpriteName = (id) => {
+                if (!id) return "Premium Sprite";
+                const clean = id.toString().trim().toUpperCase();
+                if (clean === "S001" || clean === "1") return "Starter Avatar";
+                const s = playerData.storeSprites ? playerData.storeSprites.find(item => item.id.toString().trim().toUpperCase() === clean) : null;
+                return s ? (s.sprite_name || s.name) : `Sprite (${id})`;
             };
 
-            // STEP 3: EXECUTION INITIALIZATION
-            const success = executeTimelineCompilationEngine();
-            
-            // If the background data wasn't ready, establish a polling loop to retry automatically
-            if (!success) {
-                newsWireIntervalRetryTracker = setInterval(() => {
-                    const isDone = executeTimelineCompilationEngine();
-                    if (isDone && newsWireIntervalRetryTracker) {
-                        clearInterval(newsWireIntervalRetryTracker);
-                        newsWireIntervalRetryTracker = null;
+            // 1. COLLECT ALL SUCCESSFUL AND OPEN SHEET TRADES
+            if (playerData.activeTrades && playerData.activeTrades.length > 0) {
+                playerData.activeTrades.forEach((trade, index) => {
+                    const statusStr = trade.status ? trade.status.toString().trim().toUpperCase() : '';
+                    const offerName = findSpriteName(trade.offered_id);
+                    const requestName = findSpriteName(trade.requested_sprite_id);
+                    
+                    if (statusStr === 'ACCEPTED') {
+                        activities.push({
+                            weight: 5000 + index, 
+                            icon: "🤝",
+                            badge: "TRADE COMPLETED",
+                            badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                            message: `Player <span class="text-slate-200 font-bold">${trade.sender_id}</span> successfully swapped <span class="text-blue-400 font-semibold">${offerName}</span> with Player <span class="text-slate-200 font-bold">${trade.receiver_id}</span> for <span class="text-purple-400 font-semibold">${requestName}</span>.`
+                        });
+                    } else if (statusStr === 'PENDING') {
+                        activities.push({
+                            weight: 4000 + index,
+                            icon: "⚖️",
+                            badge: "NEW PROPOSAL",
+                            badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                            message: `Player <span class="text-slate-200 font-bold">${trade.sender_id}</span> proposed a contract swap: Offering <span class="text-blue-400 font-semibold">${offerName}</span> for Player <span class="text-slate-200 font-bold">${trade.receiver_id}</span>'s <span class="text-indigo-400 font-semibold">${requestName}</span>.`
+                        });
                     }
-                }, 300);
+                });
             }
+
+            // 2. COLLECT ACTIVE PLAYER STANDINGS STATS
+            if (playerData.leaderboard && playerData.leaderboard.length > 0) {
+                playerData.leaderboard.forEach((player, index) => {
+                    const totalStars = parseInt(player.totalStars) || 0;
+                    const cleanScore = parseInt(player.score) || 0;
+
+                    activities.push({
+                        weight: 2000 + cleanScore + index,
+                        icon: "🏒",
+                        badge: "ROSTER STATUS",
+                        badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                        message: `<span class="text-white font-extrabold">${player.name || 'Roster Player'}</span> is active on the training grid with an overall tracking score of <span class="text-blue-400 font-bold">${cleanScore} points</span>!`
+                    });
+
+                    if (totalStars > 0) {
+                        activities.push({
+                            weight: 1000 + totalStars + index,
+                            icon: "⭐",
+                            badge: "WALLET BANK",
+                            badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                            message: `<span class="text-white font-extrabold">${player.name || 'Roster Player'}</span> currently commands a balance of <span class="text-amber-300 font-mono font-bold">${totalStars} Stars</span> available for marketplace spend.`
+                        });
+                    }
+                });
+            }
+
+            // Chronological Sorting pass
+            activities.sort((a, b) => b.weight - a.weight);
+
+            // 3. GENERATE INNER CONTENT
+            if (activities.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 text-xs italic text-center py-4">Locker wire logging data channel is idle.</p>`;
+                return;
+            }
+
+            container.innerHTML = activities.slice(0, 20).map(item => `
+                <div class="p-3 bg-slate-900 border border-slate-800/80 rounded-xl flex items-start gap-3 shadow-sm">
+                    <span class="text-base bg-slate-950 border border-slate-800 p-1.5 rounded-lg shrink-0">${item.icon}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded border ${item.badgeClass}">${item.badge}</span>
+                        </div>
+                        <p class="text-xs text-slate-300 font-sans mt-1 leading-relaxed">${item.message}</p>
+                    </div>
+                </div>
+            `).join('');
         }
     </script>
 </body>
