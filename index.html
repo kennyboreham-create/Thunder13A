@@ -306,21 +306,68 @@
             } catch (err) { console.error("Master read hook matrix fault:", err); }
         }
 
-        // --- UPDATED PORTAL LAYOUT REGULATOR MATRIX ---
+        // --- MASTER APPLICATION DASHBOARD LAYOUT ENGINE ---
         function renderApplicationDashboardLayout() {
-            const p = playerData.playerProfile;
-            document.getElementById('user-name-display').innerText = p.name;
-            document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
-            document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
-            document.getElementById('user-avatar-display').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${p.activeSpriteId}`;
+            // 1. CRITICAL CONSOLE LOGGING PASS (Helps track state shifts during background refreshes)
+            console.log("Initializing dashboard layout refresh...", {
+                category: typeof currentTrainingCategory !== 'undefined' ? currentTrainingCategory : 'unknown',
+                subTab: typeof activeSubTab !== 'undefined' ? activeSubTab : 'unknown',
+                hasData: !!window.playerData
+            });
+
+            // 2. STATE VALIDATION CHECK
+            // If the core spreadsheet cache is completely empty, halt render to prevent script breakages
+            if (!window.playerData) {
+                console.warn("Dashboard layout execution deferred: playerData memory block is empty.");
+                return;
+            }
+
+            // 3. TOP-LEVEL GLOBAL PROFILE SUMMARY WIDGETS
+            // Automatically updates user profile tokens, total tracking scores, and team wallet ledger balances
+            const userGlobalScoreBadge = document.getElementById('global-header-score-display');
+            const userGlobalWalletBadge = document.getElementById('global-header-wallet-display');
             
-            if (currentTrainingCategory === 'gameboard') {
-                if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
-                else if (activeSubTab === 'lineup') renderStartingLineupLayout();
-                else if (activeSubTab === 'trading') renderLockerRoomMarketLayout();
-                else if (activeSubTab === 'news') renderTeamNewsWireLayout(); // Keeps information fresh on database sync reload passes
-            } else {
-                renderLessonsList();
+            if (userGlobalScoreBadge && playerData.currentUserProfile) {
+                userGlobalScoreBadge.textContent = parseInt(playerData.currentUserProfile.score) || 0;
+            }
+            if (userGlobalWalletBadge && playerData.currentUserProfile) {
+                userGlobalWalletBadge.textContent = parseInt(playerData.currentUserProfile.totalStars) || 0;
+            }
+
+            // 4. MAIN NAVIGATION ROUTER ROUTINE
+            // Evaluate which major top-level hub tab category the user is viewing
+            const primaryViewHub = typeof currentTrainingCategory !== 'undefined' ? currentTrainingCategory : 'gameboard';
+
+            if (primaryViewHub === 'gameboard') {
+                // Ensure sub-tab selections fall back safely to standings if left empty
+                const activeTargetSubTab = typeof activeSubTab !== 'undefined' ? activeSubTab : 'standings';
+                
+                // Route layout processing commands dynamically to our multi-panel switcher
+                if (typeof switchSubTab === 'function') {
+                    switchSubTab(activeTargetSubTab);
+                }
+
+            } else if (primaryViewHub === 'skills') {
+                // Execute individual workout logs, skill checks, and checklist drills canvas layouts
+                if (typeof renderSkillsTrainingGridEngine === 'function') {
+                    renderSkillsTrainingGridEngine();
+                }
+
+            } else if (primaryViewHub === 'profile') {
+                // Execute individual configuration pages, player card templates, and stats blocks
+                if (typeof renderPlayerIdentityProfileLayout === 'function') {
+                    renderPlayerIdentityProfileLayout();
+                }
+            }
+
+            // 5. AUTOMATED LIVE REFRESH SYNC HOOK
+            // If the user is currently looking at the News Wire tab, force a background redraw
+            // to display incoming trade updates or changed point balances without forcing page refreshes.
+            const newsWireContainerVisible = document.getElementById('sub-view-news') && !document.getElementById('sub-view-news').classList.contains('hidden');
+            if (newsWireContainerVisible || (primaryViewHub === 'gameboard' && typeof activeSubTab !== 'undefined' && activeSubTab === 'news')) {
+                if (typeof renderTeamNewsWireLayout === 'function') {
+                    renderTeamNewsWireLayout();
+                }
             }
         }
 
@@ -831,40 +878,83 @@
             } catch (err) { console.error(err); }
         }
 
+        // --- MASTER SUB-TAB ROUTER ENGINE ---
         function switchSubTab(subTab) {
+            // Update global tracking state variable
             activeSubTab = subTab;
             
-            // Elements mapping array pairs
-            const tabs = [
-                { id: 'standings', btnId: 'sub-tab-standings', viewId: 'sub-view-standings', render: () => renderTeamLeaderboardLayout() },
-                { id: 'lineup',    btnId: 'sub-tab-lineup',    viewId: 'sub-view-lineup',    render: () => renderStartingLineupLayout() },
-                { id: 'trading',   btnId: 'sub-tab-trading',   viewId: 'sub-view-trading',   render: () => renderLockerRoomMarketLayout() },
-                { id: 'news',      btnId: 'sub-tab-news',      viewId: 'sub-view-news',      render: () => renderTeamNewsWireLayout() }
-            ];
+            // 1. Locate and register all structural view components
+            // (Uses fallback selectors to ensure it grabs your exact leaderboard container ID)
+            const viewStandingsGrid = document.getElementById('leaderboard-grid') || document.getElementById('leaderboard-table'); 
+            const viewLineup        = document.getElementById('sub-view-lineup');
+            const viewTrading       = document.getElementById('sub-view-trading');
+            const viewNewsWire      = document.getElementById('sub-view-news');
+
+            // 2. Locate and register all sub-navigation button elements
+            const btnStandings = document.getElementById('sub-tab-standings');
+            const btnLineup    = document.getElementById('sub-tab-lineup');
+            const btnTrading   = document.getElementById('sub-tab-trading');
+            const btnNews      = document.getElementById('sub-tab-news');
             
-            const idleStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
-            const activeStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
+            // 3. Define styling uniform layouts (Tailwind classes matching your setup)
+            const idleStyle   = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer";
+            const activeStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer";
 
-            // Loop through each tab setup defensively
-            tabs.forEach(tab => {
-                const btnEl = document.getElementById(tab.btnId);
-                const viewEl = document.getElementById(tab.viewId);
+            // 4. RESET SWITCH: Clear active styling states safely across all buttons
+            if (btnStandings) btnStandings.className = idleStyle;
+            if (btnLineup)    btnLineup.className    = idleStyle;
+            if (btnTrading)   btnTrading.className   = idleStyle;
+            if (btnNews)      btnNews.className      = idleStyle;
 
-                if (tab.id === subTab) {
-                    // Highlight selected element if found
-                    if (btnEl) btnEl.className = activeStyle;
-                    if (viewEl) viewEl.classList.remove('hidden');
-                    
-                    // Fire rendering data layout securely
-                    if (typeof tab.render === 'function') {
-                        try { tab.render(); } catch(e) { console.error(`Render error in ${tab.id}:`, e); }
+            // 5. VISIBILITY SWITCH: Hide all sub-panels by default to prevent overlapping frames
+            if (viewStandingsGrid) viewStandingsGrid.classList.add('hidden');
+            if (viewLineup)        viewLineup.classList.add('hidden');
+            if (viewTrading)       viewTrading.classList.add('hidden');
+            if (viewNewsWire)      viewNewsWire.classList.add('hidden');
+
+            // 6. ROUTING ENGINE: Activate, un-hide, and render chosen component panel
+            switch (subTab) {
+                case 'standings':
+                    if (btnStandings) btnStandings.className = activeStyle;
+                    if (viewStandingsGrid) viewStandingsGrid.classList.remove('hidden');
+                    // Fire your original leaderboard table rendering script
+                    if (typeof renderTeamLeaderboardLayout === 'function') {
+                        renderTeamLeaderboardLayout();
                     }
-                } else {
-                    // Reset unselected elements safely
-                    if (btnEl) btnEl.className = idleStyle;
-                    if (viewEl) viewEl.classList.add('hidden');
-                }
-            });
+                    break;
+
+                case 'lineup':
+                    if (btnLineup) btnLineup.className = activeStyle;
+                    if (viewLineup) viewLineup.classList.remove('hidden');
+                    // Fire your gameboard starting lineup canvas renderer
+                    if (typeof renderStartingLineupLayout === 'function') {
+                        renderStartingLineupLayout();
+                    }
+                    break;
+
+                case 'trading':
+                    if (btnTrading) btnTrading.className = activeStyle;
+                    if (viewTrading) viewTrading.classList.remove('hidden');
+                    // Fire your locker room marketplace/sprite store generator
+                    if (typeof renderLockerRoomMarketLayout === 'function') {
+                        renderLockerRoomMarketLayout();
+                    }
+                    break;
+
+                case 'news':
+                    if (btnNews) btnNews.className = activeStyle;
+                    // Reveal ONLY the timeline layout wrapper box at the bottom
+                    if (viewNewsWire) viewNewsWire.classList.remove('hidden');
+                    // Fire the real-time activity/trade compilation feed script
+                    if (typeof renderTeamNewsWireLayout === 'function') {
+                        renderTeamNewsWireLayout();
+                    }
+                    break;
+                    
+                default:
+                    console.warn(`Sub-tab routing definition variant "${subTab}" not recognized.`);
+                    break;
+            }
         }
 
         function renderStoreInventoryLayout() {
