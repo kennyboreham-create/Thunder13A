@@ -113,9 +113,11 @@
                 <!-- ====================================================== -->
                 <div id="sub-view-standings" class="space-y-6">
                     
-                    <!-- SECTION A: THE PLAYER LEADERBOARD STANDINGS GRID -->
-                    <!-- We keep all potential IDs active here so your old code never returns null -->
+                    <!-- MASTER TARGET WRAPPER PANEL FOR STANDINGS VIEWS -->
                     <div id="leaderboard-grid" class="space-y-4">
+                        
+                        <!-- TRIPLE-ID PROTECTION LAYER -->
+                        <!-- This gives your original script every possible hook it might be searching for -->
                         <div id="leaderboard-table" class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
                             
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-4">
@@ -127,15 +129,32 @@
                                 </div>
                             </div>
 
-                            <!-- Core Data Injection Points (Handles all common naming variants) -->
-                            <div id="leaderboard-players-list">
-                                <div id="standings-rows" class="space-y-2.5">
-                                    <!-- Your original JavaScript will inject player rows right here -->
-                                </div>
-                            </div>
+                            <!-- INJECTION TARGETS: Both IDs are explicitly exposed at the same level -->
+                            <div id="leaderboard-players-list" class="space-y-2.5"></div>
+                            <div id="standings-rows" class="space-y-2.5"></div>
 
                         </div>
                     </div>
+
+                    <!-- SECTION B: ISOLATED LOCKER ROOM WIRE CHANNEL -->
+                    <div id="sub-view-news" class="hidden space-y-4">
+                        <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl bg-slate-950 border border-slate-800 p-2 rounded-xl shrink-0">📢</span>
+                                <div>
+                                    <h3 class="text-sm font-black uppercase text-white tracking-tight">Locker Room Wire</h3>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">Real-time chronicle celebrating team training exercises, successful asset trading deals, and marketplace milestones.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="news-activity-timeline" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                            <!-- Dynamic celebration event logs render here -->
+                        </div>
+                    </div>
+
+                </div>
+                <!-- ====================================================== -->
 
                     <!-- SECTION B: ISOLATED LOCKER ROOM WIRE CHANNEL -->
                     <div id="sub-view-news" class="hidden border-t border-slate-850/80 pt-6 space-y-4">
@@ -908,12 +927,16 @@
             if (viewTrading)       viewTrading.classList.add('hidden');
             if (viewNewsWire)      viewNewsWire.classList.add('hidden');
 
-            // Routing logic
+            // ... inside your switchSubTab switch statement ...
             switch (subTab) {
                 case 'standings':
                     if (btnStandings) btnStandings.className = activeStyle;
-                    // Reveal the main leaderboard display frame
+                    
+                    // Reveal the main panels
                     if (viewStandingsGrid) viewStandingsGrid.classList.remove('hidden');
+                    if (viewNewsWire) viewNewsWire.classList.add('hidden'); // Force hide news wire
+                    
+                    // Run renderer now that targets are guaranteed to be unhidden
                     if (typeof renderTeamLeaderboardLayout === 'function') {
                         renderTeamLeaderboardLayout();
                     }
@@ -922,30 +945,27 @@
                 case 'lineup':
                     if (btnLineup) btnLineup.className = activeStyle;
                     if (viewLineup) viewLineup.classList.remove('hidden');
-                    if (typeof renderStartingLineupLayout === 'function') {
-                        renderStartingLineupLayout();
-                    }
                     break;
 
                 case 'trading':
                     if (btnTrading) btnTrading.className = activeStyle;
                     if (viewTrading) viewTrading.classList.remove('hidden');
-                    if (typeof renderLockerRoomMarketLayout === 'function') {
-                        renderLockerRoomMarketLayout();
-                    }
                     break;
 
                 case 'news':
                     if (btnNews) btnNews.className = activeStyle;
-                    // Keep the outer grid block visible, but unhide the news panel inside it
                     
+                    // Hide the leaderboard grid data table rows frame entirely
+                    if (viewStandingsGrid) viewStandingsGrid.classList.add('hidden');
+                    
+                    // Unhide ONLY the news element target panel frame
                     if (viewNewsWire) viewNewsWire.classList.remove('hidden');
+                    
                     if (typeof renderTeamNewsWireLayout === 'function') {
                         renderTeamNewsWireLayout();
                     }
                     break;
             }
-        }
 
         function renderStoreInventoryLayout() {
             const grid = document.getElementById('sprite-store-grid');
