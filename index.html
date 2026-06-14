@@ -108,34 +108,53 @@
                     <button onclick="switchSubTab('news')" id="sub-tab-news" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">📢 Locker Wire</button>
                 </div>
 
-                <div id="sub-view-standings" class="space-y-4">
+                <!-- ====================================================== -->
+            <!-- MASTER CONTAINER: SUB-VIEW STANDINGS & LOCKER WIRE      -->
+            <!-- ====================================================== -->
+            <div id="sub-view-standings" class="space-y-6">
+                
+                <!-- SECTION A: THE PLAYER LEADERBOARD STANDINGS GRID -->
+                <!-- This target remains wide open for renderTeamLeaderboardLayout() -->
+                <div id="leaderboard-grid" class="space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-4">
+                            <div>
+                                <h3 class="text-sm font-black uppercase text-white tracking-wide flex items-center gap-2">
+                                    🏆 Roster Rankings
+                                </h3>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Live roster positions ordered by verified tracking score performance marks.</p>
+                            </div>
+                        </div>
+
+                        <!-- Core Data Injection Point for Player Rows -->
+                        <div id="leaderboard-players-list" class="space-y-2.5">
+                            <!-- Existing script automatically injects table/card markup lines here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION B: ISOLATED LOCKER ROOM WIRE CHANNEL -->
+                <!-- Defaults to hidden class. Toggled explicitly by switchSubTab('news') -->
+                <div id="sub-view-news" class="hidden border-t border-slate-850/80 pt-6 space-y-4">
+                    <!-- News Feed Banner Presentation Card -->
+                    <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl bg-slate-950 border border-slate-800 p-2 rounded-xl shrink-0">📢</span>
+                            <div>
+                                <h3 class="text-sm font-black uppercase text-white tracking-tight">Locker Room Wire</h3>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Real-time chronicle celebrating team training exercises, successful asset trading deals, and marketplace milestones.</p>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <div class="mt-8 border-t border-slate-800/80 pt-6">
-                        <div class="bg-gradient-to-r from-slate-900 to-indigo-950/40 border border-slate-800 p-5 rounded-2xl shadow-xl mb-4">
-                            <h3 class="text-base font-black uppercase text-white tracking-tight flex items-center gap-2">📢 Locker Room Wire</h3>
-                            <p class="text-slate-400 text-xs mt-0.5">Real-time tracker celebrating training performance totals, team item trading deals, and custom storefront upgrades.</p>
-                        </div>
-                        
-                        <div id="news-activity-timeline" class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                            </div>
-                        </div>
+                    <!-- Live Chronicle Target Destination Container -->
+                    <div id="news-activity-timeline" class="space-y-3 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                        <!-- Dynamic celebration event logs are safely generated and rendered here -->
                     </div>
-                    <!-- ====================================================== -->
-                    <!-- ADD THIS AT THE VERY BOTTOM OF THE STANDINGS PANEL -->
-                    <!-- ====================================================== -->
-                    <div class="mt-8 border-t border-slate-800/80 pt-6">
-                        <div class="bg-gradient-to-r from-slate-900 to-indigo-950/40 border border-slate-800 p-5 rounded-2xl shadow-xl mb-4">
-                            <h3 class="text-base font-black uppercase text-white tracking-tight flex items-center gap-2">📢 Locker Room Wire</h3>
-                            <p class="text-slate-400 text-xs mt-0.5">Real-time tracker celebrating training performance totals, team item trading deals, and custom storefront upgrades.</p>
-                        </div>
-                        
-                        <!-- Target container where JavaScript will inject cards -->
-                        <div id="news-activity-timeline" class="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                            <!-- News alerts appear automatically right here -->
-                        </div>
-                    </div>
-                    <!-- ====================================================== -->
-                            </div>
+                </div>
+
+            </div>
+            <!-- ====================================================== -->
 
                 <div id="sub-view-lineup" class="hidden space-y-4">
                     <div class="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-900/30 p-5 rounded-2xl shadow-xl">
