@@ -938,7 +938,7 @@
                 case 'news':
                     if (btnNews) btnNews.className = activeStyle;
                     // Keep the outer grid block visible, but unhide the news panel inside it
-                    if (viewStandingsGrid) viewStandingsGrid.classList.remove('hidden');
+                    
                     if (viewNewsWire) viewNewsWire.classList.remove('hidden');
                     if (typeof renderTeamNewsWireLayout === 'function') {
                         renderTeamNewsWireLayout();
