@@ -898,7 +898,6 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- MASTER SUB-TAB ROUTER ENGINE ---
         function switchSubTab(subTab) {
             activeSubTab = subTab;
             
@@ -915,28 +914,21 @@
             const idleStyle   = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer";
             const activeStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer";
 
-            // Reset tab button styles
             if (btnStandings) btnStandings.className = idleStyle;
             if (btnLineup)    btnLineup.className    = idleStyle;
             if (btnTrading)   btnTrading.className   = idleStyle;
             if (btnNews)      btnNews.className      = idleStyle;
 
-            // Hide all sub-panels by default
             if (viewStandingsGrid) viewStandingsGrid.classList.add('hidden');
             if (viewLineup)        viewLineup.classList.add('hidden');
             if (viewTrading)       viewTrading.classList.add('hidden');
             if (viewNewsWire)      viewNewsWire.classList.add('hidden');
 
-            // ... inside your switchSubTab switch statement ...
             switch (subTab) {
                 case 'standings':
                     if (btnStandings) btnStandings.className = activeStyle;
-                    
-                    // Reveal the main panels
                     if (viewStandingsGrid) viewStandingsGrid.classList.remove('hidden');
-                    if (viewNewsWire) viewNewsWire.classList.add('hidden'); // Force hide news wire
-                    
-                    // Run renderer now that targets are guaranteed to be unhidden
+                    if (viewNewsWire) viewNewsWire.classList.add('hidden');
                     if (typeof renderTeamLeaderboardLayout === 'function') {
                         renderTeamLeaderboardLayout();
                     }
@@ -954,18 +946,14 @@
 
                 case 'news':
                     if (btnNews) btnNews.className = activeStyle;
-                    
-                    // Hide the leaderboard grid data table rows frame entirely
                     if (viewStandingsGrid) viewStandingsGrid.classList.add('hidden');
-                    
-                    // Unhide ONLY the news element target panel frame
                     if (viewNewsWire) viewNewsWire.classList.remove('hidden');
-                    
                     if (typeof renderTeamNewsWireLayout === 'function') {
                         renderTeamNewsWireLayout();
                     }
                     break;
-            }
+            } // <--- 1. THIS CLOSES THE SWITCH STATEMENT
+        } // <--- 2. THIS CLOSES THE SWITCHSUBTAB FUNCTION
 
         function renderStoreInventoryLayout() {
             const grid = document.getElementById('sprite-store-grid');
