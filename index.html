@@ -155,7 +155,25 @@
                 </div>
             </div>
 
-            <div id="store-view-container" class="hidden">
+            <div id="store-view-container" class="hidden space-y-4">
+                
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                    <div>
+                        <h4 class="text-xs font-black uppercase text-white tracking-wider">💰 Budget Filter</h4>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Filter out sprites that exceed your star allocation threshold</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-slate-400 font-bold">Max Cost:</span>
+                        <select id="store-cost-filter" onchange="renderStoreInventoryLayout()" class="bg-slate-950 border border-slate-800 text-xs text-slate-200 font-extrabold rounded-xl px-4 py-2 focus:outline-none focus:border-blue-500 transition">
+                            <option value="all" selected>All Price Ranges</option>
+                            <option value="10">10 Stars or Less</option>
+                            <option value="25">25 Stars or Less</option>
+                            <option value="50">50 Stars or Less</option>
+                            <option value="100">100 Stars or Less</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="sprite-store-grid"></div>
             </div>
 
@@ -594,7 +612,7 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- LOCKER ROOM MARKET DISPATCH LAYOUT WITH REAL NAMES ---
+        // --- LOCKER ROOM MARKET DISPATCH LAYOUT WITH MATCHING SHEET KEYS ---
         function renderLockerRoomMarketLayout() {
             const pendingContainer = document.getElementById('market-pending-list');
             const historyContainer = document.getElementById('market-history-list');
@@ -607,14 +625,39 @@
             const pendingTrades = playerData.activeTrades.filter(t => t.status.toString().trim() === "PENDING");
             const historyTrades = playerData.activeTrades.filter(t => t.status.toString().trim() !== "PENDING");
 
-            // Helper function to convert raw IDs (e.g., "S002") into real names
-            const getSpriteNameById = (spriteId) => {
-                if (!spriteId) return "Unknown Sprite";
-                const cleanId = spriteId.toString().trim();
-                if (cleanId === "S001") return "Starter Avatar";
+            // Deep-inspection helper to resolve a human-readable name out of the trade row
+            const resolveNamesFromTradeRow = (tradeRow, type) => {
+                // 1. Map to your exact spreadsheet keys discovered in console
+                // Offered ID uses 'offered_id', Requested ID uses 'requested_sprite_id'
+                const rawId = type === 'offer' ? tradeRow.offered_id : tradeRow.requested_sprite_id;
                 
-                const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
-                return sData ? (sData.sprite_name || sData.name || `Sprite ${cleanId}`) : `Sprite ${cleanId}`;
+                if (rawId === undefined || rawId === null || rawId.toString().trim() === "") return "Empty Slot";
+
+                let cleanId = rawId.toString().trim().toUpperCase();
+                
+                // Pad numbers to standard S000 format if necessary
+                if (!cleanId.startsWith('S') && !isNaN(cleanId)) {
+                    cleanId = 'S' + cleanId.padStart(3, '0');
+                }
+                
+                if (cleanId === "S001" || cleanId === "1") return "Starter Avatar";
+
+                // 2. Scan the store array using normalized comparisons
+                const sData = playerData.storeSprites ? playerData.storeSprites.find(i => {
+                    if (!i.id) return false;
+                    let storeId = i.id.toString().trim().toUpperCase();
+                    if (!storeId.startsWith('S') && !isNaN(storeId)) {
+                        storeId = 'S' + storeId.padStart(3, '0');
+                    }
+                    return storeId === cleanId;
+                }) : null;
+
+                if (sData) {
+                    return sData.sprite_name || sData.name || `Sprite ${cleanId}`;
+                }
+
+                // 3. Fallback: If it's not found in store catalog metadata, display the sanitized ID tag
+                return `Item (${cleanId})`;
             };
 
             // RENDER ACTIVE PENDING DEALS
@@ -625,9 +668,9 @@
                     const isIncoming = t.receiver_id.toString().trim() === currentAuthId.toString().trim();
                     const otherPartyName = isIncoming ? `Player ID: ${t.sender_id}` : `Player ID: ${t.receiver_id}`;
                     
-                    // Fetch real names instead of raw IDs
-                    const offerName = getSpriteNameById(t.offer_sprite_id);
-                    const requestName = getSpriteNameById(t.request_sprite_id);
+                    // Call the row inspector to pull the names mapping to the corrected keys
+                    const offerName = resolveNamesFromTradeRow(t, 'offer');
+                    const requestName = resolveNamesFromTradeRow(t, 'request');
                     
                     return `
                         <div class="p-4 bg-slate-900 border ${isIncoming ? 'border-amber-500/30 bg-amber-500/5' : 'border-slate-800'} rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
@@ -665,9 +708,8 @@
                     if (statusStr === 'ACCEPTED') badgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
                     if (statusStr === 'DECLINED') badgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
 
-                    // Fetch real names instead of raw IDs
-                    const offerName = getSpriteNameById(t.offer_sprite_id);
-                    const requestName = getSpriteNameById(t.request_sprite_id);
+                    const offerName = resolveNamesFromTradeRow(t, 'offer');
+                    const requestName = resolveNamesFromTradeRow(t, 'request');
 
                     return `
                         <div class="p-3.5 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between opacity-70">
@@ -769,7 +811,28 @@
             const grid = document.getElementById('sprite-store-grid');
             if (!playerData.storeSprites) return;
 
-            grid.innerHTML = playerData.storeSprites.map(s => {
+            // Get the current selected value of the cost filter
+            const costFilterEl = document.getElementById('store-cost-filter');
+            const maxCostLimit = costFilterEl ? costFilterEl.value : "all";
+
+            // Filter the sprites array based on cost before mapping it to HTML
+            let filteredSprites = playerData.storeSprites.filter(s => {
+                if (maxCostLimit === "all") return true;
+                
+                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || 0;
+                return spriteCost <= parseInt(maxCostLimit);
+            });
+
+            if (filteredSprites.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12 bg-slate-900/40 border border-slate-800 rounded-2xl">
+                        <p class="text-slate-500 text-xs italic">No items found within this price range selection.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filteredSprites.map(s => {
                 const spriteName = s.sprite_name || s.name || s.NAME || "Unknown Name";
                 const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || 0;
                 const totalQty = parseInt(s.rarity) || 999;
