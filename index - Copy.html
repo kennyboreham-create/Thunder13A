@@ -19,11 +19,7 @@
         let playerData = {};
         let currentAuthId = localStorage.getItem('hockey_player_id') || "";
         let currentTrainingCategory = "strategy"; 
-        let activeSubTab = "standings"; 
-
-        // Trading State Registers
-        let tradeTargetPlayerId = null;
-        let tradeTargetSpriteId = null;
+        let activeSubTab = "standings"; // Tracking subbuttons inside leaderboard main view
     </script>
 
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
@@ -88,7 +84,7 @@
 
         <main class="flex-1 max-w-6xl w-full mx-auto p-4">
             
-            <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
+            <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2">
                 <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
                 <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
                     <option value="all" selected>All Strategy Content</option>
@@ -101,24 +97,21 @@
 
             <div id="gameboard-view-container" class="hidden space-y-4">
                 
-                <div class="flex gap-1.5 border-b border-slate-800 pb-3 overflow-x-auto">
-                    <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer">Leaderboard Standings</button>
-                    <button onclick="switchSubTab('lineup')" id="sub-tab-lineup" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Starting Lineup</button>
-                    <button onclick="switchSubTab('trading')" id="sub-tab-trading" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Locker Room Market</button>
+                <div class="flex gap-2 border-b border-slate-800 pb-3">
+                    <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer">Leaderboard Standings</button>
+                    <button onclick="switchSubTab('lineup')" id="sub-tab-lineup" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer">Starting Lineup</button>
                 </div>
 
-                <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-                    <div class="mb-4">
-                        <h3 class="text-base font-black uppercase text-white tracking-tight flex items-center gap-2">🏆 Team Rankings</h3>
-                        <p class="text-slate-400 text-xs mt-0.5">Click on any teammate's row to inspect their card collection vault and request asset trades!</p>
-                    </div>
+                <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-lg font-black uppercase text-white tracking-tight mb-4 flex items-center gap-2">
+                        <span class="text-yellow-500">🏆</span> Team Standings Leaderboard
+                    </h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm">
                             <thead>
                                 <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase font-bold tracking-wider">
                                     <th class="pb-3 pl-2">Rank</th>
                                     <th class="pb-3">Player</th>
-                                    <th class="pb-3 text-center">Status</th>
                                     <th class="pb-3">Jersey</th>
                                     <th class="pb-3 text-right pr-2">Total Stars</th>
                                 </tr>
@@ -129,29 +122,11 @@
                 </div>
 
                 <div id="sub-view-lineup" class="hidden space-y-4">
-                    <div class="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-900/30 p-5 rounded-2xl shadow-xl">
-                        <h3 class="text-base font-black uppercase text-white tracking-tight">🏒 Roster Positions</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Claim a slot in the starting line! Evict occupants by buying them out. Price increments by +1 Star with each capture.</p>
+                    <div class="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-900/30 p-6 rounded-2xl shadow-xl">
+                        <h3 class="text-xl font-black uppercase text-white tracking-tight">🏒 Starting Lineup</h3>
+                        <p class="text-xs text-slate-400 mt-1">Claim a card slot in the starting line! Evict the occupant by buying them out. The buyout price climbs by +1 Star with every capture.</p>
                     </div>
                     <div id="lineup-slots-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
-                </div>
-
-                <div id="sub-view-trading" class="hidden space-y-5">
-                    <div class="bg-gradient-to-r from-indigo-950 to-slate-900 border border-indigo-900/20 p-5 rounded-2xl shadow-xl">
-                        <h3 class="text-base font-black uppercase text-white tracking-tight">💼 Locker Room Trade Desk</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Approve incoming offers or track your dispatched trade proposals here.</p>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <h4 class="text-xs font-extrabold uppercase text-amber-400 tracking-wider mb-2 flex items-center gap-1">⏳ Open/Pending Offers</h4>
-                            <div id="market-pending-list" class="space-y-2.5"></div>
-                        </div>
-                        <div>
-                            <h4 class="text-xs font-extrabold uppercase text-slate-400 tracking-wider mb-2 flex items-center gap-1">🗄️ Closed Ledger History</h4>
-                            <div id="market-history-list" class="space-y-2.5"></div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -160,39 +135,6 @@
             </div>
 
         </main>
-    </div>
-
-    <div id="inventory-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl">
-            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/20">
-                <div>
-                    <h3 id="inventory-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Player Vault Shelf</h3>
-                    <p class="text-[10px] text-slate-400 font-medium">Browse their items and propose locker exchanges</p>
-                </div>
-                <button onclick="closeInventoryModal()" class="text-slate-400 hover:text-white transition font-bold text-xl px-2">×</button>
-            </div>
-            <div id="inventory-modal-grid" class="p-5 overflow-y-auto custom-scrollbar flex-1 grid grid-cols-2 sm:grid-cols-3 gap-3.5 bg-slate-950/30"></div>
-            <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end">
-                <button onclick="closeInventoryModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Close Inventory</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="trade-proposal-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full shadow-2xl p-6 space-y-4">
-            <div>
-                <h3 class="font-black text-white text-base uppercase tracking-tight">Draft Market Proposal</h3>
-                <p class="text-xs text-slate-400 mt-0.5">Choose which card from your inventory you want to offer in exchange.</p>
-            </div>
-            <div class="space-y-2.5">
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Your Card Offer Inventory:</label>
-                <select id="trade-offer-selector" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-bold text-slate-200 focus:outline-none focus:border-blue-500 transition"></select>
-            </div>
-            <div class="flex justify-end gap-3 pt-2">
-                <button onclick="closeTradeProposalModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Cancel</button>
-                <button onclick="submitLockerRoomTradeRequest()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-5 py-2 rounded-xl text-xs transition shadow-lg shadow-indigo-600/10">Submit Proposal</button>
-            </div>
-        </div>
     </div>
 
     <div id="lineup-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -251,8 +193,7 @@
             
             if (currentTrainingCategory === 'gameboard') {
                 if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
-                else if (activeSubTab === 'lineup') renderStartingLineupLayout();
-                else renderLockerRoomMarketLayout();
+                else renderStartingLineupLayout();
             } else {
                 renderLessonsList();
             }
@@ -276,6 +217,7 @@
 
             document.getElementById('strategy-filter-bar').classList.remove('hidden');
             const filterValue = document.getElementById('strategy-status-filter').value; 
+            
             let filteredLessons = playerData.lessons.filter(l => l.category && l.category.toString().trim().toLowerCase() === 'strategy');
             
             if (filteredLessons.length === 0) {
@@ -345,11 +287,20 @@
                     `;
                 });
             }
+
             container.innerHTML = htmlOutput === "" ? `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No matching strategy items found.</p>` : htmlOutput;
         }
 
         function renderGranularWorkoutSection(container) {
-            const workoutExercises = ["20 Pushups", "30 Squats", "20 Lunges", "30 Jumps", "10 Burpees", "100 Jumping Jacks"];
+            const workoutExercises = [
+                "20 Pushups",
+                "30 Squats",
+                "20 Lunges",
+                "30 Jumps",
+                "10 Burpees", 
+                "100 Jumping Jacks"
+            ];
+            
             let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
             const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
 
@@ -371,7 +322,10 @@
                 html += `
                     <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
                         <div class="flex items-center gap-3">
-                            <input type="checkbox" ${isChecked ? 'checked disabled' : ''} onchange="submitIndividualItemProgress('${activityKey}', 2)" class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <input type="checkbox" 
+                                   ${isChecked ? 'checked disabled' : ''} 
+                                   onchange="submitIndividualItemProgress('${activityKey}', 2)"
+                                   class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
                             <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
                         </div>
                         <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
@@ -380,12 +334,17 @@
                     </label>
                 `;
             });
+
             html += `</div></div>`;
             container.innerHTML = html;
         }
 
         function renderGranularSkillsSection(container) {
-            const skillsExercises = ["100 Stickhandling Touches", "50 Shots"];
+            const skillsExercises = [
+                "100 Stickhandling Touches",
+                "50 Shots"
+            ];
+
             let baseSkillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
             const dateContext = baseSkillsLesson ? String(baseSkillsLesson.title) : "Today";
 
@@ -406,7 +365,10 @@
                 html += `
                     <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
                         <div class="flex items-center gap-3">
-                            <input type="checkbox" ${isChecked ? 'checked disabled' : ''} onchange="submitIndividualItemProgress('${activityKey}', 2)" class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <input type="checkbox" 
+                                   ${isChecked ? 'checked disabled' : ''} 
+                                   onchange="submitIndividualItemProgress('${activityKey}', 2)"
+                                   class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
                             <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
                         </div>
                         <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
@@ -415,6 +377,7 @@
                     </label>
                 `;
             });
+
             html += `</div></div>`;
             container.innerHTML = html;
         }
@@ -436,28 +399,43 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS ---
         function renderTeamLeaderboardLayout() {
             const tbody = document.getElementById('leaderboard-table-body');
             if (!playerData.leaderboard) return;
             
+            // 1. Map out a quick list of all player IDs currently holding a starting lineup spot
             const lineupPlayerIds = playerData.gameboardSlots ? 
                 playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim() : "") : [];
+
+            // Update the table header dynamically to include the new column if it isn't already there
+            const thead = tbody.closest('table').querySelector('thead tr');
+            if (thead && !thead.innerHTML.includes('Starting Lineup')) {
+                thead.innerHTML = `
+                    <th class="pb-3 pl-2">Rank</th>
+                    <th class="pb-3">Player</th>
+                    <th class="pb-3 text-center">Starting Lineup</th>
+                    <th class="pb-3">Jersey</th>
+                    <th class="pb-3 text-right pr-2">Total Stars</th>
+                `;
+            }
 
             tbody.innerHTML = playerData.leaderboard.map((player, idx) => {
                 const cleanPlayerId = player.id.toString().trim();
                 const isMe = cleanPlayerId === currentAuthId.toString().trim();
+                
+                // 2. Check if this specific player is on the gameboard
                 const inLineup = lineupPlayerIds.includes(cleanPlayerId);
 
                 return `
-                    <tr onclick="openPlayerInventoryModal('${cleanPlayerId}')" class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/40 transition cursor-pointer">
+                    <tr class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/30 transition">
                         <td class="py-3.5 pl-3 font-mono text-xs">${idx + 1}</td>
                         <td class="py-3.5 flex items-center gap-2">
-                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId || 'S001'}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
                             <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
                         </td>
+                        <!-- New Roster Status Indicator Column -->
                         <td class="py-3.5 text-center text-sm">
-                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-500/20">盒 Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
+                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border border-blue-500/20">🏒 Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
                         </td>
                         <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
                         <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
@@ -466,200 +444,28 @@
             }).join('');
         }
 
-        // --- DYNAMIC ROSTER VAULT DISPLAY OVERLAY WITH FIXES ---
-        function openPlayerInventoryModal(targetPlayerId) {
-            const modal = document.getElementById('inventory-modal');
-            const grid = document.getElementById('inventory-modal-grid');
-            const title = document.getElementById('inventory-modal-title');
-            
-            const targetPlayer = playerData.leaderboard.find(p => p.id.toString().trim() === targetPlayerId.toString().trim());
-            if (!targetPlayer) return;
-
-            title.innerText = `${targetPlayer.name} - Vault Inventory`;
-            const isMe = targetPlayerId.toString().trim() === currentAuthId.toString().trim();
-
-            // Handle reading raw arrays or mapped array rows securely
-            const itemsOwned = targetPlayer.ownedSprites || [];
-
-            if (itemsOwned.length === 0) {
-                grid.innerHTML = `<p class="col-span-full text-center py-8 text-slate-500 text-xs italic">This player doesn't have any sprites locked in their vault storage yet.</p>`;
-            } else {
-                grid.innerHTML = itemsOwned.map(item => {
-                    // Normalize checking whether the record is a raw ID string or an object payload
-                    const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
-                    const cleanId = spriteId.toString().trim();
-                    
-                    // Discover corresponding store metadata records
-                    const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
-                    
-                    // Clean Fallback Name Selector Pipeline matching your exact sheet key ('sprite_name')
-                    let nameLabel = "Unknown Sprite";
-                    if (cleanId === "S001") {
-                        nameLabel = "Starter Avatar";
-                    } else if (typeof item === 'object' && item !== null && item.name) {
-                        nameLabel = item.name;
-                    } else if (sData) {
-                        nameLabel = sData.sprite_name || sData.name || `Sprite ${cleanId}`;
-                    } else {
-                        nameLabel = `Sprite ${cleanId}`;
-                    }
-
-                    const customImg = sData ? sData.image_url : "";
-                    const imgDisplay = customImg && customImg.trim() !== "" ? customImg.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanId}`;
-
-                    return `
-                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col items-center text-center shadow">
-                            <img src="${imgDisplay}" class="w-14 h-14 bg-slate-950 rounded-lg p-1 border border-slate-800 mb-2 object-contain">
-                            <p class="text-xs font-bold text-white truncate w-full px-1" title="${nameLabel}">${nameLabel}</p>
-                            <p class="text-[9px] font-mono text-slate-500 font-bold">${cleanId}</p>
-                            
-                            ${!isMe ? `
-                                <button onclick="openTradeProposalSlip('${targetPlayerId}', '${cleanId}')" class="w-full mt-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg transition tracking-wide uppercase cursor-pointer">
-                                    🤝 Request Trade
-                                </button>
-                            ` : `
-                                <span class="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md uppercase mt-2.5">Your Asset</span>
-                            `}
-                        </div>
-                    `;
-                }).join('');
-            }
-            modal.classList.remove('hidden');
-        }
-
-        function closeInventoryModal() { document.getElementById('inventory-modal').classList.add('hidden'); }
-
-        // --- TRADE PROPOSAL DRAFT MODAL SLIP ---
-        function openTradeProposalSlip(targetPlayerId, targetSpriteId) {
-            tradeTargetPlayerId = targetPlayerId;
-            tradeTargetSpriteId = targetSpriteId;
-
-            const select = document.getElementById('trade-offer-selector');
-            const myProfileSprites = playerData.playerProfile.ownedSprites || [];
-
-            if (myProfileSprites.length === 0) {
-                select.innerHTML = `<option value="S001">Starter Avatar (S001)</option>`;
-            } else {
-                select.innerHTML = myProfileSprites.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
-            }
-            document.getElementById('trade-proposal-modal').classList.remove('hidden');
-        }
-
-        function closeTradeProposalModal() {
-            document.getElementById('trade-proposal-modal').classList.add('hidden');
-            tradeTargetPlayerId = null; tradeTargetSpriteId = null;
-        }
-
-        async function submitLockerRoomTradeRequest() {
-            if(!tradeTargetPlayerId || !tradeTargetSpriteId) return;
-            const myOfferSpriteId = document.getElementById('trade-offer-selector').value;
-
-            try {
-                const response = await fetch(`${API_URL}?action=proposeTrade&playerId=${currentAuthId}&targetPlayerId=${tradeTargetPlayerId}&offerSpriteId=${myOfferSpriteId}&requestSpriteId=${tradeTargetSpriteId}`, { method: 'POST' });
-                const res = await response.json();
-                alert(res.message);
-                if (res.success) {
-                    closeTradeProposalModal();
-                    closeInventoryModal();
-                    fetchSynchronizedDataEngine();
-                }
-            } catch (err) { console.error(err); }
-        }
-
-        // --- LOCKER ROOM MARKET DISPATCH LAYOUT ---
-        function renderLockerRoomMarketLayout() {
-            const pendingContainer = document.getElementById('market-pending-list');
-            const historyContainer = document.getElementById('market-history-list');
-            
-            if (!playerData.activeTrades) {
-                pendingContainer.innerHTML = historyContainer.innerHTML = `<p class="text-slate-500 text-xs italic">No trade contract records loaded.</p>`;
-                return;
-            }
-
-            // In our updated backend mapping, activeTrades includes pending rows for you
-            const pendingTrades = playerData.activeTrades.filter(t => t.status.toString().trim() === "PENDING");
-            const historyTrades = playerData.activeTrades.filter(t => t.status.toString().trim() !== "PENDING");
-
-            // RENDER ACTIVE PENDING DEALS
-            if (pendingTrades.length === 0) {
-                pendingContainer.innerHTML = `<p class="text-slate-500 text-xs italic p-4 bg-slate-950/40 rounded-xl border border-slate-800/60 text-center">No pending transaction contracts open on your ledger right now.</p>`;
-            } else {
-                pendingContainer.innerHTML = pendingTrades.map(t => {
-                    const isIncoming = t.receiver_id.toString().trim() === currentAuthId.toString().trim();
-                    const otherPartyName = isIncoming ? `Player ID: ${t.sender_id}` : `Player ID: ${t.receiver_id}`;
-                    
-                    return `
-                        <div class="p-4 bg-slate-900 border ${isIncoming ? 'border-amber-500/30 bg-amber-500/5' : 'border-slate-800'} rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${isIncoming ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300'}">${isIncoming ? '📥 Incoming' : '📤 Outgoing'}</span>
-                                    <span class="text-xs font-mono font-bold text-slate-400">${t.id}</span>
-                                </div>
-                                <p class="text-xs font-extrabold text-white mt-1.5">
-                                    Offer Card: <span class="text-blue-400 font-mono">${t.offer_sprite_id}</span> ➔ Requesting Card: <span class="text-indigo-400 font-mono">${t.request_sprite_id}</span>
-                                </p>
-                                <p class="text-[10px] text-slate-500 mt-0.5">Counterparty Account Connection: ${otherPartyName}</p>
-                            </div>
-                            
-                            ${isIncoming ? `
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <button onclick="resolveTradeProposal('${t.id}', 'denyTrade')" class="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-500 hover:text-white transition cursor-pointer">Decline</button>
-                                    <button onclick="resolveTradeProposal('${t.id}', 'acceptTrade')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-black transition shadow-md shadow-emerald-600/10 cursor-pointer">Accept Deal</button>
-                                </div>
-                            ` : `
-                                <span class="text-[11px] font-semibold text-slate-500 italic shrink-0 self-center">Awaiting Team Response...</span>
-                            `}
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            // RENDER ARCHIVED HISTORY LEDGER
-            if (historyTrades.length === 0) {
-                historyContainer.innerHTML = `<p class="text-slate-500 text-xs italic text-center p-3">No archived market transaction receipts discovered inside historical logs.</p>`;
-            } else {
-                historyContainer.innerHTML = historyTrades.map(t => {
-                    const statusStr = t.status.toString().trim().toUpperCase();
-                    let badgeColor = "bg-slate-950 text-slate-500 border-slate-800";
-                    if (statusStr === 'ACCEPTED') badgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-                    if (statusStr === 'DECLINED') badgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-
-                    return `
-                        <div class="p-3.5 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between opacity-70">
-                            <div>
-                                <p class="text-xs font-bold text-slate-300">Contract Ticket <span class="font-mono text-slate-400">${t.id}</span></p>
-                                <p class="text-[11px] text-slate-400 mt-0.5">Swapped <span class="font-mono">${t.offer_sprite_id}</span> for <span class="font-mono">${t.request_sprite_id}</span></p>
-                            </div>
-                            <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border ${badgeColor}">${statusStr}</span>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
-        async function resolveTradeProposal(tradeId, actionType) {
-            try {
-                const response = await fetch(`${API_URL}?action=${actionType}&playerId=${currentAuthId}&tradeId=${tradeId}`, { method: 'POST' });
-                const res = await response.json();
-                alert(res.message);
-                if (res.success) { fetchSynchronizedDataEngine(); }
-            } catch (err) { console.error(err); }
-        }
+        // --- STARTING LINEUP LAYOUT MODAL LOGIC ---
+        let selectedSlotToPurchase = null;
 
         function renderStartingLineupLayout() {
             const grid = document.getElementById('lineup-slots-grid');
             if (!playerData.gameboardSlots) return;
 
             grid.innerHTML = playerData.gameboardSlots.map(slot => {
+                // Robust verification: ensure playerId exists, isn't null, and isn't a blank string
                 const hasOccupant = slot.playerId !== undefined && slot.playerId !== null && slot.playerId.toString().trim() !== "";
+                
                 return `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
                         <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
+                        
                         <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
+                        
                         <div class="min-h-[44px] flex flex-col justify-center">
                             <p class="text-xs font-black text-white uppercase tracking-wide leading-tight">${hasOccupant ? slot.playerName : 'Empty Slot'}</p>
                             ${hasOccupant ? `<p class="text-[9px] text-slate-400 font-bold mt-0.5">Jersey #${slot.jerseyNumber} • ${slot.spriteName}</p>` : '<p class="text-[9px] text-slate-500 font-medium">Available Position</p>'}
                         </div>
+
                         <button onclick="openLineupModal('${slot.slotId}')" class="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black py-2 rounded-xl transition shadow-md shadow-blue-600/5 cursor-pointer">
                             🛒 Buyout (${slot.currentCost} ★)
                         </button>
@@ -690,7 +496,12 @@
             try {
                 const response = await fetch(`${API_URL}?action=buyLineupSlot&playerId=${currentAuthId}&slotId=${selectedSlotToPurchase}&spriteId=${spriteId}`, { method: 'POST' });
                 const res = await response.json();
-                if (res.success) { closeLineupModal(); fetchSynchronizedDataEngine(); } else { alert(res.message); }
+                if (res.success) {
+                    closeLineupModal();
+                    fetchSynchronizedDataEngine();
+                } else {
+                    alert(res.message);
+                }
             } catch (err) { console.error(err); }
         }
 
@@ -698,56 +509,80 @@
             activeSubTab = subTab;
             const btnStandings = document.getElementById('sub-tab-standings');
             const btnLineup = document.getElementById('sub-tab-lineup');
-            const btnTrading = document.getElementById('sub-tab-trading');
-            
             const viewStandings = document.getElementById('sub-view-standings');
             const viewLineup = document.getElementById('sub-view-lineup');
-            const viewTrading = document.getElementById('sub-view-trading');
-
-            // Hide everything first
-            viewStandings.classList.add('hidden'); viewLineup.classList.add('hidden'); viewTrading.classList.add('hidden');
-            btnStandings.className = btnLineup.className = btnTrading.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
 
             if (subTab === 'standings') {
                 btnStandings.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
-                viewStandings.classList.remove('hidden'); renderTeamLeaderboardLayout();
-            } else if (subTab === 'lineup') {
-                btnLineup.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
-                viewLineup.classList.remove('hidden'); renderStartingLineupLayout();
+                btnLineup.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
+                viewStandings.classList.remove('hidden');
+                viewLineup.classList.add('hidden');
+                renderTeamLeaderboardLayout();
             } else {
-                btnTrading.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
-                viewTrading.classList.remove('hidden'); renderLockerRoomMarketLayout();
+                btnStandings.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
+                btnLineup.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
+                viewStandings.classList.add('hidden');
+                viewLineup.classList.remove('hidden');
+                renderStartingLineupLayout();
             }
         }
 
+        // --- COMPLETE HIGH-FEATURE SPRITE STOREFRONT GRID ---
         function renderStoreInventoryLayout() {
             const grid = document.getElementById('sprite-store-grid');
             if (!playerData.storeSprites) return;
 
+            // Debugging tool: Inspect incoming structure keys in the browser console (F12)
+            console.log("--- SYSTEM STORE SYNC TRANSMISSION INSPECTION ---");
+            console.log("First item data structure received from Google Sheet:", playerData.storeSprites[0]);
+
             grid.innerHTML = playerData.storeSprites.map(s => {
+                // 1. Matches your EXACT spreadsheet keys ('sprite_name' and 'cost_in_stars')
                 const spriteName = s.sprite_name || s.name || s.NAME || "Unknown Name";
-                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || 0;
-                const totalQty = parseInt(s.rarity) || 999;
+                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || parseInt(s.COST) || 0;
+                
+                // 2. Rarity and Stock Counters
+                const totalQty = parseInt(s.rarity) || parseInt(s.RARITY) || 999;
                 const stockLeft = s.stockLeft !== undefined ? s.stockLeft : totalQty;
                 const isSoldOut = s.soldOut === true;
                 
-                let rarityLabel = "Common"; let rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
-                if (totalQty === 1) { rarityLabel = "👑 Legendary"; rarityColor = "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse"; }
-                else if (totalQty <= 5) { rarityLabel = "🔥 Epic"; rarityColor = "bg-purple-500/10 text-purple-400 border-purple-500/30"; }
-                else if (totalQty <= 15) { rarityLabel = "✨ Rare"; rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30"; }
+                // 3. Dynamic Rarity Tier Engine Labels
+                let rarityLabel = "Common";
+                let rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
+                if (totalQty === 1) {
+                    rarityLabel = "👑 Legendary";
+                    rarityColor = "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse";
+                } else if (totalQty <= 5) {
+                    rarityLabel = "🔥 Epic";
+                    rarityColor = "bg-purple-500/10 text-purple-400 border-purple-500/30";
+                } else if (totalQty <= 15) {
+                    rarityLabel = "✨ Rare";
+                    rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30";
+                }
 
-                const customImageSrc = s.image_url || "";
-                const finalImgDisplay = customImageSrc.trim() !== "" ? customImageSrc.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
+                // 4. Image Loader with DiceBear Pixel-Art/Bottts Fallbacks
+                const customImageSrc = s.image_url || s.url || "";
+                const finalImgDisplay = customImageSrc.trim() !== "" ? 
+                    customImageSrc.trim() : 
+                    `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
+
+                // 5. Calculate Stock Percentage for the Progress Bar
                 const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
 
                 return `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
-                        <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">${rarityLabel}</span>
+                        
+                        <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">
+                            ${rarityLabel}
+                        </span>
+
                         <img src="${finalImgDisplay}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-2 mt-3 object-contain">
+                        
                         <div class="space-y-0.5">
                             <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${spriteName}</p>
                             <p class="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest">${s.id || 'No ID'}</p>
                         </div>
+
                         <div class="w-full mt-3 px-1">
                             <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 mb-1">
                                 <span>Stock Left</span>
@@ -757,12 +592,15 @@
                                 <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${stockPercentage}%"></div>
                             </div>
                         </div>
+
                         <div class="w-full mt-4">
                             ${s.owned ? 
                                 `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
                                 isSoldOut ? 
                                 `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
-                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${spriteCost} ★)</button>`
+                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">
+                                    🛒 Buy (${spriteCost} ★)
+                                </button>`
                             }
                         </div>
                     </div>
@@ -774,48 +612,8 @@
             try {
                 const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
                 const res = await response.json();
-                
-                if (res.success) {
-                    // Find the purchased sprite in our local store catalog data
-                    const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
-                    const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
-                    
-                    // Display premium success message alert tray
-                    alert(`🎉 Congrats! You successfully unlocked "${spriteName}"!`);
-                    
-                    // Local state mutation: instantly update ownership flag so it reflects without page reload
-                    playerData.storeSprites = playerData.storeSprites.map(s => {
-                        if (s.id.toString().trim() === spriteId.toString().trim()) {
-                            return { ...s, owned: true, stockLeft: s.stockLeft !== undefined ? Math.max(0, s.stockLeft - 1) : s.stockLeft };
-                        }
-                        return s;
-                    });
-
-                    // Add to your profile's owned inventory array list so it's instantly available for trading/equipping
-                    if (playerData.playerProfile && playerData.playerProfile.ownedSprites) {
-                        if (!playerData.playerProfile.ownedSprites.some(item => item.id === spriteId)) {
-                            playerData.playerProfile.ownedSprites.push({ id: spriteId, name: spriteName });
-                        }
-                    }
-
-                    // Deduct cost locally to instantly sync the top wallet star display bar
-                    if (purchasedSprite && playerData.playerProfile) {
-                        const cost = parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0;
-                        playerData.playerProfile.totalStars = Math.max(0, playerData.playerProfile.totalStars - cost);
-                    }
-
-                    // Force immediate UI re-renders across headers and stores
-                    renderApplicationDashboardLayout();
-                    renderStoreInventoryLayout();
-                    
-                    // Background sync with the sheet database to confirm everything matches up perfectly
-                    fetchSynchronizedDataEngine();
-                } else {
-                    alert(res.message || "Purchase processing error.");
-                }
-            } catch (err) { 
-                console.error("Store transaction fault handler:", err); 
-            }
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
         }
 
         async function executeAvatarProfileEquip(spriteId) {
@@ -829,20 +627,26 @@
         function openQuizModal(lessonId) {
             activeQuizLessonTarget = lessonId;
             activeQuizQuestionsCache = playerData.tests.filter(t => t.lesson_id.toString().trim() === lessonId.toString().trim());
+            
             const titleEl = document.getElementById('quiz-modal-title');
             const bodyEl = document.getElementById('quiz-modal-body');
             const correspondingLesson = playerData.lessons.find(l => l.id === lessonId);
+            
             titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Tactical Quiz Assessment";
             
             if (activeQuizQuestionsCache.length === 0) {
                 bodyEl.innerHTML = `<p class="text-slate-500 italic text-center p-4">No exam sheet configurations registered.</p>`;
-                document.getElementById('quiz-modal').classList.remove('hidden'); return;
+                document.getElementById('quiz-modal').classList.remove('hidden');
+                return;
             }
 
             bodyEl.innerHTML = activeQuizQuestionsCache.map((q, idx) => {
-                const questionText = q.question || "Missing Question Text";
-                const optA = q.option_a || ""; const optB = q.option_b || ""; const optC = q.option_c || ""; const optD = q.option_d || "";
-                const qId = q.id || idx;
+                const questionText = q.question || q.QUESTION || q.Text || q.text || "Missing Question Text";
+                const optA = q.option_a || q.OPTION_A || q.a || q.A || "";
+                const optB = q.option_b || q.OPTION_B || q.b || q.B || "";
+                const optC = q.option_c || q.OPTION_C || q.c || q.C || "";
+                const optD = q.option_d || q.OPTION_D || q.d || q.D || "";
+                const qId = q.id || q.ID || idx;
 
                 return `
                     <div class="space-y-2.5 pb-4 border-b border-slate-800 last:border-0">
@@ -856,23 +660,32 @@
                     </div>
                 `;
             }).join('');
+
             document.getElementById('quiz-modal').classList.remove('hidden');
         }
 
-        function closeQuizModal() { document.getElementById('quiz-modal').classList.add('hidden'); }
+        document.getElementById('quiz-modal').classList.add('hidden');
 
         async function evaluateActiveQuizAnswers() {
-            let correctCount = 0; let total = activeQuizQuestionsCache.length; let missingAnswerGuard = false;
+            let correctCount = 0;
+            let total = activeQuizQuestionsCache.length;
+            let missingAnswerGuard = false;
 
             activeQuizQuestionsCache.forEach((q, idx) => {
-                const qId = q.id || idx; const correctAns = q.correct_answer || "";
+                const qId = q.id || q.ID || idx;
+                const correctAns = q.correct_answer || q.CORRECT_ANSWER || q.answer || q.ANSWER || "";
+                
                 const selected = document.querySelector(`input[name="q_${qId}"]:checked`);
                 if (!selected) { missingAnswerGuard = true; return; }
-                if (selected.value.trim().toUpperCase() === correctAns.toString().trim().toUpperCase()) { correctCount++; }
+                if (selected.value.trim().toUpperCase() === correctAns.toString().trim().toUpperCase()) {
+                    correctCount++;
+                }
             });
 
             if (missingAnswerGuard) { alert("Please answer all questions before submitting."); return; }
-            const perfectScoreEarned = correctCount === total; const scorePercent = Math.round((correctCount / total) * 100);
+
+            const perfectScoreEarned = correctCount === total;
+            const scorePercent = Math.round((correctCount / total) * 100);
 
             try {
                 const response = await fetch(`${API_URL}?action=submitTestResult&playerId=${currentAuthId}&lessonId=${activeQuizLessonTarget}&score=${scorePercent}&passed=${perfectScoreEarned}`, { method: 'POST' });
@@ -880,13 +693,15 @@
                 if (res.success) {
                     if (perfectScoreEarned) { alert(`🎉 Perfect Score! 100% Correct. You earned +10 Stars!`); } 
                     else { alert(`Quiz Finished. Result: ${scorePercent}%. 100% required to pass. Try again!`); }
-                    closeQuizModal(); fetchSynchronizedDataEngine();
+                    closeQuizModal();
+                    fetchSynchronizedDataEngine();
                 }
             } catch (err) { console.error(err); }
         }
 
         function switchCategoryView(targetTab) {
             currentTrainingCategory = targetTab;
+            
             ['strategy', 'workout', 'skills', 'gameboard', 'store'].forEach(tab => {
                 const el = document.getElementById(`nav-${tab}`);
                 el.className = tab === targetTab ? "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer" : "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer";
@@ -896,48 +711,62 @@
             const gameboardView = document.getElementById('gameboard-view-container');
             const storeView = document.getElementById('store-view-container');
 
-            lessonsList.classList.add('hidden'); gameboardView.classList.add('hidden'); storeView.classList.add('hidden');
+            lessonsList.classList.add('hidden');
+            gameboardView.classList.add('hidden');
+            storeView.classList.add('hidden');
 
             if (targetTab === 'gameboard') {
-                gameboardView.classList.remove('hidden'); document.getElementById('strategy-filter-bar').classList.add('hidden');
+                gameboardView.classList.remove('hidden');
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
                 switchSubTab(activeSubTab); 
             } else if (targetTab === 'store') {
-                storeView.classList.remove('hidden'); document.getElementById('strategy-filter-bar').classList.add('hidden');
+                storeView.classList.remove('hidden');
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
                 renderStoreInventoryLayout();
             } else {
-                lessonsList.classList.remove('hidden'); renderLessonsList();
+                lessonsList.classList.remove('hidden');
+                renderLessonsList();
             }
         }
 
         async function attemptSystemLogin() {
             const idInput = document.getElementById('auth-player-id').value.trim();
             const passInput = document.getElementById('auth-password').value.trim();
-            const errorEl = document.getElementById('auth-error'); const btn = document.getElementById('login-btn');
+            const errorEl = document.getElementById('auth-error');
+            const btn = document.getElementById('login-btn');
+
             if(!idInput || !passInput) return;
-            btn.innerText = "Authorizing..."; errorEl.classList.add('hidden');
+            btn.innerText = "Authorizing...";
+            errorEl.classList.add('hidden');
 
             try {
                 const response = await fetch(`${API_URL}?action=login&playerId=${idInput}&password=${encodeURIComponent(passInput)}`, { method: 'POST' });
                 const res = await response.json();
                 if (res.success) {
-                    currentAuthId = idInput; localStorage.setItem('hockey_player_id', idInput);
-                    document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
+                    currentAuthId = idInput;
+                    localStorage.setItem('hockey_player_id', idInput);
+                    document.getElementById('auth-screen').classList.add('hidden');
+                    document.getElementById('app-viewport').classList.remove('hidden');
                     fetchSynchronizedDataEngine();
                 } else {
                     errorEl.innerText = res.message; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
                 }
-            } catch (err) { errorEl.innerText = "Network connection failed."; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials"; }
+            } catch (err) {
+                errorEl.innerText = "Network connection failed."; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
+            }
         }
 
         function logSystemOut() {
-            localStorage.removeItem('hockey_player_id'); currentAuthId = ""; playerData = {};
+            localStorage.removeItem('hockey_player_id');
+            currentAuthId = ""; playerData = {};
             document.getElementById('auth-player-id').value = ""; document.getElementById('auth-password').value = "";
             document.getElementById('login-btn').innerText = "Verify Credentials";
             document.getElementById('app-viewport').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden');
         }
 
         if (currentAuthId) {
-            document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-viewport').classList.remove('hidden');
             fetchSynchronizedDataEngine();
         }
     </script>
