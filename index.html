@@ -18,7 +18,7 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec"; 
         let playerData = {};
         let currentAuthId = localStorage.getItem('hockey_player_id') || "";
-        let currentTrainingCategory = "gameboard"; 
+        let currentTrainingCategory = "strategy"; 
         let activeSubTab = "standings"; 
 
         // Trading State Registers
@@ -78,29 +78,28 @@
 
         <nav class="bg-slate-900 border-b border-slate-800 px-2 sticky top-[65px] z-30">
             <div class="max-w-6xl mx-auto flex justify-around">
-                <button onclick="switchCategoryView('strategy')" id="nav-strategy" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Strategy</button>
+                <button onclick="switchCategoryView('strategy')" id="nav-strategy" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer">Strategy</button>
                 <button onclick="switchCategoryView('workout')" id="nav-workout" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Workout</button>
                 <button onclick="switchCategoryView('skills')" id="nav-skills" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Skills</button>
-                <button onclick="switchCategoryView('gameboard')" id="nav-gameboard" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer">Leaderboard</button>
+                <button onclick="switchCategoryView('gameboard')" id="nav-gameboard" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Leaderboard</button>
                 <button onclick="switchCategoryView('store')" id="nav-store" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Store</button>
             </div>
         </nav>
 
         <main class="flex-1 max-w-6xl w-full mx-auto p-4">
             
-            <div id="lessons-list-container" class="hidden space-y-4">
-                <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
-                    <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
-                        <option value="all" selected>All Strategy Content</option>
-                        <option value="todo">To Do</option>
-                        <option value="completed">Completed</option>
-                    </select>
-                </div>
-                <div id="lessons-list" class="space-y-3"></div>
+            <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
+                <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
+                    <option value="all" selected>All Strategy Content</option>
+                    <option value="todo">To Do</option>
+                    <option value="completed">Completed</option>
+                </select>
             </div>
 
-            <div id="gameboard-view-container" class="space-y-4">
+            <div id="lessons-list" class="space-y-3"></div>
+
+            <div id="gameboard-view-container" class="hidden space-y-4">
                 
                 <div class="flex gap-1.5 border-b border-slate-800 pb-3 overflow-x-auto">
                     <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer">Leaderboard Standings</button>
@@ -109,21 +108,73 @@
                     <button onclick="switchSubTab('news')" id="sub-tab-news" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">📢 Locker Wire</button>
                 </div>
 
-                <div id="sub-view-standings" class="space-y-4">
-                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-4">
-                            <div>
-                                <h3 class="text-sm font-black uppercase text-white tracking-wide flex items-center gap-2">
-                                    🏆 Roster Rankings
-                                </h3>
-                                <p class="text-[10px] text-slate-400 mt-0.5">Live roster positions ordered by verified tracking score performance marks.</p>
+                <!-- ====================================================== -->
+                <!-- MASTER CONTAINER: SUB-VIEW STANDINGS & LOCKER WIRE      -->
+                <!-- ====================================================== -->
+                <div id="sub-view-standings" class="space-y-6">
+                    
+                    <!-- MASTER TARGET WRAPPER PANEL FOR STANDINGS VIEWS -->
+                    <div id="leaderboard-grid" class="space-y-4">
+                        
+                        <!-- TRIPLE-ID PROTECTION LAYER -->
+                        <!-- This gives your original script every possible hook it might be searching for -->
+                        <div id="leaderboard-table" class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                            
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-4">
+                                <div>
+                                    <h3 class="text-sm font-black uppercase text-white tracking-wide flex items-center gap-2">
+                                        🏆 Roster Rankings
+                                    </h3>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">Live roster positions ordered by verified tracking score performance marks.</p>
+                                </div>
+                            </div>
+
+                            <!-- INJECTION TARGETS: Both IDs are explicitly exposed at the same level -->
+                            <div id="leaderboard-players-list" class="space-y-2.5"></div>
+                            <div id="standings-rows" class="space-y-2.5"></div>
+
+                        </div>
+                    </div>
+
+                    <!-- SECTION B: ISOLATED LOCKER ROOM WIRE CHANNEL -->
+                    <div id="sub-view-news" class="hidden space-y-4">
+                        <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl bg-slate-950 border border-slate-800 p-2 rounded-xl shrink-0">📢</span>
+                                <div>
+                                    <h3 class="text-sm font-black uppercase text-white tracking-tight">Locker Room Wire</h3>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">Real-time chronicle celebrating team training exercises, successful asset trading deals, and marketplace milestones.</p>
+                                </div>
                             </div>
                         </div>
                         
-                        <div id="leaderboard-players-list" class="space-y-2.5"></div>
-                        <div id="standings-rows" class="space-y-2.5"></div>
+                        <div id="news-activity-timeline" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                            <!-- Dynamic celebration event logs render here -->
+                        </div>
                     </div>
+
                 </div>
+                <!-- ====================================================== -->
+
+                    <!-- SECTION B: ISOLATED LOCKER ROOM WIRE CHANNEL -->
+                    <div id="sub-view-news" class="hidden border-t border-slate-850/80 pt-6 space-y-4">
+                        <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-slate-800 p-5 rounded-2xl shadow-xl">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl bg-slate-950 border border-slate-800 p-2 rounded-xl shrink-0">📢</span>
+                                <div>
+                                    <h3 class="text-sm font-black uppercase text-white tracking-tight">Locker Room Wire</h3>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">Real-time chronicle celebrating team training exercises, successful asset trading deals, and marketplace milestones.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="news-activity-timeline" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                            <!-- Dynamic celebration event logs render here -->
+                        </div>
+                    </div>
+
+                </div>
+                <!-- ====================================================== -->
 
                 <div id="sub-view-lineup" class="hidden space-y-4">
                     <div class="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-900/30 p-5 rounded-2xl shadow-xl">
@@ -138,6 +189,11 @@
                         <h3 class="text-base font-black uppercase text-white tracking-tight">💼 Locker Room Trade Desk</h3>
                         <p class="text-xs text-slate-400 mt-0.5">Approve incoming offers or track your dispatched trade proposals here.</p>
                     </div>
+                                        <!-- THE NEWS SUB-VIEW TARGET PANEL -->
+                    <div id="sub-view-news" class="hidden w-full space-y-4">
+                        <!-- Everything will be rendered perfectly right here by JavaScript -->
+                    </div>
+                    
                     <div class="space-y-4">
                         <div>
                             <h4 class="text-xs font-extrabold uppercase text-amber-400 tracking-wider mb-2 flex items-center gap-1">⏳ Open/Pending Offers</h4>
@@ -149,23 +205,10 @@
                         </div>
                     </div>
                 </div>
-
-                <div id="sub-view-news" class="hidden space-y-4">
-                    <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-slate-800 p-5 rounded-2xl shadow-xl">
-                        <div class="flex items-center gap-3">
-                            <span class="text-xl bg-slate-950 border border-slate-800 p-2 rounded-xl shrink-0">📢</span>
-                            <div>
-                                <h3 class="text-sm font-black uppercase text-white tracking-tight">Locker Room Wire</h3>
-                                <p class="text-[10px] text-slate-400 mt-0.5">Real-time chronicle celebrating team training exercises, successful asset trading deals, and marketplace milestones.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="news-activity-timeline" class="space-y-3 max-h-[500px] overflow-y-auto pr-1"></div>
-                </div>
-
             </div>
 
             <div id="store-view-container" class="hidden space-y-4">
+                
                 <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
                     <div>
                         <h4 class="text-xs font-black uppercase text-white tracking-wider">💰 Budget Filter</h4>
@@ -182,8 +225,23 @@
                         </select>
                     </div>
                 </div>
+
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="sprite-store-grid"></div>
             </div>
+            <div id="news-view-container" class="hidden space-y-4">
+            <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-md">
+                <div class="flex items-center gap-3 border-b border-slate-800 pb-3 mb-4">
+                    <span class="text-2xl">📢</span>
+                    <div>
+                        <h3 class="text-sm font-black uppercase text-white tracking-wide">Locker Room Wire</h3>
+                        <p class="text-[10px] text-slate-400">Real-time celebration tracker of team exercises, trading deals, and marketplace unlocks.</p>
+                    </div>
+                </div>
+
+                <div id="news-activity-timeline" class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                    </div>
+            </div>
+</div>
 
         </main>
     </div>
@@ -238,219 +296,999 @@
         </div>
     </div>
 
+    <div id="quiz-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h3 id="quiz-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Tactical Quiz Assessment</h3>
+                <button onclick="closeQuizModal()" class="text-slate-400 hover:text-white transition font-bold text-xl px-2">×</button>
+            </div>
+            <div id="quiz-modal-body" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6"></div>
+            <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end gap-3">
+                <button onclick="closeQuizModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Cancel</button>
+                <button onclick="evaluateActiveQuizAnswers()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition shadow-md shadow-indigo-600/10">Submit Answers</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // --- MASTER SYSTEM VIEW MANAGER ENGINE ---
-        function switchCategoryView(category) {
-            currentTrainingCategory = category;
-            
-            const mainLessonsPanel = document.getElementById('lessons-list-container');
-            const gameboardPanel = document.getElementById('gameboard-view-container');
-            const storePanel = document.getElementById('store-view-container');
-            const filters = document.getElementById('strategy-filter-bar');
-
-            // Hide everything by default
-            if (mainLessonsPanel) mainLessonsPanel.classList.add('hidden');
-            if (gameboardPanel) gameboardPanel.classList.add('hidden');
-            if (storePanel) storePanel.classList.add('hidden');
-            if (filters) filters.classList.add('hidden');
-
-            // Reset navigation links layout
-            const navItems = ['strategy', 'workout', 'skills', 'gameboard', 'store'];
-            navItems.forEach(item => {
-                const btn = document.getElementById(`nav-${item}`);
-                if (btn) {
-                    btn.className = "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer";
+        async function fetchSynchronizedDataEngine() {
+            if (!currentAuthId) return;
+            try {
+                const response = await fetch(`${API_URL}?action=getDashboard&playerId=${currentAuthId}`);
+                const data = await response.json();
+                if (data.success) {
+                    playerData = data;
+                    renderApplicationDashboardLayout();
+                } else {
+                    alert(data.message || "Session data fetch sync break occurred.");
+                    logSystemOut();
                 }
+            } catch (err) { console.error("Master read hook matrix fault:", err); }
+        }
+
+        // --- MASTER APPLICATION DASHBOARD LAYOUT ENGINE ---
+        function renderApplicationDashboardLayout() {
+            // 1. CRITICAL CONSOLE LOGGING PASS (Helps track state shifts during background refreshes)
+            console.log("Initializing dashboard layout refresh...", {
+                category: typeof currentTrainingCategory !== 'undefined' ? currentTrainingCategory : 'unknown',
+                subTab: typeof activeSubTab !== 'undefined' ? activeSubTab : 'unknown',
+                hasData: !!window.playerData
             });
 
-            // Highlight selected nav button
-            const activeBtn = document.getElementById(`nav-${category}`);
-            if (activeBtn) {
-                activeBtn.className = "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer";
+            // 2. STATE VALIDATION CHECK
+            // If the core spreadsheet cache is completely empty, halt render to prevent script breakages
+            if (!window.playerData) {
+                console.warn("Dashboard layout execution deferred: playerData memory block is empty.");
+                return;
             }
 
-            // Route view toggle logic cleanly
-            if (category === 'strategy' || category === 'workout' || category === 'skills') {
-                if (mainLessonsPanel) mainLessonsPanel.classList.remove('hidden');
-                if (category === 'strategy' && filters) filters.classList.remove('hidden');
-                if (typeof renderLessonsList === 'function') renderLessonsList();
-            } else if (category === 'gameboard') {
-                if (gameboardPanel) gameboardPanel.classList.remove('hidden');
-                switchSubTab(activeSubTab);
-            } else if (category === 'store') {
-                if (storePanel) storePanel.classList.remove('hidden');
-                if (typeof renderStoreInventoryLayout === 'function') renderStoreInventoryLayout();
+            // 3. TOP-LEVEL GLOBAL PROFILE SUMMARY WIDGETS
+            // Automatically updates user profile tokens, total tracking scores, and team wallet ledger balances
+            const userGlobalScoreBadge = document.getElementById('global-header-score-display');
+            const userGlobalWalletBadge = document.getElementById('global-header-wallet-display');
+            
+            if (userGlobalScoreBadge && playerData.currentUserProfile) {
+                userGlobalScoreBadge.textContent = parseInt(playerData.currentUserProfile.score) || 0;
+            }
+            if (userGlobalWalletBadge && playerData.currentUserProfile) {
+                userGlobalWalletBadge.textContent = parseInt(playerData.currentUserProfile.totalStars) || 0;
+            }
+
+            // 4. MAIN NAVIGATION ROUTER ROUTINE
+            // Evaluate which major top-level hub tab category the user is viewing
+            const primaryViewHub = typeof currentTrainingCategory !== 'undefined' ? currentTrainingCategory : 'gameboard';
+
+            if (primaryViewHub === 'gameboard') {
+                // Ensure sub-tab selections fall back safely to standings if left empty
+                const activeTargetSubTab = typeof activeSubTab !== 'undefined' ? activeSubTab : 'standings';
+                
+                // Route layout processing commands dynamically to our multi-panel switcher
+                if (typeof switchSubTab === 'function') {
+                    switchSubTab(activeTargetSubTab);
+                }
+
+            } else if (primaryViewHub === 'skills') {
+                // Execute individual workout logs, skill checks, and checklist drills canvas layouts
+                if (typeof renderSkillsTrainingGridEngine === 'function') {
+                    renderSkillsTrainingGridEngine();
+                }
+
+            } else if (primaryViewHub === 'profile') {
+                // Execute individual configuration pages, player card templates, and stats blocks
+                if (typeof renderPlayerIdentityProfileLayout === 'function') {
+                    renderPlayerIdentityProfileLayout();
+                }
+            }
+
+            // 5. AUTOMATED LIVE REFRESH SYNC HOOK
+            // If the user is currently looking at the News Wire tab, force a background redraw
+            // to display incoming trade updates or changed point balances without forcing page refreshes.
+            const newsWireContainerVisible = document.getElementById('sub-view-news') && !document.getElementById('sub-view-news').classList.contains('hidden');
+            if (newsWireContainerVisible || (primaryViewHub === 'gameboard' && typeof activeSubTab !== 'undefined' && activeSubTab === 'news')) {
+                if (typeof renderTeamNewsWireLayout === 'function') {
+                    renderTeamNewsWireLayout();
+                }
             }
         }
 
-        // --- MASTER SUB-TAB ROUTER ENGINE ---
-        function switchSubTab(subTab) {
-            if (!subTab) return;
-            activeSubTab = subTab;
+        function renderLessonsList() {
+            const container = document.getElementById('lessons-list');
+            if (!playerData.lessons) return;
             
-            const subPanels = {
-                standings: document.getElementById('sub-view-standings'),
-                lineup: document.getElementById('sub-view-lineup'),
-                trading: document.getElementById('sub-view-trading'),
-                news: document.getElementById('sub-view-news')
-            };
-
-            const buttons = {
-                standings: document.getElementById('sub-tab-standings'),
-                lineup: document.getElementById('sub-tab-lineup'),
-                trading: document.getElementById('sub-tab-trading'),
-                news: document.getElementById('sub-tab-news')
-            };
-            
-            const idleStyle   = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer";
-            const activeStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer";
-
-            Object.values(buttons).forEach(btn => { if (btn) btn.className = idleStyle; });
-            Object.values(subPanels).forEach(panel => { if (panel) panel.classList.add('hidden'); });
-
-            if (buttons[subTab]) buttons[subTab].className = activeStyle;
-            if (subPanels[subTab]) subPanels[subTab].classList.remove('hidden');
-
-            // Safely route to data rendering operations
-            switch (subTab) {
-                case 'standings':
-                    if (typeof renderTeamLeaderboardLayout === 'function') renderTeamLeaderboardLayout();
-                    break;
-                case 'lineup':
-                    if (typeof renderStartingLineupLayout === 'function') renderStartingLineupLayout();
-                    break;
-                case 'trading':
-                    if (typeof renderLockerRoomMarketLayout === 'function') renderLockerRoomMarketLayout();
-                    break;
-                case 'news':
-                    if (typeof renderTeamNewsWireLayout === 'function') renderTeamNewsWireLayout();
-                    break;
+            if (currentTrainingCategory.toLowerCase() === 'workout') {
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderGranularWorkoutSection(container);
+                return;
             }
-        }
 
-        // --- DYNAMIC RENDERING ENGINES (LOCAL SIMULATION INJECTION) ---
-        function renderTeamLeaderboardLayout() {
-            const targetA = document.getElementById('leaderboard-players-list');
-            const targetB = document.getElementById('standings-rows');
-            if (!targetA && !targetB) return;
+            if (currentTrainingCategory.toLowerCase() === 'skills') {
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderGranularSkillsSection(container);
+                return;
+            }
 
-            const players = playerData.leaderboard || [
-                { id: "P001", name: "Gretzky Kid", score: 450, totalStars: 32, avatar: "1" },
-                { id: "P002", name: "Connor Fan", score: 390, totalStars: 14, avatar: "2" },
-                { id: "P003", name: "Slapshot Pro", score: 210, totalStars: 5, avatar: "3" }
-            ];
+            document.getElementById('strategy-filter-bar').classList.remove('hidden');
+            const filterValue = document.getElementById('strategy-status-filter').value; 
+            let filteredLessons = playerData.lessons.filter(l => l.category && l.category.toString().trim().toLowerCase() === 'strategy');
+            
+            if (filteredLessons.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded-xl border border-slate-800">No strategy content loaded yet.</p>`;
+                return;
+            }
 
-            let html = players.map((p, idx) => `
-                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs font-black text-slate-500 w-5">#${idx + 1}</span>
-                        <div class="bg-slate-900 border border-slate-700 p-1 rounded-lg">
-                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${p.id}" class="w-8 h-8">
-                        </div>
+            filteredLessons.sort((a, b) => a.completed - b.completed);
+            let htmlOutput = "";
+
+            filteredLessons.forEach(l => {
+                const videoUrl = l.video_url ? l.video_url.trim() : "";
+                const isLessonComplete = l.completed;
+
+                if (filterValue === 'todo' && isLessonComplete) return;
+                if (filterValue === 'completed' && !isLessonComplete) return;
+
+                htmlOutput += `
+                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${isLessonComplete ? 'opacity-60' : ''}">
                         <div>
-                            <h4 class="text-xs font-bold text-white uppercase">${p.name}</h4>
-                            <p class="text-[9px] text-slate-400 font-mono">ID: ${p.id} • Score Points: <span class="text-blue-400 font-bold">${p.score}</span></p>
+                            <p class="font-bold ${isLessonComplete ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
+                            <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                        ${isLessonComplete ? 
+                            `
+                            <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>
+                            ${videoUrl !== "" ? `<button onclick="window.open('${videoUrl}', '_blank')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold">Watch Again</button>` : ''}
+                            ` : 
+                            `<button onclick="handleLessonCompletion('${l.id}', '${videoUrl}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">Complete</button>`
+                        }
                         </div>
                     </div>
-                    <div class="flex items-center justify-between sm:justify-end gap-4 border-t border-slate-800/50 sm:border-t-0 pt-2 sm:pt-0">
-                        <div class="text-left sm:text-right">
-                            <p class="text-xs font-black text-amber-400">★ ${p.totalStars}</p>
-                            <p class="text-[8px] text-slate-500 uppercase font-bold tracking-wider">Bank Balance</p>
-                        </div>
-                        <button onclick="inspectPlayerVault('${p.id}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg transition cursor-pointer">
-                            Inspect Roster
-                        </button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            });
 
-            if(targetA) targetA.innerHTML = html;
-            if(targetB) targetB.innerHTML = ""; // Prevent split layout duplications
+            if (playerData.tests) {
+                const uniqueLessonIdsInTests = [...new Set(playerData.tests.map(t => t.lesson_id))];
+                uniqueLessonIdsInTests.forEach(lId => {
+                    const correspondingLesson = playerData.lessons.find(l => l.id === lId);
+                    const matchingTestData = playerData.tests.find(t => t.lesson_id === lId);
+                    const isTestPassed = matchingTestData ? matchingTestData.completed === true : false;
+                    const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
+
+                    if (filterValue === 'todo' && isTestPassed) return;
+                    if (filterValue === 'completed' && !isTestPassed) return;
+
+                    htmlOutput += `
+                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/40 transition ${isTestPassed ? 'opacity-60' : ''}">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-indigo-500/20">Exam Assess</span>
+                                    <p class="font-bold ${isTestPassed ? 'text-slate-400 line-through' : 'text-slate-100'}">${labelText}</p>
+                                </div>
+                                <p class="text-xs text-yellow-500 font-medium mt-0.5">+10 Stars <span class="text-slate-400">(Requires 100%)</span></p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                            ${isTestPassed ? 
+                                `
+                                <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Passed ✓</span>
+                                <button onclick="openQuizModal('${lId}')" class="text-indigo-400 hover:text-indigo-300 text-xs underline font-semibold">Review Exam</button>
+                                ` : 
+                                `<button onclick="openQuizModal('${lId}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">Take Test</button>`
+                            }
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            container.innerHTML = htmlOutput === "" ? `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No matching strategy items found.</p>` : htmlOutput;
+        }
+
+        function renderGranularWorkoutSection(container) {
+            const workoutExercises = ["20 Pushups", "30 Squats", "20 Lunges", "30 Jumps", "10 Burpees", "100 Jumping Jacks"];
+            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
+            const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
+
+            let html = `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <div>
+                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Granular Training Set</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Weekly Workouts (${weekContext})</h3>
+                        <p class="text-xs text-slate-400 mt-1">Check off each training unit as you complete it. Earning +2 Stars per unit!</p>
+                    </div>
+                    <div class="space-y-2 pt-2">
+            `;
+
+            workoutExercises.forEach(ex => {
+                const cleanExName = ex.replace(/'/g, "").replace(/\s+/g, '_');
+                const activityKey = `WORKOUT_${cleanExName}_${weekContext.replace(/\s+/g, '_')}`;
+                const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
+
+                html += `
+                    <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" ${isChecked ? 'checked disabled' : ''} onchange="submitIndividualItemProgress('${activityKey}', 2)" class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
+                        </div>
+                        <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
+                            ${isChecked ? 'Cleared' : '+2 ★'}
+                        </span>
+                    </label>
+                `;
+            });
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function renderGranularSkillsSection(container) {
+            const skillsExercises = ["100 Stickhandling Touches", "50 Shots"];
+            let baseSkillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
+            const dateContext = baseSkillsLesson ? String(baseSkillsLesson.title) : "Today";
+
+            let html = `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <div>
+                        <span class="bg-amber-500/10 text-amber-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-amber-500/20">Daily Calibration</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Skills Drills (${dateContext})</h3>
+                        <p class="text-xs text-slate-400 mt-1">Complete your technical elements to claim +2 Stars per unit!</p>
+                    </div>
+                    <div class="space-y-2 pt-2">
+            `;
+
+            skillsExercises.forEach(ex => {
+                const activityKey = `SKILLS_${ex.replace(/\s+/g, '_')}_${dateContext.replace(/\s+/g, '_')}`;
+                const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
+
+                html += `
+                    <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" ${isChecked ? 'checked disabled' : ''} onchange="submitIndividualItemProgress('${activityKey}', 2)" class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
+                        </div>
+                        <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
+                            ${isChecked ? 'Cleared' : '+2 ★'}
+                        </span>
+                    </label>
+                `;
+            });
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        async function submitIndividualItemProgress(activityKey, starBonus) {
+            try {
+                const response = await fetch(`${API_URL}?action=completeWorkoutModule&playerId=${currentAuthId}&activityId=${activityKey}&starBonus=${starBonus}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
+        }
+
+        async function handleLessonCompletion(lessonId, videoUrl) {
+            if (videoUrl !== "") window.open(videoUrl, '_blank');
+            try {
+                const response = await fetch(`${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=LESSON&activityId=${lessonId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
+        }
+
+        // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS ---
+        function renderTeamLeaderboardLayout() {
+            const tbody = document.getElementById('leaderboard-table-body');
+            if (!playerData.leaderboard) return;
+            
+            const lineupPlayerIds = playerData.gameboardSlots ? 
+                playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim() : "") : [];
+
+            tbody.innerHTML = playerData.leaderboard.map((player, idx) => {
+                const cleanPlayerId = player.id.toString().trim();
+                const isMe = cleanPlayerId === currentAuthId.toString().trim();
+                const inLineup = lineupPlayerIds.includes(cleanPlayerId);
+
+                return `
+                    <tr onclick="openPlayerInventoryModal('${cleanPlayerId}')" class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/40 transition cursor-pointer">
+                        <td class="py-3.5 pl-3 font-mono text-xs">${idx + 1}</td>
+                        <td class="py-3.5 flex items-center gap-2">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId || 'S001'}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
+                            <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
+                        </td>
+                        <td class="py-3.5 text-center text-sm">
+                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-500/20">盒 Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
+                        </td>
+                        <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
+                        <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
+                    </tr>
+                `;
+            }).join('');
+            // Add this right inside the bottom of your existing renderTeamLeaderboardLayout function:
+            renderTeamNewsWireLayout();
+        }
+
+        // --- DYNAMIC ROSTER VAULT DISPLAY OVERLAY WITH FIXES ---
+        function openPlayerInventoryModal(targetPlayerId) {
+            const modal = document.getElementById('inventory-modal');
+            const grid = document.getElementById('inventory-modal-grid');
+            const title = document.getElementById('inventory-modal-title');
+            
+            const targetPlayer = playerData.leaderboard.find(p => p.id.toString().trim() === targetPlayerId.toString().trim());
+            if (!targetPlayer) return;
+
+            title.innerText = `${targetPlayer.name} - Vault Inventory`;
+            const isMe = targetPlayerId.toString().trim() === currentAuthId.toString().trim();
+
+            // Handle reading raw arrays or mapped array rows securely
+            const itemsOwned = targetPlayer.ownedSprites || [];
+
+            if (itemsOwned.length === 0) {
+                grid.innerHTML = `<p class="col-span-full text-center py-8 text-slate-500 text-xs italic">This player doesn't have any sprites locked in their vault storage yet.</p>`;
+            } else {
+                grid.innerHTML = itemsOwned.map(item => {
+                    // Normalize checking whether the record is a raw ID string or an object payload
+                    const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
+                    const cleanId = spriteId.toString().trim();
+                    
+                    // Discover corresponding store metadata records
+                    const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
+                    
+                    // Clean Fallback Name Selector Pipeline matching your exact sheet key ('sprite_name')
+                    let nameLabel = "Unknown Sprite";
+                    if (cleanId === "S001") {
+                        nameLabel = "Starter Avatar";
+                    } else if (typeof item === 'object' && item !== null && item.name) {
+                        nameLabel = item.name;
+                    } else if (sData) {
+                        nameLabel = sData.sprite_name || sData.name || `Sprite ${cleanId}`;
+                    } else {
+                        nameLabel = `Sprite ${cleanId}`;
+                    }
+
+                    const customImg = sData ? sData.image_url : "";
+                    const imgDisplay = customImg && customImg.trim() !== "" ? customImg.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanId}`;
+
+                    return `
+                        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col items-center text-center shadow">
+                            <img src="${imgDisplay}" class="w-14 h-14 bg-slate-950 rounded-lg p-1 border border-slate-800 mb-2 object-contain">
+                            <p class="text-xs font-bold text-white truncate w-full px-1" title="${nameLabel}">${nameLabel}</p>
+                            <p class="text-[9px] font-mono text-slate-500 font-bold">${cleanId}</p>
+                            
+                            ${!isMe ? `
+                                <button onclick="openTradeProposalSlip('${targetPlayerId}', '${cleanId}')" class="w-full mt-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg transition tracking-wide uppercase cursor-pointer">
+                                    🤝 Request Trade
+                                </button>
+                            ` : `
+                                <span class="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md uppercase mt-2.5">Your Asset</span>
+                            `}
+                        </div>
+                    `;
+                }).join('');
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeInventoryModal() { document.getElementById('inventory-modal').classList.add('hidden'); }
+
+        // --- FIXED TRADE PROPOSAL DRAFT MODAL SLIP ---
+        function openTradeProposalSlip(targetPlayerId, targetSpriteId) {
+            tradeTargetPlayerId = targetPlayerId;
+            tradeTargetSpriteId = targetSpriteId;
+
+            const select = document.getElementById('trade-offer-selector');
+            
+            // Extract your owned inventory array
+            const myProfileSprites = (playerData.playerProfile && playerData.playerProfile.ownedSprites) ? 
+                                      playerData.playerProfile.ownedSprites : [];
+
+            if (myProfileSprites.length === 0) {
+                // Safe absolute fallback if inventory arrays haven't loaded yet
+                select.innerHTML = `<option value="S001">Starter Avatar (S001)</option>`;
+            } else {
+                select.innerHTML = myProfileSprites.map(item => {
+                    // 1. Extract raw ID safely whether item is an object or a plain string
+                    const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
+                    const cleanId = spriteId.toString().trim();
+                    
+                    if (cleanId === "") return "";
+
+                    // 2. Cross-reference against store catalog dataset to find real name
+                    const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
+                    
+                    // 3. Resolve the human-readable label matching your spreadsheet keys
+                    let nameLabel = "Unknown Sprite";
+                    if (cleanId === "S001") {
+                        nameLabel = "Starter Avatar";
+                    } else if (typeof item === 'object' && item !== null && item.name) {
+                        nameLabel = item.name;
+                    } else if (sData) {
+                        nameLabel = sData.sprite_name || sData.name || `Sprite ${cleanId}`;
+                    } else {
+                        nameLabel = `Sprite ${cleanId}`;
+                    }
+
+                    return `<option value="${cleanId}">${nameLabel} (${cleanId})</option>`;
+                }).join('');
+            }
+            
+            document.getElementById('trade-proposal-modal').classList.remove('hidden');
+        }
+
+        function closeTradeProposalModal() {
+            document.getElementById('trade-proposal-modal').classList.add('hidden');
+            tradeTargetPlayerId = null; tradeTargetSpriteId = null;
+        }
+
+        async function submitLockerRoomTradeRequest() {
+            if(!tradeTargetPlayerId || !tradeTargetSpriteId) return;
+            const myOfferSpriteId = document.getElementById('trade-offer-selector').value;
+
+            try {
+                const response = await fetch(`${API_URL}?action=proposeTrade&playerId=${currentAuthId}&targetPlayerId=${tradeTargetPlayerId}&offerSpriteId=${myOfferSpriteId}&requestSpriteId=${tradeTargetSpriteId}`, { method: 'POST' });
+                const res = await response.json();
+                alert(res.message);
+                if (res.success) {
+                    closeTradeProposalModal();
+                    closeInventoryModal();
+                    fetchSynchronizedDataEngine();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+       // --- LOCKER ROOM MARKET DISPATCH LAYOUT WITH MATCHING SHEET KEYS ---
+        function renderLockerRoomMarketLayout() {
+            const pendingContainer = document.getElementById('market-pending-list');
+            const historyContainer = document.getElementById('market-history-list');
+            
+            if (!playerData.activeTrades) {
+                pendingContainer.innerHTML = historyContainer.innerHTML = `<p class="text-slate-500 text-xs italic">No trade contract records loaded.</p>`;
+                return;
+            }
+
+            const pendingTrades = playerData.activeTrades.filter(t => t.status.toString().trim() === "PENDING");
+            const historyTrades = playerData.activeTrades.filter(t => t.status.toString().trim() !== "PENDING");
+
+            // Deep-inspection helper to resolve a human-readable name out of the trade row
+            const resolveNamesFromTradeRow = (tradeRow, type) => {
+                // 1. Map to your exact spreadsheet keys discovered in console
+                // Offered ID uses 'offered_id', Requested ID uses 'requested_sprite_id'
+                const rawId = type === 'offer' ? tradeRow.offered_id : tradeRow.requested_sprite_id;
+                
+                if (rawId === undefined || rawId === null || rawId.toString().trim() === "") return "Empty Slot";
+
+                let cleanId = rawId.toString().trim().toUpperCase();
+                
+                // Pad numbers to standard S000 format if necessary
+                if (!cleanId.startsWith('S') && !isNaN(cleanId)) {
+                    cleanId = 'S' + cleanId.padStart(3, '0');
+                }
+                
+                if (cleanId === "S001" || cleanId === "1") return "Starter Avatar";
+
+                // 2. Scan the store array using normalized comparisons
+                const sData = playerData.storeSprites ? playerData.storeSprites.find(i => {
+                    if (!i.id) return false;
+                    let storeId = i.id.toString().trim().toUpperCase();
+                    if (!storeId.startsWith('S') && !isNaN(storeId)) {
+                        storeId = 'S' + storeId.padStart(3, '0');
+                    }
+                    return storeId === cleanId;
+                }) : null;
+
+                if (sData) {
+                    return sData.sprite_name || sData.name || `Sprite ${cleanId}`;
+                }
+
+                // 3. Fallback: If it's not found in store catalog metadata, display the sanitized ID tag
+                return `Item (${cleanId})`;
+            };
+
+            // RENDER ACTIVE PENDING DEALS
+            if (pendingTrades.length === 0) {
+                pendingContainer.innerHTML = `<p class="text-slate-500 text-xs italic p-4 bg-slate-950/40 rounded-xl border border-slate-800/60 text-center">No pending transaction contracts open on your ledger right now.</p>`;
+            } else {
+                pendingContainer.innerHTML = pendingTrades.map(t => {
+                    const isIncoming = t.receiver_id.toString().trim() === currentAuthId.toString().trim();
+                    const otherPartyName = isIncoming ? `Player ID: ${t.sender_id}` : `Player ID: ${t.receiver_id}`;
+                    
+                    // Call the row inspector to pull the names mapping to the corrected keys
+                    const offerName = resolveNamesFromTradeRow(t, 'offer');
+                    const requestName = resolveNamesFromTradeRow(t, 'request');
+                    
+                    return `
+                        <div class="p-4 bg-slate-900 border ${isIncoming ? 'border-amber-500/30 bg-amber-500/5' : 'border-slate-800'} rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${isIncoming ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300'}">${isIncoming ? '📥 Incoming' : '📤 Outgoing'}</span>
+                                    <span class="text-xs font-mono font-bold text-slate-400">${t.id}</span>
+                                </div>
+                                <p class="text-xs font-extrabold text-white mt-1.5">
+                                    Offer: <span class="text-blue-400 font-sans">${offerName}</span> ➔ Requesting: <span class="text-indigo-400 font-sans">${requestName}</span>
+                                </p>
+                                <p class="text-[10px] text-slate-500 mt-0.5">Counterparty Account Connection: ${otherPartyName}</p>
+                            </div>
+                            
+                            ${isIncoming ? `
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <button onclick="resolveTradeProposal('${t.id}', 'denyTrade')" class="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-500 hover:text-white transition cursor-pointer">Decline</button>
+                                    <button onclick="resolveTradeProposal('${t.id}', 'acceptTrade')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-black transition shadow-md shadow-emerald-600/10 cursor-pointer">Accept Deal</button>
+                                </div>
+                            ` : `
+                                <span class="text-[11px] font-semibold text-slate-500 italic shrink-0 self-center">Awaiting Team Response...</span>
+                            `}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // RENDER ARCHIVED HISTORY LEDGER
+            if (historyTrades.length === 0) {
+                historyContainer.innerHTML = `<p class="text-slate-500 text-xs italic text-center p-3">No archived market transaction receipts discovered inside historical logs.</p>`;
+            } else {
+                historyContainer.innerHTML = historyTrades.map(t => {
+                    const statusStr = t.status.toString().trim().toUpperCase();
+                    let badgeColor = "bg-slate-950 text-slate-500 border-slate-800";
+                    if (statusStr === 'ACCEPTED') badgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                    if (statusStr === 'DECLINED') badgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
+
+                    const offerName = resolveNamesFromTradeRow(t, 'offer');
+                    const requestName = resolveNamesFromTradeRow(t, 'request');
+
+                    return `
+                        <div class="p-3.5 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between opacity-70">
+                            <div>
+                                <p class="text-xs font-bold text-slate-300">Contract Ticket <span class="font-mono text-slate-400">${t.id}</span></p>
+                                <p class="text-[11px] text-slate-400 mt-0.5">Swapped <span class="font-sans text-slate-300">${offerName}</span> for <span class="font-sans text-slate-300">${requestName}</span></p>
+                            </div>
+                            <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border ${badgeColor}">${statusStr}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        async function resolveTradeProposal(tradeId, actionType) {
+            try {
+                const response = await fetch(`${API_URL}?action=${actionType}&playerId=${currentAuthId}&tradeId=${tradeId}`, { method: 'POST' });
+                const res = await response.json();
+                alert(res.message);
+                if (res.success) { fetchSynchronizedDataEngine(); }
+            } catch (err) { console.error(err); }
         }
 
         function renderStartingLineupLayout() {
             const grid = document.getElementById('lineup-slots-grid');
-            if (!grid) return;
+            if (!playerData.gameboardSlots) return;
 
-            const slots = playerData.lineupSlots || [
-                { id: "slot_1", position_name: "Left Wing", current_owner_name: "Connor Fan", buyout_stars: 12, sprite_id: "S001" },
-                { id: "slot_2", position_name: "Center", current_owner_name: "Vacant Position", buyout_stars: 5, sprite_id: "" },
-                { id: "slot_3", position_name: "Right Wing", current_owner_name: "Gretzky Kid", buyout_stars: 20, sprite_id: "S004" }
-            ];
-
-            grid.innerHTML = slots.map(s => `
-                <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col justify-between min-h-[140px] shadow-sm relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 bg-blue-600/10 text-blue-400 text-[8px] uppercase tracking-widest font-black px-2.5 py-1 rounded-bl-lg border-l border-b border-blue-900/20">
-                        ${s.position_name}
-                    </div>
-                    <div class="mt-2">
-                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Current Guard</p>
-                        <h4 class="text-xs font-extrabold text-white truncate mt-0.5">${s.current_owner_name}</h4>
-                    </div>
-                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                        <div>
-                            <p class="text-[8px] text-slate-500 font-bold uppercase">Buyout Cost</p>
-                            <p class="text-xs font-black text-yellow-500">★ ${s.buyout_stars}</p>
+            grid.innerHTML = playerData.gameboardSlots.map(slot => {
+                const hasOccupant = slot.playerId !== undefined && slot.playerId !== null && slot.playerId.toString().trim() !== "";
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
+                        <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
+                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
+                        <div class="min-h-[44px] flex flex-col justify-center">
+                            <p class="text-xs font-black text-white uppercase tracking-wide leading-tight">${hasOccupant ? slot.playerName : 'Empty Slot'}</p>
+                            ${hasOccupant ? `<p class="text-[9px] text-slate-400 font-bold mt-0.5">Jersey #${slot.jerseyNumber} • ${slot.spriteName}</p>` : '<p class="text-[9px] text-slate-500 font-medium">Available Position</p>'}
                         </div>
-                        <button onclick="triggerSlotClaimSequence('${s.id}')" class="bg-blue-600 hover:bg-blue-500 text-white font-black text-[9px] uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition cursor-pointer shadow-md shadow-blue-600/10">
-                            Evict
+                        <button onclick="openLineupModal('${slot.slotId}')" class="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black py-2 rounded-xl transition shadow-md shadow-blue-600/5 cursor-pointer">
+                            🛒 Buyout (${slot.currentCost} ★)
                         </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openLineupModal(slotId) {
+            selectedSlotToPurchase = slotId;
+            const selector = document.getElementById('lineup-sprite-selector');
+            const owned = playerData.playerProfile.ownedSprites || [];
+
+            if (owned.length === 0) {
+                selector.innerHTML = `<option value="S001">Starter Avatar</option>`;
+            } else {
+                selector.innerHTML = owned.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+            }
+            document.getElementById('lineup-modal').classList.remove('hidden');
+        }
+
+        function closeLineupModal() { document.getElementById('lineup-modal').classList.add('hidden'); selectedSlotToPurchase = null; }
+
+        async function confirmLineupSlotPurchase() {
+            if (!selectedSlotToPurchase) return;
+            const spriteId = document.getElementById('lineup-sprite-selector').value;
+
+            try {
+                const response = await fetch(`${API_URL}?action=buyLineupSlot&playerId=${currentAuthId}&slotId=${selectedSlotToPurchase}&spriteId=${spriteId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { closeLineupModal(); fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
+        }
+
+        function switchSubTab(subTab) {
+            activeSubTab = subTab;
+            
+            const viewStandingsGrid = document.getElementById('leaderboard-grid'); 
+            const viewLineup        = document.getElementById('sub-view-lineup');
+            const viewTrading       = document.getElementById('sub-view-trading');
+            const viewNewsWire      = document.getElementById('sub-view-news');
+
+            const btnStandings = document.getElementById('sub-tab-standings');
+            const btnLineup    = document.getElementById('sub-tab-lineup');
+            const btnTrading   = document.getElementById('sub-tab-trading');
+            const btnNews      = document.getElementById('sub-tab-news');
+            
+            const idleStyle   = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer";
+            const activeStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer";
+
+            if (btnStandings) btnStandings.className = idleStyle;
+            if (btnLineup)    btnLineup.className    = idleStyle;
+            if (btnTrading)   btnTrading.className   = idleStyle;
+            if (btnNews)      btnNews.className      = idleStyle;
+
+            if (viewStandingsGrid) viewStandingsGrid.classList.add('hidden');
+            if (viewLineup)        viewLineup.classList.add('hidden');
+            if (viewTrading)       viewTrading.classList.add('hidden');
+            if (viewNewsWire)      viewNewsWire.classList.add('hidden');
+
+            switch (subTab) {
+                case 'standings':
+                    if (btnStandings) btnStandings.className = activeStyle;
+                    if (viewStandingsGrid) viewStandingsGrid.classList.remove('hidden');
+                    if (viewNewsWire) viewNewsWire.classList.add('hidden');
+                    if (typeof renderTeamLeaderboardLayout === 'function') {
+                        renderTeamLeaderboardLayout();
+                    }
+                    break;
+
+                case 'lineup':
+                    if (btnLineup) btnLineup.className = activeStyle;
+                    if (viewLineup) viewLineup.classList.remove('hidden');
+                    break;
+
+                case 'trading':
+                    if (btnTrading) btnTrading.className = activeStyle;
+                    if (viewTrading) viewTrading.classList.remove('hidden');
+                    break;
+
+                case 'news':
+                    if (btnNews) btnNews.className = activeStyle;
+                    if (viewStandingsGrid) viewStandingsGrid.classList.add('hidden');
+                    if (viewNewsWire) viewNewsWire.classList.remove('hidden');
+                    if (typeof renderTeamNewsWireLayout === 'function') {
+                        renderTeamNewsWireLayout();
+                    }
+                    break;
+            } // <--- 1. THIS CLOSES THE SWITCH STATEMENT
+        } // <--- 2. THIS CLOSES THE SWITCHSUBTAB FUNCTION
+
+        function renderStoreInventoryLayout() {
+            const grid = document.getElementById('sprite-store-grid');
+            if (!playerData.storeSprites) return;
+
+            // Get the current selected value of the cost filter
+            const costFilterEl = document.getElementById('store-cost-filter');
+            const maxCostLimit = costFilterEl ? costFilterEl.value : "all";
+
+            // Filter the sprites array based on cost before mapping it to HTML
+            let filteredSprites = playerData.storeSprites.filter(s => {
+                if (maxCostLimit === "all") return true;
+                
+                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || 0;
+                return spriteCost <= parseInt(maxCostLimit);
+            });
+
+            if (filteredSprites.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12 bg-slate-900/40 border border-slate-800 rounded-2xl">
+                        <p class="text-slate-500 text-xs italic">No items found within this price range selection.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filteredSprites.map(s => {
+                const spriteName = s.sprite_name || s.name || s.NAME || "Unknown Name";
+                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || 0;
+                const totalQty = parseInt(s.rarity) || 999;
+                const stockLeft = s.stockLeft !== undefined ? s.stockLeft : totalQty;
+                const isSoldOut = s.soldOut === true;
+                
+                let rarityLabel = "Common"; let rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
+                if (totalQty === 1) { rarityLabel = "👑 Legendary"; rarityColor = "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse"; }
+                else if (totalQty <= 5) { rarityLabel = "🔥 Epic"; rarityColor = "bg-purple-500/10 text-purple-400 border-purple-500/30"; }
+                else if (totalQty <= 15) { rarityLabel = "✨ Rare"; rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30"; }
+
+                const customImageSrc = s.image_url || "";
+                const finalImgDisplay = customImageSrc.trim() !== "" ? customImageSrc.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
+                const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
+
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
+                        <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">${rarityLabel}</span>
+                        <img src="${finalImgDisplay}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-2 mt-3 object-contain">
+                        <div class="space-y-0.5">
+                            <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${spriteName}</p>
+                            <p class="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest">${s.id || 'No ID'}</p>
+                        </div>
+                        <div class="w-full mt-3 px-1">
+                            <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 mb-1">
+                                <span>Stock Left</span>
+                                <span class="${stockLeft === 0 ? 'text-rose-400 font-black' : 'text-slate-300'}">${stockLeft} / ${totalQty}</span>
+                            </div>
+                            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800/60">
+                                <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${stockPercentage}%"></div>
+                            </div>
+                        </div>
+                        <div class="w-full mt-4">
+                            ${s.owned ? 
+                                `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
+                                isSoldOut ? 
+                                `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
+                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${spriteCost} ★)</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function executeSpriteStorePurchase(spriteId) {
+            try {
+                const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
+                const res = await response.json();
+                
+                if (res.success) {
+                    // Find the purchased sprite in our local store catalog data
+                    const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
+                    const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
+                    
+                    // Display premium success message alert tray
+                    alert(`🎉 Congrats! You successfully unlocked "${spriteName}"!`);
+                    
+                    // Local state mutation: instantly update ownership flag so it reflects without page reload
+                    playerData.storeSprites = playerData.storeSprites.map(s => {
+                        if (s.id.toString().trim() === spriteId.toString().trim()) {
+                            return { ...s, owned: true, stockLeft: s.stockLeft !== undefined ? Math.max(0, s.stockLeft - 1) : s.stockLeft };
+                        }
+                        return s;
+                    });
+
+                    // Add to your profile's owned inventory array list so it's instantly available for trading/equipping
+                    if (playerData.playerProfile && playerData.playerProfile.ownedSprites) {
+                        if (!playerData.playerProfile.ownedSprites.some(item => item.id === spriteId)) {
+                            playerData.playerProfile.ownedSprites.push({ id: spriteId, name: spriteName });
+                        }
+                    }
+
+                    // Deduct cost locally to instantly sync the top wallet star display bar
+                    if (purchasedSprite && playerData.playerProfile) {
+                        const cost = parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0;
+                        playerData.playerProfile.totalStars = Math.max(0, playerData.playerProfile.totalStars - cost);
+                    }
+
+                    // Force immediate UI re-renders across headers and stores
+                    renderApplicationDashboardLayout();
+                    renderStoreInventoryLayout();
+                    
+                    // Background sync with the sheet database to confirm everything matches up perfectly
+                    fetchSynchronizedDataEngine();
+                } else {
+                    alert(res.message || "Purchase processing error.");
+                }
+            } catch (err) { 
+                console.error("Store transaction fault handler:", err); 
+            }
+        }
+
+        async function executeAvatarProfileEquip(spriteId) {
+            try {
+                const response = await fetch(`${API_URL}?action=equipSprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
+        }
+
+        function openQuizModal(lessonId) {
+            activeQuizLessonTarget = lessonId;
+            activeQuizQuestionsCache = playerData.tests.filter(t => t.lesson_id.toString().trim() === lessonId.toString().trim());
+            const titleEl = document.getElementById('quiz-modal-title');
+            const bodyEl = document.getElementById('quiz-modal-body');
+            const correspondingLesson = playerData.lessons.find(l => l.id === lessonId);
+            titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Tactical Quiz Assessment";
+            
+            if (activeQuizQuestionsCache.length === 0) {
+                bodyEl.innerHTML = `<p class="text-slate-500 italic text-center p-4">No exam sheet configurations registered.</p>`;
+                document.getElementById('quiz-modal').classList.remove('hidden'); return;
+            }
+
+            bodyEl.innerHTML = activeQuizQuestionsCache.map((q, idx) => {
+                const questionText = q.question || "Missing Question Text";
+                const optA = q.option_a || ""; const optB = q.option_b || ""; const optC = q.option_c || ""; const optD = q.option_d || "";
+                const qId = q.id || idx;
+
+                return `
+                    <div class="space-y-2.5 pb-4 border-b border-slate-800 last:border-0">
+                        <p class="text-sm font-bold text-slate-100 flex gap-2"><span class="text-indigo-400 font-mono">${idx + 1}.</span> ${questionText}</p>
+                        <div class="grid grid-cols-1 gap-2 pl-4">
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="A" class="accent-indigo-500"> <span>${optA}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="B" class="accent-indigo-500"> <span>${optB}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="C" class="accent-indigo-500"> <span>${optC}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="D" class="accent-indigo-500"> <span>${optD}</span></label>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            document.getElementById('quiz-modal').classList.remove('hidden');
+        }
+
+        function closeQuizModal() { document.getElementById('quiz-modal').classList.add('hidden'); }
+
+        async function evaluateActiveQuizAnswers() {
+            let correctCount = 0; let total = activeQuizQuestionsCache.length; let missingAnswerGuard = false;
+
+            activeQuizQuestionsCache.forEach((q, idx) => {
+                const qId = q.id || idx; const correctAns = q.correct_answer || "";
+                const selected = document.querySelector(`input[name="q_${qId}"]:checked`);
+                if (!selected) { missingAnswerGuard = true; return; }
+                if (selected.value.trim().toUpperCase() === correctAns.toString().trim().toUpperCase()) { correctCount++; }
+            });
+
+            if (missingAnswerGuard) { alert("Please answer all questions before submitting."); return; }
+            const perfectScoreEarned = correctCount === total; const scorePercent = Math.round((correctCount / total) * 100);
+
+            try {
+                const response = await fetch(`${API_URL}?action=submitTestResult&playerId=${currentAuthId}&lessonId=${activeQuizLessonTarget}&score=${scorePercent}&passed=${perfectScoreEarned}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    if (perfectScoreEarned) { alert(`🎉 Perfect Score! 100% Correct. You earned +10 Stars!`); } 
+                    else { alert(`Quiz Finished. Result: ${scorePercent}%. 100% required to pass. Try again!`); }
+                    closeQuizModal(); fetchSynchronizedDataEngine();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function switchCategoryView(targetTab) {
+            currentTrainingCategory = targetTab;
+            ['strategy', 'workout', 'skills', 'gameboard', 'store'].forEach(tab => {
+                const el = document.getElementById(`nav-${tab}`);
+                el.className = tab === targetTab ? "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer" : "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer";
+            });
+
+            const lessonsList = document.getElementById('lessons-list');
+            const gameboardView = document.getElementById('gameboard-view-container');
+            const storeView = document.getElementById('store-view-container');
+
+            lessonsList.classList.add('hidden'); gameboardView.classList.add('hidden'); storeView.classList.add('hidden');
+
+            if (targetTab === 'gameboard') {
+                gameboardView.classList.remove('hidden'); document.getElementById('strategy-filter-bar').classList.add('hidden');
+                switchSubTab(activeSubTab); 
+            } else if (targetTab === 'store') {
+                storeView.classList.remove('hidden'); document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderStoreInventoryLayout();
+            } else {
+                lessonsList.classList.remove('hidden'); renderLessonsList();
+            }
+        }
+
+        async function attemptSystemLogin() {
+            const idInput = document.getElementById('auth-player-id').value.trim();
+            const passInput = document.getElementById('auth-password').value.trim();
+            const errorEl = document.getElementById('auth-error'); const btn = document.getElementById('login-btn');
+            if(!idInput || !passInput) return;
+            btn.innerText = "Authorizing..."; errorEl.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_URL}?action=login&playerId=${idInput}&password=${encodeURIComponent(passInput)}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    currentAuthId = idInput; localStorage.setItem('hockey_player_id', idInput);
+                    document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
+                    fetchSynchronizedDataEngine();
+                } else {
+                    errorEl.innerText = res.message; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
+                }
+            } catch (err) { errorEl.innerText = "Network connection failed."; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials"; }
+        }
+
+        function logSystemOut() {
+            localStorage.removeItem('hockey_player_id'); currentAuthId = ""; playerData = {};
+            document.getElementById('auth-player-id').value = ""; document.getElementById('auth-password').value = "";
+            document.getElementById('login-btn').innerText = "Verify Credentials";
+            document.getElementById('app-viewport').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden');
+        }
+
+        if (currentAuthId) {
+            document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
+            fetchSynchronizedDataEngine();
+        }
+       // --- COMPLETE BULLETPROOF ENGINE RENDERER FOR LOCKER ROOM WIRE ---
+        let newsWireIntervalRetryTracker = null;
+
+        // --- SECURE SYSTEM TIMELINE NEWS COMPILER ---
+        function renderTeamNewsWireLayout() {
+            const container = document.getElementById('news-activity-timeline');
+            if (!container) return; // Exit safely if the tab isn't mounted yet
+
+            let activities = [];
+
+            // Safe dictionary helper to process avatar IDs
+            const findSpriteName = (id) => {
+                if (!id) return "Premium Sprite";
+                const clean = id.toString().trim().toUpperCase();
+                if (clean === "S001" || clean === "1") return "Starter Avatar";
+                const s = playerData.storeSprites ? playerData.storeSprites.find(item => item.id.toString().trim().toUpperCase() === clean) : null;
+                return s ? (s.sprite_name || s.name) : `Sprite (${id})`;
+            };
+
+            // 1. COLLECT ALL SUCCESSFUL AND OPEN SHEET TRADES
+            if (playerData.activeTrades && playerData.activeTrades.length > 0) {
+                playerData.activeTrades.forEach((trade, index) => {
+                    const statusStr = trade.status ? trade.status.toString().trim().toUpperCase() : '';
+                    const offerName = findSpriteName(trade.offered_id);
+                    const requestName = findSpriteName(trade.requested_sprite_id);
+                    
+                    if (statusStr === 'ACCEPTED') {
+                        activities.push({
+                            weight: 5000 + index, 
+                            icon: "🤝",
+                            badge: "TRADE COMPLETED",
+                            badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                            message: `Player <span class="text-slate-200 font-bold">${trade.sender_id}</span> successfully swapped <span class="text-blue-400 font-semibold">${offerName}</span> with Player <span class="text-slate-200 font-bold">${trade.receiver_id}</span> for <span class="text-purple-400 font-semibold">${requestName}</span>.`
+                        });
+                    } else if (statusStr === 'PENDING') {
+                        activities.push({
+                            weight: 4000 + index,
+                            icon: "⚖️",
+                            badge: "NEW PROPOSAL",
+                            badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                            message: `Player <span class="text-slate-200 font-bold">${trade.sender_id}</span> proposed a contract swap: Offering <span class="text-blue-400 font-semibold">${offerName}</span> for Player <span class="text-slate-200 font-bold">${trade.receiver_id}</span>'s <span class="text-indigo-400 font-semibold">${requestName}</span>.`
+                        });
+                    }
+                });
+            }
+
+            // 2. COLLECT ACTIVE PLAYER STANDINGS STATS
+            if (playerData.leaderboard && playerData.leaderboard.length > 0) {
+                playerData.leaderboard.forEach((player, index) => {
+                    const totalStars = parseInt(player.totalStars) || 0;
+                    const cleanScore = parseInt(player.score) || 0;
+
+                    activities.push({
+                        weight: 2000 + cleanScore + index,
+                        icon: "🏒",
+                        badge: "ROSTER STATUS",
+                        badgeClass: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                        message: `<span class="text-white font-extrabold">${player.name || 'Roster Player'}</span> is active on the training grid with an overall tracking score of <span class="text-blue-400 font-bold">${cleanScore} points</span>!`
+                    });
+
+                    if (totalStars > 0) {
+                        activities.push({
+                            weight: 1000 + totalStars + index,
+                            icon: "⭐",
+                            badge: "WALLET BANK",
+                            badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                            message: `<span class="text-white font-extrabold">${player.name || 'Roster Player'}</span> currently commands a balance of <span class="text-amber-300 font-mono font-bold">${totalStars} Stars</span> available for marketplace spend.`
+                        });
+                    }
+                });
+            }
+
+            // Chronological Sorting pass
+            activities.sort((a, b) => b.weight - a.weight);
+
+            // 3. GENERATE INNER CONTENT
+            if (activities.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 text-xs italic text-center py-4">Locker wire logging data channel is idle.</p>`;
+                return;
+            }
+
+            container.innerHTML = activities.slice(0, 20).map(item => `
+                <div class="p-3 bg-slate-900 border border-slate-800/80 rounded-xl flex items-start gap-3 shadow-sm">
+                    <span class="text-base bg-slate-950 border border-slate-800 p-1.5 rounded-lg shrink-0">${item.icon}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded border ${item.badgeClass}">${item.badge}</span>
+                        </div>
+                        <p class="text-xs text-slate-300 font-sans mt-1 leading-relaxed">${item.message}</p>
                     </div>
                 </div>
             `).join('');
         }
-
-        function renderLockerRoomMarketLayout() {
-            const pendingList = document.getElementById('market-pending-list');
-            const historyList = document.getElementById('market-history-list');
-            
-            if (pendingList) {
-                pendingList.innerHTML = `<div class="p-3 bg-slate-950/40 border border-slate-800/60 rounded-xl text-center text-xs text-slate-500 italic">No incoming trade offers pending review.</div>`;
-            }
-            if (historyList) {
-                historyList.innerHTML = `<div class="p-3 bg-slate-950/40 border border-slate-800/60 rounded-xl text-center text-xs text-slate-500 italic">Historical transfer ledger is empty.</div>`;
-            }
-        }
-
-        function renderTeamNewsWireLayout() {
-            const container = document.getElementById('news-activity-timeline');
-            if (!container) return;
-            container.innerHTML = `<p class="text-slate-500 text-xs italic text-center py-4">Locker wire logging data channel is active and checking metrics.</p>`;
-        }
-
-        function inspectPlayerVault(id) { alert(`Inspecting locker asset details for profile: ${id}`); }
-        function triggerSlotClaimSequence(id) { alert(`Opening operational inventory filters to claim line position: ${id}`); }
-
-        // --- AUTHENTICATION FLOW TRIGGERS ---
-        function attemptSystemLogin() {
-            const idInput = document.getElementById('auth-player-id').value.trim();
-            if(!idInput) return;
-            localStorage.setItem('hockey_player_id', idInput);
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('app-viewport').classList.remove('hidden');
-            
-            window.playerData = { 
-                currentUserProfile: { totalStars: 15 }, 
-                leaderboard: null, 
-                lineupSlots: null 
-            };
-            switchCategoryView('gameboard');
-        }
-
-        function logSystemOut() {
-            localStorage.removeItem('hockey_player_id');
-            document.getElementById('app-viewport').classList.add('hidden');
-            document.getElementById('auth-screen').classList.remove('hidden');
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            if (currentAuthId) {
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('app-viewport').classList.remove('hidden');
-                attemptSystemLogin();
-            }
-        });
     </script>
-
 </body>
 </html>
