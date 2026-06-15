@@ -87,10 +87,11 @@
         </nav>
 
         <main class="flex-1 max-w-6xl w-full mx-auto p-4">
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-                <h2>New Lessons Added Weekly</h2>
+            
             
             <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                <h2>New Lessons Added Weekly</h2>
                 <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
                 <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
                     <option value="all" selected>All Strategy Content</option>
