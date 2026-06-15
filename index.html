@@ -566,7 +566,7 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- LOCKER ROOM MARKET DISPATCH LAYOUT ---
+        // --- LOCKER ROOM MARKET DISPATCH LAYOUT WITH REAL NAMES ---
         function renderLockerRoomMarketLayout() {
             const pendingContainer = document.getElementById('market-pending-list');
             const historyContainer = document.getElementById('market-history-list');
@@ -576,9 +576,18 @@
                 return;
             }
 
-            // In our updated backend mapping, activeTrades includes pending rows for you
             const pendingTrades = playerData.activeTrades.filter(t => t.status.toString().trim() === "PENDING");
             const historyTrades = playerData.activeTrades.filter(t => t.status.toString().trim() !== "PENDING");
+
+            // Helper function to convert raw IDs (e.g., "S002") into real names
+            const getSpriteNameById = (spriteId) => {
+                if (!spriteId) return "Unknown Sprite";
+                const cleanId = spriteId.toString().trim();
+                if (cleanId === "S001") return "Starter Avatar";
+                
+                const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
+                return sData ? (sData.sprite_name || sData.name || `Sprite ${cleanId}`) : `Sprite ${cleanId}`;
+            };
 
             // RENDER ACTIVE PENDING DEALS
             if (pendingTrades.length === 0) {
@@ -588,6 +597,10 @@
                     const isIncoming = t.receiver_id.toString().trim() === currentAuthId.toString().trim();
                     const otherPartyName = isIncoming ? `Player ID: ${t.sender_id}` : `Player ID: ${t.receiver_id}`;
                     
+                    // Fetch real names instead of raw IDs
+                    const offerName = getSpriteNameById(t.offer_sprite_id);
+                    const requestName = getSpriteNameById(t.request_sprite_id);
+                    
                     return `
                         <div class="p-4 bg-slate-900 border ${isIncoming ? 'border-amber-500/30 bg-amber-500/5' : 'border-slate-800'} rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
                             <div>
@@ -596,7 +609,7 @@
                                     <span class="text-xs font-mono font-bold text-slate-400">${t.id}</span>
                                 </div>
                                 <p class="text-xs font-extrabold text-white mt-1.5">
-                                    Offer Card: <span class="text-blue-400 font-mono">${t.offer_sprite_id}</span> ➔ Requesting Card: <span class="text-indigo-400 font-mono">${t.request_sprite_id}</span>
+                                    Offer: <span class="text-blue-400 font-sans">${offerName}</span> ➔ Requesting: <span class="text-indigo-400 font-sans">${requestName}</span>
                                 </p>
                                 <p class="text-[10px] text-slate-500 mt-0.5">Counterparty Account Connection: ${otherPartyName}</p>
                             </div>
@@ -624,11 +637,15 @@
                     if (statusStr === 'ACCEPTED') badgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
                     if (statusStr === 'DECLINED') badgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
 
+                    // Fetch real names instead of raw IDs
+                    const offerName = getSpriteNameById(t.offer_sprite_id);
+                    const requestName = getSpriteNameById(t.request_sprite_id);
+
                     return `
                         <div class="p-3.5 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between opacity-70">
                             <div>
                                 <p class="text-xs font-bold text-slate-300">Contract Ticket <span class="font-mono text-slate-400">${t.id}</span></p>
-                                <p class="text-[11px] text-slate-400 mt-0.5">Swapped <span class="font-mono">${t.offer_sprite_id}</span> for <span class="font-mono">${t.request_sprite_id}</span></p>
+                                <p class="text-[11px] text-slate-400 mt-0.5">Swapped <span class="font-sans text-slate-300">${offerName}</span> for <span class="font-sans text-slate-300">${requestName}</span></p>
                             </div>
                             <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border ${badgeColor}">${statusStr}</span>
                         </div>
