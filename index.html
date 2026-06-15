@@ -97,7 +97,7 @@
                 </select>
             </div>
 
-            <div id="lessons-list" class="space-y-3"></div>
+            <div id="lessons-list" class="space-y-3">New Lessons Added Weekly</div>
 
             <div id="gameboard-view-container" class="hidden space-y-4">
                 
@@ -313,7 +313,7 @@
 
                 htmlOutput += `
                     <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${isLessonComplete ? 'opacity-60' : ''}">
-                        <div>New lessons added weekly 
+                        <div> 
                             <p class="font-bold ${isLessonComplete ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
                             <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
                         </div>
