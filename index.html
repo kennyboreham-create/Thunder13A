@@ -841,8 +841,8 @@
                 
                 let rarityLabel = "Common"; let rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
                 if (totalQty === 1) { rarityLabel = "👑 Legendary"; rarityColor = "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse"; }
-                else if (totalQty <= 5) { rarityLabel = "🔥 Epic"; rarityColor = "bg-purple-500/10 text-purple-400 border-purple-500/30"; }
-                else if (totalQty <= 15) { rarityLabel = "✨ Rare"; rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30"; }
+                else if (totalQty === 2) { rarityLabel = "🔥 Epic"; rarityColor = "bg-purple-500/10 text-purple-400 border-purple-500/30"; }
+                else if (totalQty === 3) { rarityLabel = "✨ Rare"; rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30"; }
 
                 const customImageSrc = s.image_url || "";
                 const finalImgDisplay = customImageSrc.trim() !== "" ? customImageSrc.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
