@@ -15,15 +15,11 @@
 <body class="text-slate-100 font-sans min-h-screen flex flex-col antialiased">
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec"; 
+        const API_URL = "YOUR_SCRIPT_URL_HERE"; 
         let playerData = {};
         let currentAuthId = localStorage.getItem('hockey_player_id') || "";
-        let currentTrainingCategory = "gameboard"; 
-        let activeSubTab = "standings"; 
-
-        // Trading State Registers
-        let tradeTargetPlayerId = null;
-        let tradeTargetSpriteId = null;
+        let currentTrainingCategory = "strategy"; 
+        let activeSubTab = "standings"; // Tracking subbuttons inside leaderboard main view
     </script>
 
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
@@ -78,362 +74,617 @@
 
         <nav class="bg-slate-900 border-b border-slate-800 px-2 sticky top-[65px] z-30">
             <div class="max-w-6xl mx-auto flex justify-around">
-                <button onclick="switchCategoryView('strategy')" id="nav-strategy" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Strategy</button>
+                <button onclick="switchCategoryView('strategy')" id="nav-strategy" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer">Strategy</button>
                 <button onclick="switchCategoryView('workout')" id="nav-workout" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Workout</button>
                 <button onclick="switchCategoryView('skills')" id="nav-skills" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Skills</button>
-                <button onclick="switchCategoryView('gameboard')" id="nav-gameboard" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer">Leaderboard</button>
+                <button onclick="switchCategoryView('gameboard')" id="nav-gameboard" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Leaderboard</button>
                 <button onclick="switchCategoryView('store')" id="nav-store" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Store</button>
             </div>
         </nav>
 
         <main class="flex-1 max-w-6xl w-full mx-auto p-4">
             
-            <div id="lessons-list-container" class="hidden space-y-4">
-                <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
-                    <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
-                        <option value="all" selected>All Strategy Content</option>
-                        <option value="todo">To Do</option>
-                        <option value="completed">Completed</option>
-                    </select>
-                </div>
-                <div id="lessons-list" class="space-y-3"></div>
+            <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
+                <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
+                    <option value="all" selected>All Strategy Content</option>
+                    <option value="todo">To Do</option>
+                    <option value="completed">Completed</option>
+                </select>
             </div>
 
-            <div id="gameboard-view-container" class="space-y-4">
+            <div id="lessons-list" class="space-y-3"></div>
+
+            <div id="gameboard-view-container" class="hidden space-y-4">
                 
-                <div class="flex gap-1.5 border-b border-slate-800 pb-3 overflow-x-auto">
-                    <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer">Leaderboard Standings</button>
-                    <button onclick="switchSubTab('lineup')" id="sub-tab-lineup" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Starting Lineup</button>
-                    <button onclick="switchSubTab('trading')" id="sub-tab-trading" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Locker Room Market</button>
-                    <button onclick="switchSubTab('news')" id="sub-tab-news" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">📢 Locker Wire</button>
+                <div class="flex gap-2 border-b border-slate-800 pb-3">
+                    <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer">Leaderboard Standings</button>
+                    <button onclick="switchSubTab('lineup')" id="sub-tab-lineup" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer">Starting Lineup</button>
                 </div>
 
-                <div id="sub-view-standings" class="space-y-4">
-                    <div class="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-4">
-                            <div>
-                                <h3 class="text-sm font-black uppercase text-white tracking-wide flex items-center gap-2">
-                                    🏆 Roster Rankings
-                                </h3>
-                                <p class="text-[10px] text-slate-400 mt-0.5">Live roster positions ordered by verified tracking score performance marks.</p>
-                            </div>
-                        </div>
-                        
-                        <div id="leaderboard-players-list" class="space-y-2.5"></div>
-                        <div id="standings-rows" class="space-y-2.5"></div>
+                <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-lg font-black uppercase text-white tracking-tight mb-4 flex items-center gap-2">
+                        <span class="text-yellow-500">🏆</span> Team Standings Leaderboard
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase font-bold tracking-wider">
+                                    <th class="pb-3 pl-2">Rank</th>
+                                    <th class="pb-3">Player</th>
+                                    <th class="pb-3">Jersey</th>
+                                    <th class="pb-3 text-right pr-2">Total Stars</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-table-body" class="divide-y divide-slate-800/50"></tbody>
+                        </table>
                     </div>
                 </div>
 
                 <div id="sub-view-lineup" class="hidden space-y-4">
-                    <div class="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-900/30 p-5 rounded-2xl shadow-xl">
-                        <h3 class="text-base font-black uppercase text-white tracking-tight">🏒 Roster Positions</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Claim a slot in the starting line! Evict occupants by buying them out. Price increments by +1 Star with each capture.</p>
+                    <div class="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-900/30 p-6 rounded-2xl shadow-xl">
+                        <h3 class="text-xl font-black uppercase text-white tracking-tight">🏒 Starting Lineup</h3>
+                        <p class="text-xs text-slate-400 mt-1">Claim a card slot in the starting line! Evict the occupant by buying them out. The buyout price climbs by +1 Star with every capture.</p>
                     </div>
                     <div id="lineup-slots-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
                 </div>
-
-                <div id="sub-view-trading" class="hidden space-y-5">
-                    <div class="bg-gradient-to-r from-indigo-950 to-slate-900 border border-indigo-900/20 p-5 rounded-2xl shadow-xl">
-                        <h3 class="text-base font-black uppercase text-white tracking-tight">💼 Locker Room Trade Desk</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">Approve incoming offers or track your dispatched trade proposals here.</p>
-                    </div>
-                    <div class="space-y-4">
-                        <div>
-                            <h4 class="text-xs font-extrabold uppercase text-amber-400 tracking-wider mb-2 flex items-center gap-1">⏳ Open/Pending Offers</h4>
-                            <div id="market-pending-list" class="space-y-2.5"></div>
-                        </div>
-                        <div>
-                            <h4 class="text-xs font-extrabold uppercase text-slate-400 tracking-wider mb-2 flex items-center gap-1">🗄️ Closed Ledger History</h4>
-                            <div id="market-history-list" class="space-y-2.5"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="sub-view-news" class="hidden space-y-4">
-                    <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/30 border border-slate-800 p-5 rounded-2xl shadow-xl">
-                        <div class="flex items-center gap-3">
-                            <span class="text-xl bg-slate-950 border border-slate-800 p-2 rounded-xl shrink-0">📢</span>
-                            <div>
-                                <h3 class="text-sm font-black uppercase text-white tracking-tight">Locker Room Wire</h3>
-                                <p class="text-[10px] text-slate-400 mt-0.5">Real-time chronicle celebrating team training exercises, successful asset trading deals, and marketplace milestones.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="news-activity-timeline" class="space-y-3 max-h-[500px] overflow-y-auto pr-1"></div>
-                </div>
-
             </div>
 
-            <div id="store-view-container" class="hidden space-y-4">
-                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-                    <div>
-                        <h4 class="text-xs font-black uppercase text-white tracking-wider">💰 Budget Filter</h4>
-                        <p class="text-[10px] text-slate-400 mt-0.5">Filter out sprites that exceed your star allocation threshold</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs text-slate-400 font-bold">Max Cost:</span>
-                        <select id="store-cost-filter" onchange="renderStoreInventoryLayout()" class="bg-slate-950 border border-slate-800 text-xs text-slate-200 font-extrabold rounded-xl px-4 py-2 focus:outline-none focus:border-blue-500 transition">
-                            <option value="all" selected>All Price Ranges</option>
-                            <option value="10">10 Stars or Less</option>
-                            <option value="25">25 Stars or Less</option>
-                            <option value="50">50 Stars or Less</option>
-                            <option value="100">100 Stars or Less</option>
-                        </select>
-                    </div>
-                </div>
+            <div id="store-view-container" class="hidden">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="sprite-store-grid"></div>
             </div>
 
         </main>
     </div>
 
-    <div id="inventory-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl">
-            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/20">
-                <div>
-                    <h3 id="inventory-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Player Vault Shelf</h3>
-                    <p class="text-[10px] text-slate-400 font-medium">Browse their items and propose locker exchanges</p>
-                </div>
-                <button onclick="closeInventoryModal()" class="text-slate-400 hover:text-white transition font-bold text-xl px-2">×</button>
+    <div id="lineup-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full shadow-2xl p-6 space-y-4">
+            <div>
+                <h3 class="font-black text-white text-base uppercase tracking-tight">Deploy Roster Card</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Select an owned sprite to represent you in this slot.</p>
             </div>
-            <div id="inventory-modal-grid" class="p-5 overflow-y-auto custom-scrollbar flex-1 grid grid-cols-2 sm:grid-cols-3 gap-3.5 bg-slate-950/30"></div>
-            <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end">
-                <button onclick="closeInventoryModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Close Inventory</button>
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Your Card Inventory:</label>
+                <select id="lineup-sprite-selector" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-bold text-slate-200 focus:outline-none focus:border-blue-500 transition"></select>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeLineupModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Cancel</button>
+                <button onclick="confirmLineupSlotPurchase()" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-5 py-2 rounded-xl text-xs transition shadow-lg shadow-blue-600/10">Confirm Buyout</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="quiz-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h3 id="quiz-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Tactical Quiz Assessment</h3>
+                <button onclick="closeQuizModal()" class="text-slate-400 hover:text-white transition font-bold text-xl px-2">×</button>
+            </div>
+            <div id="quiz-modal-body" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6"></div>
+            <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end gap-3">
+                <button onclick="closeQuizModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Cancel</button>
+                <button onclick="evaluateActiveQuizAnswers()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition shadow-md shadow-indigo-600/10">Submit Answers</button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- MASTER SYSTEM VIEW MANAGER ENGINE ---
-        function switchCategoryView(category) {
-            currentTrainingCategory = category;
-            
-            const mainLessonsPanel = document.getElementById('lessons-list-container');
-            const gameboardPanel = document.getElementById('gameboard-view-container');
-            const storePanel = document.getElementById('store-view-container');
-            const filters = document.getElementById('strategy-filter-bar');
-
-            // Hide everything safely first
-            if (mainLessonsPanel) mainLessonsPanel.classList.add('hidden');
-            if (gameboardPanel) gameboardPanel.classList.add('hidden');
-            if (storePanel) storePanel.classList.add('hidden');
-            if (filters) filters.classList.add('hidden');
-
-            // Reset navigation bar layout styles
-            const navItems = ['strategy', 'workout', 'skills', 'gameboard', 'store'];
-            navItems.forEach(item => {
-                const btn = document.getElementById(`nav-${item}`);
-                if (btn) {
-                    btn.className = "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer";
+        async function fetchSynchronizedDataEngine() {
+            if (!currentAuthId) return;
+            try {
+                const response = await fetch(`${API_URL}?action=getDashboard&playerId=${currentAuthId}`);
+                const data = await response.json();
+                if (data.success) {
+                    playerData = data;
+                    renderApplicationDashboardLayout();
+                } else {
+                    alert(data.message || "Session data fetch sync break occurred.");
+                    logSystemOut();
                 }
-            });
-
-            // Highlight selected core menu tab button
-            const activeBtn = document.getElementById(`nav-${category}`);
-            if (activeBtn) {
-                activeBtn.className = "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer";
-            }
-
-            // Route dynamic panel configurations
-            if (category === 'strategy' || category === 'workout' || category === 'skills') {
-                if (mainLessonsPanel) mainLessonsPanel.classList.remove('hidden');
-                if (category === 'strategy' && filters) filters.classList.remove('hidden');
-                if (typeof renderLessonsList === 'function') renderLessonsList();
-            } else if (category === 'gameboard') {
-                if (gameboardPanel) gameboardPanel.classList.remove('hidden');
-                switchSubTab(activeSubTab); // Force render sub-views safely
-            } else if (category === 'store') {
-                if (storePanel) storePanel.classList.remove('hidden');
-                if (typeof renderStoreInventoryLayout === 'function') renderStoreInventoryLayout();
-            }
+            } catch (err) { console.error("Master read hook matrix fault:", err); }
         }
 
-        // --- MASTER SUB-TAB ROUTER ENGINE ---
-        function switchSubTab(subTab) {
-            if (!subTab) return;
-            activeSubTab = subTab;
+        function renderApplicationDashboardLayout() {
+            const p = playerData.playerProfile;
+            document.getElementById('user-name-display').innerText = p.name;
+            document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
+            document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
+            document.getElementById('user-avatar-display').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${p.activeSpriteId}`;
             
-            // Core safety constraint: Check if the main leaderboard manager is currently visible
-            const gameboardPanel = document.getElementById('gameboard-view-container');
-            if (gameboardPanel && gameboardPanel.classList.contains('hidden')) {
-                // If it is hidden, force switch category layout view back to target first
-                gameboardPanel.classList.remove('hidden');
-                document.getElementById('lessons-list-container').classList.add('hidden');
-                document.getElementById('store-view-container').classList.add('hidden');
+            if (currentTrainingCategory === 'gameboard') {
+                if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
+                else renderStartingLineupLayout();
+            } else {
+                renderLessonsList();
             }
-
-            const subPanels = {
-                standings: document.getElementById('sub-view-standings'),
-                lineup: document.getElementById('sub-view-lineup'),
-                trading: document.getElementById('sub-view-trading'),
-                news: document.getElementById('sub-view-news')
-            };
-
-            const buttons = {
-                standings: document.getElementById('sub-tab-standings'),
-                lineup: document.getElementById('sub-tab-lineup'),
-                trading: document.getElementById('sub-tab-trading'),
-                news: document.getElementById('sub-tab-news')
-            };
-            
-            const idleStyle   = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer";
-            const activeStyle = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer";
-
-            Object.values(buttons).forEach(btn => { if (btn) btn.className = idleStyle; });
-            Object.values(subPanels).forEach(panel => { if (panel) panel.classList.add('hidden'); });
-
-            if (buttons[subTab]) buttons[subTab].className = activeStyle;
-            if (subPanels[subTab]) subPanels[subTab].classList.remove('hidden');
-
-            // Force evaluate local layout rendering channels
-            switch (subTab) {
-                case 'standings':
-                    if (typeof renderTeamLeaderboardLayout === 'function') renderTeamLeaderboardLayout();
-                    break;
-                case 'lineup':
-                    if (typeof renderStartingLineupLayout === 'function') renderStartingLineupLayout();
-                    break;
-                case 'trading':
-                    if (typeof renderLockerRoomMarketLayout === 'function') renderLockerRoomMarketLayout();
-                    break;
-                case 'news':
-                    if (typeof renderTeamNewsWireLayout === 'function') renderTeamNewsWireLayout();
-                    break;
-            }
-        }
-
-        // --- DATA RENDERING INJECTION ENGINES ---
-        function renderTeamLeaderboardLayout() {
-            const targetA = document.getElementById('leaderboard-players-list');
-            const targetB = document.getElementById('standings-rows');
-            if (!targetA && !targetB) return;
-
-            const players = (playerData && playerData.leaderboard && playerData.leaderboard.length > 0) ? playerData.leaderboard : [
-                { id: "P001", name: "Gretzky Kid", score: 450, totalStars: 32, avatar: "1" },
-                { id: "P002", name: "Connor Fan", score: 390, totalStars: 14, avatar: "2" },
-                { id: "P003", name: "Slapshot Pro", score: 210, totalStars: 5, avatar: "3" }
-            ];
-
-            let html = players.map((p, idx) => `
-                <div class="p-3 bg-slate-950/60 border border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs font-black text-slate-500 w-5">#${idx + 1}</span>
-                        <div class="bg-slate-900 border border-slate-700 p-1 rounded-lg">
-                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${p.id}" class="w-8 h-8">
-                        </div>
-                        <div>
-                            <h4 class="text-xs font-bold text-white uppercase">${p.name}</h4>
-                            <p class="text-[9px] text-slate-400 font-mono">ID: ${p.id} • Score Points: <span class="text-blue-400 font-bold">${p.score}</span></p>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between sm:justify-end gap-4 border-t border-slate-800/50 sm:border-t-0 pt-2 sm:pt-0">
-                        <div class="text-left sm:text-right">
-                            <p class="text-xs font-black text-amber-400">★ ${p.totalStars}</p>
-                            <p class="text-[8px] text-slate-500 uppercase font-bold tracking-wider">Bank Balance</p>
-                        </div>
-                        <button onclick="inspectPlayerVault('${p.id}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg transition cursor-pointer">
-                            Inspect Roster
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-
-            if(targetA) targetA.innerHTML = html;
-            if(targetB) targetB.innerHTML = ""; 
-        }
-
-        function renderStartingLineupLayout() {
-            const grid = document.getElementById('lineup-slots-grid');
-            if (!grid) return;
-
-            const slots = (playerData && playerData.lineupSlots && playerData.lineupSlots.length > 0) ? playerData.lineupSlots : [
-                { id: "slot_1", position_name: "Left Wing", current_owner_name: "Connor Fan", buyout_stars: 12, sprite_id: "S001" },
-                { id: "slot_2", position_name: "Center", current_owner_name: "Vacant Position", buyout_stars: 5, sprite_id: "" },
-                { id: "slot_3", position_name: "Right Wing", current_owner_name: "Gretzky Kid", buyout_stars: 20, sprite_id: "S004" }
-            ];
-
-            grid.innerHTML = slots.map(s => `
-                <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-col justify-between min-h-[140px] shadow-sm relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 bg-blue-600/10 text-blue-400 text-[8px] uppercase tracking-widest font-black px-2.5 py-1 rounded-bl-lg border-l border-b border-blue-900/20">
-                        ${s.position_name}
-                    </div>
-                    <div class="mt-2">
-                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Current Guard</p>
-                        <h4 class="text-xs font-extrabold text-white truncate mt-0.5">${s.current_owner_name}</h4>
-                    </div>
-                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                        <div>
-                            <p class="text-[8px] text-slate-500 font-bold uppercase">Buyout Cost</p>
-                            <p class="text-xs font-black text-yellow-500">★ ${s.buyout_stars}</p>
-                        </div>
-                        <button onclick="triggerSlotClaimSequence('${s.id}')" class="bg-blue-600 hover:bg-blue-500 text-white font-black text-[9px] uppercase tracking-wider px-2.5 py-1.5 rounded-lg transition cursor-pointer shadow-md shadow-blue-600/10">
-                            Evict
-                        </button>
-                    </div>
-                </div>
-            `).join('');
         }
 
         function renderLessonsList() {
             const container = document.getElementById('lessons-list');
-            if(!container) return;
-            container.innerHTML = `<p class="text-slate-400 text-xs italic">Training assignments and drills channel loading...</p>`;
+            if (!playerData.lessons) return;
+            
+            if (currentTrainingCategory.toLowerCase() === 'workout') {
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderGranularWorkoutSection(container);
+                return;
+            }
+
+            if (currentTrainingCategory.toLowerCase() === 'skills') {
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderGranularSkillsSection(container);
+                return;
+            }
+
+            document.getElementById('strategy-filter-bar').classList.remove('hidden');
+            const filterValue = document.getElementById('strategy-status-filter').value; 
+            
+            let filteredLessons = playerData.lessons.filter(l => l.category && l.category.toString().trim().toLowerCase() === 'strategy');
+            
+            if (filteredLessons.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded-xl border border-slate-800">No strategy content loaded yet.</p>`;
+                return;
+            }
+
+            filteredLessons.sort((a, b) => a.completed - b.completed);
+            let htmlOutput = "";
+
+            filteredLessons.forEach(l => {
+                const videoUrl = l.video_url ? l.video_url.trim() : "";
+                const isLessonComplete = l.completed;
+
+                if (filterValue === 'todo' && isLessonComplete) return;
+                if (filterValue === 'completed' && !isLessonComplete) return;
+
+                htmlOutput += `
+                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${isLessonComplete ? 'opacity-60' : ''}">
+                        <div>
+                            <p class="font-bold ${isLessonComplete ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
+                            <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                        ${isLessonComplete ? 
+                            `
+                            <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>
+                            ${videoUrl !== "" ? `<button onclick="window.open('${videoUrl}', '_blank')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold">Watch Again</button>` : ''}
+                            ` : 
+                            `<button onclick="handleLessonCompletion('${l.id}', '${videoUrl}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">Complete</button>`
+                        }
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (playerData.tests) {
+                const uniqueLessonIdsInTests = [...new Set(playerData.tests.map(t => t.lesson_id))];
+                uniqueLessonIdsInTests.forEach(lId => {
+                    const correspondingLesson = playerData.lessons.find(l => l.id === lId);
+                    const matchingTestData = playerData.tests.find(t => t.lesson_id === lId);
+                    const isTestPassed = matchingTestData ? matchingTestData.completed === true : false;
+                    const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
+
+                    if (filterValue === 'todo' && isTestPassed) return;
+                    if (filterValue === 'completed' && !isTestPassed) return;
+
+                    htmlOutput += `
+                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/40 transition ${isTestPassed ? 'opacity-60' : ''}">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-indigo-500/20">Exam Assess</span>
+                                    <p class="font-bold ${isTestPassed ? 'text-slate-400 line-through' : 'text-slate-100'}">${labelText}</p>
+                                </div>
+                                <p class="text-xs text-yellow-500 font-medium mt-0.5">+10 Stars <span class="text-slate-400">(Requires 100%)</span></p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                            ${isTestPassed ? 
+                                `
+                                <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Passed ✓</span>
+                                <button onclick="openQuizModal('${lId}')" class="text-indigo-400 hover:text-indigo-300 text-xs underline font-semibold">Review Exam</button>
+                                ` : 
+                                `<button onclick="openQuizModal('${lId}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">Take Test</button>`
+                            }
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            container.innerHTML = htmlOutput === "" ? `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No matching strategy items found.</p>` : htmlOutput;
+        }
+
+        function renderGranularWorkoutSection(container) {
+            const workoutExercises = [
+                "20 Pushups",
+                "30 Squats",
+                "20 Lunges",
+                "30 Jumps",
+                "10 Burpees", 
+                "100 Jumping Jacks"
+            ];
+            
+            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
+            const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
+
+            let html = `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <div>
+                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Granular Training Set</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Weekly Workouts (${weekContext})</h3>
+                        <p class="text-xs text-slate-400 mt-1">Check off each training unit as you complete it. Earning +2 Stars per unit!</p>
+                    </div>
+                    <div class="space-y-2 pt-2">
+            `;
+
+            workoutExercises.forEach(ex => {
+                const cleanExName = ex.replace(/'/g, "").replace(/\s+/g, '_');
+                const activityKey = `WORKOUT_${cleanExName}_${weekContext.replace(/\s+/g, '_')}`;
+                const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
+
+                html += `
+                    <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" 
+                                   ${isChecked ? 'checked disabled' : ''} 
+                                   onchange="submitIndividualItemProgress('${activityKey}', 2)"
+                                   class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
+                        </div>
+                        <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
+                            ${isChecked ? 'Cleared' : '+2 ★'}
+                        </span>
+                    </label>
+                `;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function renderGranularSkillsSection(container) {
+            const skillsExercises = [
+                "100 Stickhandling Touches",
+                "50 Shots"
+            ];
+
+            let baseSkillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
+            const dateContext = baseSkillsLesson ? String(baseSkillsLesson.title) : "Today";
+
+            let html = `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <div>
+                        <span class="bg-amber-500/10 text-amber-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-amber-500/20">Daily Calibration</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Skills Drills (${dateContext})</h3>
+                        <p class="text-xs text-slate-400 mt-1">Complete your technical elements to claim +2 Stars per unit!</p>
+                    </div>
+                    <div class="space-y-2 pt-2">
+            `;
+
+            skillsExercises.forEach(ex => {
+                const activityKey = `SKILLS_${ex.replace(/\s+/g, '_')}_${dateContext.replace(/\s+/g, '_')}`;
+                const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
+
+                html += `
+                    <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" 
+                                   ${isChecked ? 'checked disabled' : ''} 
+                                   onchange="submitIndividualItemProgress('${activityKey}', 2)"
+                                   class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
+                        </div>
+                        <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
+                            ${isChecked ? 'Cleared' : '+2 ★'}
+                        </span>
+                    </label>
+                `;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        async function submitIndividualItemProgress(activityKey, starBonus) {
+            try {
+                const response = await fetch(`${API_URL}?action=completeWorkoutModule&playerId=${currentAuthId}&activityId=${activityKey}&starBonus=${starBonus}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
+        }
+
+        async function handleLessonCompletion(lessonId, videoUrl) {
+            if (videoUrl !== "") window.open(videoUrl, '_blank');
+            try {
+                const response = await fetch(`${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=LESSON&activityId=${lessonId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
+        }
+
+        function renderTeamLeaderboardLayout() {
+            const tbody = document.getElementById('leaderboard-table-body');
+            if (!playerData.leaderboard) return;
+            
+            tbody.innerHTML = playerData.leaderboard.map((player, idx) => {
+                const isMe = player.id.toString().trim() === currentAuthId.toString().trim();
+                return `
+                    <tr class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/30 transition">
+                        <td class="py-3.5 pl-3 font-mono text-xs">${idx + 1}</td>
+                        <td class="py-3.5 flex items-center gap-2">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
+                            <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
+                        </td>
+                        <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
+                        <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // --- STARTING LINEUP LAYOUT MODAL LOGIC ---
+        let selectedSlotToPurchase = null;
+
+        function renderStartingLineupLayout() {
+            const grid = document.getElementById('lineup-slots-grid');
+            if (!playerData.gameboardSlots) return;
+
+            grid.innerHTML = playerData.gameboardSlots.map(slot => {
+                const hasOccupant = slot.playerId && slot.playerId.trim() !== "";
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
+                        <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
+                        
+                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
+                        
+                        <div class="min-h-[44px] flex flex-col justify-center">
+                            <p class="text-xs font-black text-white uppercase tracking-wide leading-tight">${hasOccupant ? slot.playerName : 'Empty Slot'}</p>
+                            ${hasOccupant ? `<p class="text-[9px] text-slate-400 font-bold mt-0.5">Jersey #${slot.jerseyNumber} • ${slot.spriteName}</p>` : '<p class="text-[9px] text-slate-500 font-medium">Available Position</p>'}
+                        </div>
+
+                        <button onclick="openLineupModal('${slot.slotId}')" class="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black py-2 rounded-xl transition shadow-md shadow-blue-600/5 cursor-pointer">
+                            🛒 Buyout (${slot.currentCost} ★)
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openLineupModal(slotId) {
+            selectedSlotToPurchase = slotId;
+            const selector = document.getElementById('lineup-sprite-selector');
+            const owned = playerData.playerProfile.ownedSprites || [];
+
+            if (owned.length === 0) {
+                selector.innerHTML = `<option value="S001">Starter Avatar</option>`;
+            } else {
+                selector.innerHTML = owned.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+            }
+            document.getElementById('lineup-modal').classList.remove('hidden');
+        }
+
+        function closeLineupModal() { document.getElementById('lineup-modal').classList.add('hidden'); selectedSlotToPurchase = null; }
+
+        async function confirmLineupSlotPurchase() {
+            if (!selectedSlotToPurchase) return;
+            const spriteId = document.getElementById('lineup-sprite-selector').value;
+
+            try {
+                const response = await fetch(`${API_URL}?action=buyLineupSlot&playerId=${currentAuthId}&slotId=${selectedSlotToPurchase}&spriteId=${spriteId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    closeLineupModal();
+                    fetchSynchronizedDataEngine();
+                } else {
+                    alert(res.message);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function switchSubTab(subTab) {
+            activeSubTab = subTab;
+            const btnStandings = document.getElementById('sub-tab-standings');
+            const btnLineup = document.getElementById('sub-tab-lineup');
+            const viewStandings = document.getElementById('sub-view-standings');
+            const viewLineup = document.getElementById('sub-view-lineup');
+
+            if (subTab === 'standings') {
+                btnStandings.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
+                btnLineup.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
+                viewStandings.classList.remove('hidden');
+                viewLineup.classList.add('hidden');
+                renderTeamLeaderboardLayout();
+            } else {
+                btnStandings.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
+                btnLineup.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
+                viewStandings.classList.add('hidden');
+                viewLineup.classList.remove('hidden');
+                renderStartingLineupLayout();
+            }
         }
 
         function renderStoreInventoryLayout() {
-            const container = document.getElementById('sprite-store-grid');
-            if(!container) return;
-            container.innerHTML = `<p class="text-slate-400 text-xs italic">Marketplace item catalog loading...</p>`;
+            const grid = document.getElementById('sprite-store-grid');
+            if (!playerData.storeSprites) return;
+
+            grid.innerHTML = playerData.storeSprites.map(s => {
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
+                        <span class="absolute top-2 right-2 text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-slate-950/60 text-slate-400 border border-slate-800">${s.rarity} qty</span>
+                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${s.id}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-3 mt-1">
+                        <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${s.name}</p>
+                        <p class="text-[10px] text-slate-500 font-bold mt-1">Stock Left: ${s.stockLeft}</p>
+                        <div class="w-full mt-4">
+                            ${s.owned ? 
+                                `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
+                                s.soldOut ? 
+                                `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
+                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${s.cost} ★)</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function renderLockerRoomMarketLayout() {
-            const pendingList = document.getElementById('market-pending-list');
-            const historyList = document.getElementById('market-history-list');
-            if (pendingList) pendingList.innerHTML = `<div class="p-3 bg-slate-950/40 border border-slate-800/60 rounded-xl text-center text-xs text-slate-500 italic">No trade deals pending.</div>`;
-            if (historyList) historyList.innerHTML = `<div class="p-3 bg-slate-950/40 border border-slate-800/60 rounded-xl text-center text-xs text-slate-500 italic">Historical ledger clear.</div>`;
+        async function executeSpriteStorePurchase(spriteId) {
+            try {
+                const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
         }
 
-        function renderTeamNewsWireLayout() {
-            const container = document.getElementById('news-activity-timeline');
-            if (container) container.innerHTML = `<p class="text-slate-500 text-xs italic text-center py-4">Locker activity log channels active.</p>`;
+        async function executeAvatarProfileEquip(spriteId) {
+            try {
+                const response = await fetch(`${API_URL}?action=equipSprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
         }
 
-        function inspectPlayerVault(id) { alert(`Inspecting player inventory ledger: ${id}`); }
-        // Fix for the button click script check failure
-        function triggerSlotClaimSequence(id) { alert(`Opening operational inventory filters to claim line position: ${id}`); }
-        function closeInventoryModal() { document.getElementById('inventory-modal').classList.add('hidden'); }
-
-        // --- AUTHENTICATION FLOW TRIGGERS ---
-        function attemptSystemLogin() {
-            const idInput = document.getElementById('auth-player-id').value.trim();
-            if(!idInput) return;
-            localStorage.setItem('hockey_player_id', idInput);
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('app-viewport').classList.remove('hidden');
+        function openQuizModal(lessonId) {
+            activeQuizLessonTarget = lessonId;
+            activeQuizQuestionsCache = playerData.tests.filter(t => t.lesson_id.toString().trim() === lessonId.toString().trim());
             
-            window.playerData = { 
-                currentUserProfile: { totalStars: 15 }, 
-                leaderboard: [], 
-                lineupSlots: [] 
-            };
-            switchCategoryView('gameboard');
+            const titleEl = document.getElementById('quiz-modal-title');
+            const bodyEl = document.getElementById('quiz-modal-body');
+            const correspondingLesson = playerData.lessons.find(l => l.id === lessonId);
+            
+            titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Tactical Quiz Assessment";
+            
+            if (activeQuizQuestionsCache.length === 0) {
+                bodyEl.innerHTML = `<p class="text-slate-500 italic text-center p-4">No exam sheet configurations registered.</p>`;
+                document.getElementById('quiz-modal').classList.remove('hidden');
+                return;
+            }
+
+            bodyEl.innerHTML = activeQuizQuestionsCache.map((q, idx) => {
+                const questionText = q.question || q.QUESTION || q.Text || q.text || "Missing Question Text";
+                const optA = q.option_a || q.OPTION_A || q.a || q.A || "";
+                const optB = q.option_b || q.OPTION_B || q.b || q.B || "";
+                const optC = q.option_c || q.OPTION_C || q.c || q.C || "";
+                const optD = q.option_d || q.OPTION_D || q.d || q.D || "";
+                const qId = q.id || q.ID || idx;
+
+                return `
+                    <div class="space-y-2.5 pb-4 border-b border-slate-800 last:border-0">
+                        <p class="text-sm font-bold text-slate-100 flex gap-2"><span class="text-indigo-400 font-mono">${idx + 1}.</span> ${questionText}</p>
+                        <div class="grid grid-cols-1 gap-2 pl-4">
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="A" class="accent-indigo-500"> <span>${optA}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="B" class="accent-indigo-500"> <span>${optB}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="C" class="accent-indigo-500"> <span>${optC}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="D" class="accent-indigo-500"> <span>${optD}</span></label>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('quiz-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('quiz-modal').classList.add('hidden');
+
+        async function evaluateActiveQuizAnswers() {
+            let correctCount = 0;
+            let total = activeQuizQuestionsCache.length;
+            let missingAnswerGuard = false;
+
+            activeQuizQuestionsCache.forEach((q, idx) => {
+                const qId = q.id || q.ID || idx;
+                const correctAns = q.correct_answer || q.CORRECT_ANSWER || q.answer || q.ANSWER || "";
+                
+                const selected = document.querySelector(`input[name="q_${qId}"]:checked`);
+                if (!selected) { missingAnswerGuard = true; return; }
+                if (selected.value.trim().toUpperCase() === correctAns.toString().trim().toUpperCase()) {
+                    correctCount++;
+                }
+            });
+
+            if (missingAnswerGuard) { alert("Please answer all questions before submitting."); return; }
+
+            const perfectScoreEarned = correctCount === total;
+            const scorePercent = Math.round((correctCount / total) * 100);
+
+            try {
+                const response = await fetch(`${API_URL}?action=submitTestResult&playerId=${currentAuthId}&lessonId=${activeQuizLessonTarget}&score=${scorePercent}&passed=${perfectScoreEarned}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    if (perfectScoreEarned) { alert(`🎉 Perfect Score! 100% Correct. You earned +10 Stars!`); } 
+                    else { alert(`Quiz Finished. Result: ${scorePercent}%. 100% required to pass. Try again!`); }
+                    closeQuizModal();
+                    fetchSynchronizedDataEngine();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function switchCategoryView(targetTab) {
+            currentTrainingCategory = targetTab;
+            
+            ['strategy', 'workout', 'skills', 'gameboard', 'store'].forEach(tab => {
+                const el = document.getElementById(`nav-${tab}`);
+                el.className = tab === targetTab ? "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer" : "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer";
+            });
+
+            const lessonsList = document.getElementById('lessons-list');
+            const gameboardView = document.getElementById('gameboard-view-container');
+            const storeView = document.getElementById('store-view-container');
+
+            lessonsList.classList.add('hidden');
+            gameboardView.classList.add('hidden');
+            storeView.classList.add('hidden');
+
+            if (targetTab === 'gameboard') {
+                gameboardView.classList.remove('hidden');
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                switchSubTab(activeSubTab); 
+            } else if (targetTab === 'store') {
+                storeView.classList.remove('hidden');
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderStoreInventoryLayout();
+            } else {
+                lessonsList.classList.remove('hidden');
+                renderLessonsList();
+            }
+        }
+
+        async function attemptSystemLogin() {
+            const idInput = document.getElementById('auth-player-id').value.trim();
+            const passInput = document.getElementById('auth-password').value.trim();
+            const errorEl = document.getElementById('auth-error');
+            const btn = document.getElementById('login-btn');
+
+            if(!idInput || !passInput) return;
+            btn.innerText = "Authorizing...";
+            errorEl.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_URL}?action=login&playerId=${idInput}&password=${encodeURIComponent(passInput)}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    currentAuthId = idInput;
+                    localStorage.setItem('hockey_player_id', idInput);
+                    document.getElementById('auth-screen').classList.add('hidden');
+                    document.getElementById('app-viewport').classList.remove('hidden');
+                    fetchSynchronizedDataEngine();
+                } else {
+                    errorEl.innerText = res.message; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
+                }
+            } catch (err) {
+                errorEl.innerText = "Network connection failed."; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
+            }
         }
 
         function logSystemOut() {
             localStorage.removeItem('hockey_player_id');
-            document.getElementById('app-viewport').classList.add('hidden');
-            document.getElementById('auth-screen').classList.remove('hidden');
+            currentAuthId = ""; playerData = {};
+            document.getElementById('auth-player-id').value = ""; document.getElementById('auth-password').value = "";
+            document.getElementById('login-btn').innerText = "Verify Credentials";
+            document.getElementById('app-viewport').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden');
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            if (currentAuthId) {
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('app-viewport').classList.remove('hidden');
-                attemptSystemLogin();
-            }
-        });
+        if (currentAuthId) {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-viewport').classList.remove('hidden');
+            fetchSynchronizedDataEngine();
+        }
     </script>
-
 </body>
 </html>
