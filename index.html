@@ -527,23 +527,80 @@
             }
         }
 
+        // --- COMPLETE HIGH-FEATURE SPRITE STOREFRONT GRID ---
         function renderStoreInventoryLayout() {
             const grid = document.getElementById('sprite-store-grid');
             if (!playerData.storeSprites) return;
 
+            // Debugging tool: Inspect incoming structure keys in the browser console (F12)
+            console.log("--- SYSTEM STORE SYNC TRANSMISSION INSPECTION ---");
+            console.log("First item data structure received from Google Sheet:", playerData.storeSprites[0]);
+
             grid.innerHTML = playerData.storeSprites.map(s => {
+                // 1. Matches your EXACT spreadsheet keys ('sprite_name' and 'cost_in_stars')
+                const spriteName = s.sprite_name || s.name || s.NAME || "Unknown Name";
+                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || parseInt(s.COST) || 0;
+                
+                // 2. Rarity and Stock Counters
+                const totalQty = parseInt(s.rarity) || parseInt(s.RARITY) || 999;
+                const stockLeft = s.stockLeft !== undefined ? s.stockLeft : totalQty;
+                const isSoldOut = s.soldOut === true;
+                
+                // 3. Dynamic Rarity Tier Engine Labels
+                let rarityLabel = "Common";
+                let rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
+                if (totalQty === 1) {
+                    rarityLabel = "👑 Legendary";
+                    rarityColor = "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse";
+                } else if (totalQty <= 5) {
+                    rarityLabel = "🔥 Epic";
+                    rarityColor = "bg-purple-500/10 text-purple-400 border-purple-500/30";
+                } else if (totalQty <= 15) {
+                    rarityLabel = "✨ Rare";
+                    rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30";
+                }
+
+                // 4. Image Loader with DiceBear Pixel-Art/Bottts Fallbacks
+                const customImageSrc = s.image_url || s.url || "";
+                const finalImgDisplay = customImageSrc.trim() !== "" ? 
+                    customImageSrc.trim() : 
+                    `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
+
+                // 5. Calculate Stock Percentage for the Progress Bar
+                const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
+
                 return `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
-                        <span class="absolute top-2 right-2 text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-slate-950/60 text-slate-400 border border-slate-800">${s.rarity} qty</span>
-                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${s.id}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-3 mt-1">
-                        <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${s.name}</p>
-                        <p class="text-[10px] text-slate-500 font-bold mt-1">Stock Left: ${s.stockLeft}</p>
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
+                        
+                        <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">
+                            ${rarityLabel}
+                        </span>
+
+                        <img src="${finalImgDisplay}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-2 mt-3 object-contain">
+                        
+                        <div class="space-y-0.5">
+                            <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${spriteName}</p>
+                            <p class="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest">${s.id || 'No ID'}</p>
+                        </div>
+
+                        <div class="w-full mt-3 px-1">
+                            <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 mb-1">
+                                <span>Stock Left</span>
+                                <span class="${stockLeft === 0 ? 'text-rose-400 font-black' : 'text-slate-300'}">${stockLeft} / ${totalQty}</span>
+                            </div>
+                            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800/60">
+                                <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${stockPercentage}%"></div>
+                            </div>
+                        </div>
+
                         <div class="w-full mt-4">
                             ${s.owned ? 
                                 `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
-                                s.soldOut ? 
+                                isSoldOut ? 
                                 `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
-                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${s.cost} ★)</button>`
+                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">
+                                    🛒 Buy (${spriteCost} ★)
+                                </button>`
                             }
                         </div>
                     </div>
