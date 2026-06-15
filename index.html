@@ -403,14 +403,39 @@
             const tbody = document.getElementById('leaderboard-table-body');
             if (!playerData.leaderboard) return;
             
+            // 1. Map out a quick list of all player IDs currently holding a starting lineup spot
+            const lineupPlayerIds = playerData.gameboardSlots ? 
+                playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim() : "") : [];
+
+            // Update the table header dynamically to include the new column if it isn't already there
+            const thead = tbody.closest('table').querySelector('thead tr');
+            if (thead && !thead.innerHTML.includes('Starting Lineup')) {
+                thead.innerHTML = `
+                    <th class="pb-3 pl-2">Rank</th>
+                    <th class="pb-3">Player</th>
+                    <th class="pb-3 text-center">Starting Lineup</th>
+                    <th class="pb-3">Jersey</th>
+                    <th class="pb-3 text-right pr-2">Total Stars</th>
+                `;
+            }
+
             tbody.innerHTML = playerData.leaderboard.map((player, idx) => {
-                const isMe = player.id.toString().trim() === currentAuthId.toString().trim();
+                const cleanPlayerId = player.id.toString().trim();
+                const isMe = cleanPlayerId === currentAuthId.toString().trim();
+                
+                // 2. Check if this specific player is on the gameboard
+                const inLineup = lineupPlayerIds.includes(cleanPlayerId);
+
                 return `
                     <tr class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/30 transition">
                         <td class="py-3.5 pl-3 font-mono text-xs">${idx + 1}</td>
                         <td class="py-3.5 flex items-center gap-2">
                             <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
                             <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
+                        </td>
+                        <!-- New Roster Status Indicator Column -->
+                        <td class="py-3.5 text-center text-sm">
+                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border border-blue-500/20">🏒 Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
                         </td>
                         <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
                         <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
