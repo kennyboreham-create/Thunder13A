@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hockey Team Training Portal</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         body { background-color: #0b1329; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -24,6 +25,16 @@
         // Trading State Registers
         let tradeTargetPlayerId = null;
         let tradeTargetSpriteId = null;
+
+        // Lesson modal state
+        let activeLessonId = null;
+        let activeLessonAlreadyCompleted = false;
+        let activeLessonMediaType = null;
+        let activeLessonStarReward = 2;
+        let lessonProgressTimer = null;
+        let ytPlayer = null;
+        let lessonCompletionSubmitted = false;
+        let pendingYouTubeVideoId = null;
     </script>
 
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
@@ -234,6 +245,29 @@
         </div>
     </div>
 
+    <div id="lesson-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
+                <div>
+                    <h3 id="lesson-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Strategy Lesson</h3>
+                    <p id="lesson-modal-reward" class="text-[10px] text-yellow-500 font-bold mt-0.5">+2 Stars</p>
+                </div>
+                <button onclick="closeLessonModal()" class="text-slate-400 hover:text-white transition font-bold text-xl px-2 cursor-pointer">×</button>
+            </div>
+            <div id="lesson-modal-content" class="flex-1 min-h-[50vh] bg-black relative overflow-hidden"></div>
+            <div class="p-4 border-t border-slate-800 bg-slate-950/50 shrink-0">
+                <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    <span id="lesson-progress-label">Lesson Progress</span>
+                    <span id="lesson-progress-percent">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700/50">
+                    <div id="lesson-progress-bar" class="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="lesson-completion-message" class="text-xs mt-2 font-semibold hidden"></p>
+            </div>
+        </div>
+    </div>
+
     <div id="quiz-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl">
             <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
@@ -325,9 +359,9 @@
                         ${isLessonComplete ? 
                             `
                             <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>
-                            ${videoUrl !== "" ? `<button onclick="window.open('${videoUrl}', '_blank')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold">Watch Again</button>` : ''}
+                            ${videoUrl !== "" ? `<button onclick="openLessonModal('${l.id}')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold cursor-pointer">Watch Again</button>` : ''}
                             ` : 
-                            `<button onclick="handleLessonCompletion('${l.id}', '${videoUrl}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">Complete</button>`
+                            `<button onclick="openLessonModal('${l.id}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition cursor-pointer">${videoUrl !== "" ? 'Start Lesson' : 'Open Lesson'}</button>`
                         }
                         </div>
                     </div>
@@ -449,13 +483,297 @@
             } catch (err) { console.error(err); }
         }
 
-        async function handleLessonCompletion(lessonId, videoUrl) {
-            if (videoUrl !== "") window.open(videoUrl, '_blank');
+        function extractYouTubeVideoId(url) {
+            const patterns = [
+                /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+            ];
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) return match[1];
+            }
+            return null;
+        }
+
+        function toGoogleSlidesEmbedUrl(url) {
+            const pubMatch = url.match(/\/presentation\/d\/e\/([a-zA-Z0-9_-]+)/);
+            if (pubMatch) return `https://docs.google.com/presentation/d/e/${pubMatch[1]}/embed?start=false&loop=false`;
+            const idMatch = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
+            if (idMatch) return `https://docs.google.com/presentation/d/${idMatch[1]}/embed?start=false&loop=false`;
+            return url;
+        }
+
+        function parseLessonMedia(url) {
+            if (!url || !url.trim()) return { type: 'none' };
+            const u = url.trim();
+
+            const ytId = extractYouTubeVideoId(u);
+            if (ytId) return { type: 'youtube', videoId: ytId };
+
+            if (/docs\.google\.com\/presentation/.test(u)) {
+                return { type: 'slides', embedUrl: toGoogleSlidesEmbedUrl(u) };
+            }
+
+            if (/\.(mp4|webm|ogg)(\?|$)/i.test(u)) {
+                return { type: 'video', src: u };
+            }
+
+            const driveMatch = u.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+            if (driveMatch) {
+                return { type: 'drive', embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview` };
+            }
+
+            return { type: 'iframe', embedUrl: u };
+        }
+
+        function setLessonProgress(percent) {
+            const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+            document.getElementById('lesson-progress-bar').style.width = `${clamped}%`;
+            document.getElementById('lesson-progress-percent').innerText = `${clamped}%`;
+            if (clamped >= 100) {
+                document.getElementById('lesson-progress-label').innerText = activeLessonAlreadyCompleted ? 'Previously Completed' : 'Lesson Complete';
+            }
+        }
+
+        function showLessonCompletionMessage(text, isSuccess) {
+            const el = document.getElementById('lesson-completion-message');
+            el.innerText = text;
+            el.className = `text-xs mt-2 font-semibold ${isSuccess ? 'text-emerald-400' : 'text-amber-400'}`;
+            el.classList.remove('hidden');
+        }
+
+        function handleSlidesPostMessage(event) {
+            if (!activeLessonId) return;
+            const origin = event.origin || '';
+            if (!origin.includes('google.com')) return;
+
+            let data = event.data;
+            if (typeof data === 'string') {
+                try { data = JSON.parse(data); } catch { return; }
+            }
+            if (!data || typeof data !== 'object') return;
+
+            let currentIndex = null;
+            let total = null;
+
+            if (activeLessonMediaType === 'slides') {
+                if (data.event === 'infoDelivery' && data.info) {
+                    const info = data.info;
+                    total = info.slideCount ?? info.slidesCount ?? info.totalSlides;
+                    if (info.slideNumber != null) currentIndex = info.slideNumber;
+                    else if (info.currentSlide != null) currentIndex = info.currentSlide + 1;
+                } else if (data.event === 'slideChanged') {
+                    if (data.slide != null) currentIndex = data.slide + 1;
+                    total = data.slideCount ?? data.totalSlides;
+                }
+            } else if (activeLessonMediaType === 'drive') {
+                if (data.event === 'videoEnded' || data.event === 'onVideoEnd') {
+                    setLessonProgress(100);
+                    onLessonMediaComplete();
+                    return;
+                }
+                if (data.event === 'videoProgress' && data.info) {
+                    const pct = parseFloat(data.info.progress ?? data.info.currentTime / data.info.duration * 100);
+                    if (!isNaN(pct)) setLessonProgress(pct);
+                }
+            }
+
+            if (currentIndex != null && total != null && total > 0) {
+                const pct = Math.min(100, (currentIndex / total) * 100);
+                setLessonProgress(pct);
+                if (currentIndex >= total) onLessonMediaComplete();
+            }
+        }
+
+        function startYouTubeProgressPolling() {
+            if (lessonProgressTimer) clearInterval(lessonProgressTimer);
+            lessonProgressTimer = setInterval(() => {
+                if (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
+                const duration = ytPlayer.getDuration();
+                const current = ytPlayer.getCurrentTime();
+                if (duration > 0) setLessonProgress((current / duration) * 100);
+            }, 500);
+        }
+
+        function onYouTubePlayerReady() {
+            if (pendingYouTubeVideoId) {
+                initYouTubeLessonPlayer(pendingYouTubeVideoId);
+                pendingYouTubeVideoId = null;
+            }
+        }
+
+        window.onYouTubeIframeAPIReady = onYouTubePlayerReady;
+
+        function initYouTubeLessonPlayer(videoId) {
+            const container = document.getElementById('lesson-yt-player');
+            if (!container) return;
+
+            if (typeof YT === 'undefined' || !YT.Player) {
+                pendingYouTubeVideoId = videoId;
+                return;
+            }
+
+            if (ytPlayer && ytPlayer.destroy) {
+                ytPlayer.destroy();
+                ytPlayer = null;
+            }
+
+            ytPlayer = new YT.Player('lesson-yt-player', {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: { rel: 0, modestbranding: 1 },
+                events: {
+                    onReady: () => startYouTubeProgressPolling(),
+                    onStateChange: (event) => {
+                        if (event.data === YT.PlayerState.ENDED) {
+                            setLessonProgress(100);
+                            onLessonMediaComplete();
+                        }
+                    }
+                }
+            });
+        }
+
+        function mountLessonMedia(media) {
+            const container = document.getElementById('lesson-modal-content');
+            activeLessonMediaType = media.type;
+
+            if (media.type === 'youtube') {
+                container.innerHTML = `<div id="lesson-yt-player" class="absolute inset-0 w-full h-full"></div>`;
+                initYouTubeLessonPlayer(media.videoId);
+                return;
+            }
+
+            if (media.type === 'video') {
+                container.innerHTML = `
+                    <video id="lesson-html5-video" class="absolute inset-0 w-full h-full object-contain" controls playsinline>
+                        <source src="${media.src}">
+                    </video>`;
+                const videoEl = document.getElementById('lesson-html5-video');
+                videoEl.addEventListener('timeupdate', () => {
+                    if (videoEl.duration > 0) setLessonProgress((videoEl.currentTime / videoEl.duration) * 100);
+                });
+                videoEl.addEventListener('ended', () => {
+                    setLessonProgress(100);
+                    onLessonMediaComplete();
+                });
+                return;
+            }
+
+            if (media.type === 'slides') {
+                window.addEventListener('message', handleSlidesPostMessage);
+                container.innerHTML = `<iframe id="lesson-embed-frame" class="absolute inset-0 w-full h-full border-0" src="${media.embedUrl}" allowfullscreen></iframe>`;
+                return;
+            }
+
+            if (media.type === 'drive') {
+                window.addEventListener('message', handleSlidesPostMessage);
+                container.innerHTML = `<iframe id="lesson-embed-frame" class="absolute inset-0 w-full h-full border-0" src="${media.embedUrl}" allow="autoplay" allowfullscreen></iframe>`;
+                return;
+            }
+
+            if (media.type === 'iframe') {
+                container.innerHTML = `<iframe id="lesson-embed-frame" class="absolute inset-0 w-full h-full border-0" src="${media.embedUrl}" allowfullscreen></iframe>`;
+                return;
+            }
+
+            container.innerHTML = `<div class="flex items-center justify-center h-full p-8 text-slate-400 text-sm">No media linked to this lesson. Close this window to return.</div>`;
+        }
+
+        function openLessonModal(lessonId) {
+            const lesson = playerData.lessons.find(l => l.id.toString().trim() === lessonId.toString().trim());
+            if (!lesson) return;
+
+            closeLessonModal(false);
+
+            activeLessonId = lessonId;
+            activeLessonAlreadyCompleted = lesson.completed === true;
+            activeLessonStarReward = parseInt(lesson.star_reward) || 2;
+            lessonCompletionSubmitted = activeLessonAlreadyCompleted;
+
+            document.getElementById('lesson-modal-title').innerText = lesson.title || 'Strategy Lesson';
+            document.getElementById('lesson-modal-reward').innerText = activeLessonAlreadyCompleted
+                ? 'Already earned +' + activeLessonStarReward + ' Stars'
+                : '+' + activeLessonStarReward + ' Stars on completion';
+
+            const msgEl = document.getElementById('lesson-completion-message');
+            msgEl.classList.add('hidden');
+            msgEl.innerText = '';
+
+            const videoUrl = lesson.video_url ? lesson.video_url.trim() : '';
+            const media = parseLessonMedia(videoUrl);
+
+            if (activeLessonAlreadyCompleted) {
+                setLessonProgress(0);
+                document.getElementById('lesson-progress-label').innerText = 'Review Progress';
+            } else {
+                setLessonProgress(0);
+                document.getElementById('lesson-progress-label').innerText = 'Lesson Progress';
+            }
+
+            mountLessonMedia(media);
+
+            if (!videoUrl && !activeLessonAlreadyCompleted) {
+                setLessonProgress(100);
+                onLessonMediaComplete();
+            }
+
+            document.getElementById('lesson-modal').classList.remove('hidden');
+        }
+
+        function closeLessonModal(resetState = true) {
+            if (lessonProgressTimer) {
+                clearInterval(lessonProgressTimer);
+                lessonProgressTimer = null;
+            }
+            if (ytPlayer && typeof ytPlayer.destroy === 'function') {
+                ytPlayer.destroy();
+                ytPlayer = null;
+            }
+            window.removeEventListener('message', handleSlidesPostMessage);
+            document.getElementById('lesson-modal-content').innerHTML = '';
+            document.getElementById('lesson-modal').classList.add('hidden');
+
+            if (resetState) {
+                activeLessonId = null;
+                activeLessonAlreadyCompleted = false;
+                activeLessonMediaType = null;
+                lessonCompletionSubmitted = false;
+            }
+        }
+
+        async function onLessonMediaComplete() {
+            setLessonProgress(100);
+
+            if (activeLessonAlreadyCompleted || lessonCompletionSubmitted) {
+                showLessonCompletionMessage('You have already completed this lesson.', false);
+                return;
+            }
+
+            lessonCompletionSubmitted = true;
+
             try {
-                const response = await fetch(`${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=LESSON&activityId=${lessonId}`, { method: 'POST' });
+                const response = await fetch(`${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=LESSON&activityId=${activeLessonId}`, { method: 'POST' });
                 const res = await response.json();
-                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
-            } catch (err) { console.error(err); }
+                if (res.success) {
+                    activeLessonAlreadyCompleted = true;
+                    showLessonCompletionMessage(`Lesson complete! You earned +${activeLessonStarReward} Stars!`, true);
+                    fetchSynchronizedDataEngine();
+                } else {
+                    lessonCompletionSubmitted = false;
+                    const friendlyMsg = (res.message && res.message.toLowerCase().includes('duplication'))
+                        ? 'You have already completed this lesson.'
+                        : (res.message || 'Could not record completion.');
+                    showLessonCompletionMessage(friendlyMsg, false);
+                }
+            } catch (err) {
+                lessonCompletionSubmitted = false;
+                console.error(err);
+                showLessonCompletionMessage('Network error while saving completion.', false);
+            }
         }
 
         // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS ---
