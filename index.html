@@ -458,57 +458,53 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS AND PUCKS COLUMN ---
+        // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS (NO PUCKS SYSTEM) ---
         function renderTeamLeaderboardLayout() {
             const tbody = document.getElementById('leaderboard-table-body');
             if (!playerData.leaderboard) return;
             
+            // Create an array mapping all unique player IDs currently occupying starting lineup slots
             const lineupPlayerIds = playerData.gameboardSlots ? 
-                playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim() : "") : [];
+                playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim().toLowerCase() : "") : [];
 
-            // Sort logic setup
+            // Sort logic setup aligned with the required sorting hierarchy rules
             let sortedLeaderboard = [...playerData.leaderboard].sort((a, b) => {
-                const aCleanId = a.id.toString().trim();
-                const bCleanId = b.id.toString().trim();
+                const aCleanId = a.id.toString().trim().toLowerCase();
+                const bCleanId = b.id.toString().trim().toLowerCase();
                 
+                // Primary Sort Filter: If lineup status differs, put the active lineup player first
                 const aInLineup = lineupPlayerIds.includes(aCleanId) ? 1 : 0;
                 const bInLineup = lineupPlayerIds.includes(bCleanId) ? 1 : 0;
 
                 if (aInLineup !== bInLineup) {
-                    return bInLineup - aInLineup;
+                    return bInLineup - aInLineup; // True values (1) bubble to the top position
                 }
 
-                const aPucks = parseInt(a.totalPucks) || parseInt(a.pucks) || 0;
-                const bPucks = parseInt(b.totalPucks) || parseInt(b.pucks) || 0;
-                if (aPucks !== bPucks) {
-                    return bPucks - aPucks;
-                }
-
-                const aStars = parseInt(a.totalStars) || parseInt(a.stars) || 0;
-                const bStars = parseInt(b.totalStars) || parseInt(b.stars) || 0;
+                // Secondary Sort Filter (Tie-Breaker): Sort descending by total stars
+                const aStars = parseInt(a.totalStars) || 0;
+                const bStars = parseInt(b.totalStars) || 0;
                 return bStars - aStars;
             });
 
-            // Render output containing dynamic Pucks property injection
+            // Render output mapping perfectly across variable properties (Pucks column references completely removed)
             tbody.innerHTML = sortedLeaderboard.map((player, idx) => {
                 const cleanPlayerId = player.id.toString().trim();
-                const isMe = cleanPlayerId === currentAuthId.toString().trim();
-                const inLineup = lineupPlayerIds.includes(cleanPlayerId);
-                const pucksDisplay = parseInt(player.totalPucks) || parseInt(player.pucks) || 0;
+                const isMe = cleanPlayerId.toLowerCase() === currentAuthId.toString().trim().toLowerCase();
+                const inLineup = lineupPlayerIds.includes(cleanPlayerId.toLowerCase());
+                const starBalance = parseInt(player.totalStars) || 0;
 
                 return `
                     <tr onclick="openPlayerInventoryModal('${cleanPlayerId}')" class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/40 transition cursor-pointer">
-                        <td class="py-3.5 pl-3 font-mono text-xs">${idx + 1}</td>
+                        <td class="py-3.5 pl-3 font-mono text-xs text-center">${idx + 1}</td>
                         <td class="py-3.5 flex items-center gap-2">
                             <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId || 'S001'}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
                             <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
                         </td>
                         <td class="py-3.5 text-center text-sm">
-                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-500/20">📋 Starting Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
+                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-emerald-500/20">📋 Active Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
                         </td>
-                        <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
-                        <td class="py-3.5 text-right font-bold text-slate-300">${pucksDisplay.toLocaleString()}</td>
-                        <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
+                        <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber || '--'}</td>
+                        <td class="py-3.5 text-right pr-3 font-black text-amber-400">⭐ ${starBalance.toLocaleString()}</td>
                     </tr>
                 `;
             }).join('');
