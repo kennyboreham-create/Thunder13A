@@ -26,6 +26,7 @@
         let tradeTargetSpriteId = null;
     </script>
 
+    <!-- AUTHENTICATION LAYER GATING SCREEN -->
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-md w-full shadow-2xl text-center">
             <div class="w-16 h-16 bg-blue-600/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
@@ -49,8 +50,10 @@
         </div>
     </div>
 
+    <!-- MAIN CORE ENGINE APP DASHBOARD VIEWPORT -->
     <div id="app-viewport" class="flex-1 flex flex-col hidden">
         
+        <!-- TELEMETRY HEADER STATUS SECTION -->
         <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
             <div class="max-w-6xl mx-auto flex justify-between items-center">
                 <div class="flex items-center gap-3">
@@ -76,6 +79,7 @@
             </div>
         </header>
 
+        <!-- GLOBAL APP NAVIGATION CONSOLE -->
         <nav class="bg-slate-900 border-b border-slate-800 px-2 sticky top-[65px] z-30">
             <div class="max-w-6xl mx-auto flex justify-around">
                 <button onclick="switchCategoryView('strategy')" id="nav-strategy" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer">Strategy</button>
@@ -86,8 +90,10 @@
             </div>
         </nav>
 
+        <!-- CORE INTERACTIVE DISPLAY COMPONENT WINDOW -->
         <main class="flex-1 max-w-6xl w-full mx-auto p-4">
             
+            <!-- CONTROLLABLE STRATEGY FILTER CONSOLE -->
             <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
                 <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
                     <h2>New Lessons Added Weekly</h2>
@@ -100,16 +106,20 @@
                 </div>
             </div>  
 
+            <!-- TRANSLATIONAL LISTING STREAM CONTAINER FOR INSTRUCTIONAL SYSTEMS -->
             <div id="lessons-list" class="space-y-3"></div>
 
+            <!-- GAMEBOARD MULTI-TAB MATRIX GRID CONSOLE -->
             <div id="gameboard-view-container" class="hidden space-y-4">
                 
+                <!-- MULTI-TAB REGISTRATION SYSTEM -->
                 <div class="flex gap-1.5 border-b border-slate-800 pb-3 overflow-x-auto">
                     <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer">Leaderboard Standings</button>
                     <button onclick="switchSubTab('lineup')" id="sub-tab-lineup" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Starting Lineup</button>
                     <button onclick="switchSubTab('trading')" id="sub-tab-trading" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Market</button>
                 </div>
 
+                <!-- SUBTAB CORE AREA: STANDINGS RETAILER MATRIX -->
                 <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
                     <div class="mb-4">
                         <h3 class="text-base font-black uppercase text-white tracking-tight flex items-center gap-2">🏆 Team Rankings</h3>
@@ -132,6 +142,7 @@
                     </div>
                 </div>
 
+                <!-- SUBTAB CORE AREA: ROSTER ASSIGNMENT LINEUP SLOTS -->
                 <div id="sub-view-lineup" class="hidden space-y-4">
                     <div class="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-900/30 p-5 rounded-2xl shadow-xl">
                         <h3 class="text-base font-black uppercase text-white tracking-tight">🏒 Roster Positions</h3>
@@ -140,6 +151,7 @@
                     <div id="lineup-slots-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
                 </div>
 
+                <!-- SUBTAB CORE AREA: ASSET MARKET TRANSACTION CONSOLE -->
                 <div id="sub-view-trading" class="hidden space-y-5">
                     <div class="bg-gradient-to-r from-indigo-950 to-slate-900 border border-indigo-900/20 p-5 rounded-2xl shadow-xl">
                         <h3 class="text-base font-black uppercase text-white tracking-tight">💼 Locker Room Trade Desk</h3>
@@ -159,6 +171,7 @@
                 </div>
             </div>
 
+            <!-- STORE FRONT END LAYOUT SYSTEM CONSOLE -->
             <div id="store-view-container" class="hidden space-y-4">
                 
                 <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
@@ -184,6 +197,9 @@
         </main>
     </div>
 
+    <!-- MODAL PORTAL WINDOWS SECTION -->
+    
+    <!-- VAULT PROFILE INVENTORY EXPLORATION DISPLAY -->
     <div id="inventory-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl">
             <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/20">
@@ -200,6 +216,7 @@
         </div>
     </div>
 
+    <!-- TRANSACTION PROPOSAL WRITER SYSTEM MODAL -->
     <div id="trade-proposal-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full shadow-2xl p-6 space-y-4">
             <div>
@@ -217,6 +234,7 @@
         </div>
     </div>
 
+    <!-- POSITION DEPLOYMENT MODAL PROMPT -->
     <div id="lineup-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full shadow-2xl p-6 space-y-4">
             <div>
@@ -234,6 +252,7 @@
         </div>
     </div>
 
+    <!-- ASSESSMENT EXAMINATION SHEET PLATFORM WINDOW -->
     <div id="quiz-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl">
             <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
@@ -248,6 +267,7 @@
         </div>
     </div>
 
+    <!-- CORE TELEMETRY OPERATIONS CONTROLLER ENGINE -->
     <script>
         async function fetchSynchronizedDataEngine() {
             if (!currentAuthId) return;
@@ -838,9 +858,6 @@
                 const finalImgDisplay = customImageSrc.trim() !== "" ? customImageSrc.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
                 const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
 
-                // Identify if the item is a puck or custom consumable asset
-                const isConsumableAsset = s.id.toString().toLowerCase().includes("puck") || spriteName.toLowerCase().includes("puck");
-
                 return `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden">
                         <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">${rarityLabel}</span>
@@ -859,7 +876,7 @@
                             </div>
                         </div>
                         <div class="w-full mt-4 flex flex-col gap-2">
-                            ${s.owned && !isConsumableAsset ? 
+                            ${s.owned ? 
                                 `
                                 <button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer mb-1">Equip Avatar</button>
                                 <button onclick="executeSpriteStorePurchase('${s.id}', ${spriteCost})" class="w-full bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-xs font-bold py-2 rounded-xl transition border border-blue-500/20 cursor-pointer">🛒 Buy Duplicate (${spriteCost} ★)</button>
