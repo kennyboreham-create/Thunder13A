@@ -458,7 +458,7 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS AND PUCKS COLUMN ---
+        // --- RENDER DYNAMIC LEADERBOARD WITH REAL PUCKS PROPERTY ---
         function renderTeamLeaderboardLayout() {
             const tbody = document.getElementById('leaderboard-table-body');
             if (!playerData.leaderboard) return;
@@ -466,7 +466,6 @@
             const lineupPlayerIds = playerData.gameboardSlots ? 
                 playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim() : "") : [];
 
-            // Sort logic setup
             let sortedLeaderboard = [...playerData.leaderboard].sort((a, b) => {
                 const aCleanId = a.id.toString().trim();
                 const bCleanId = b.id.toString().trim();
@@ -489,12 +488,13 @@
                 return bStars - aStars;
             });
 
-            // Render output containing dynamic Pucks property injection
             tbody.innerHTML = sortedLeaderboard.map((player, idx) => {
                 const cleanPlayerId = player.id.toString().trim();
                 const isMe = cleanPlayerId === currentAuthId.toString().trim();
                 const inLineup = lineupPlayerIds.includes(cleanPlayerId);
-                const pucksDisplay = parseInt(player.totalPucks) || parseInt(player.pucks) || 0;
+                
+                // Fallback architecture reads both 'totalPucks' and 'pucks' fields directly from the server engine matrix objects
+                const pucksDisplay = parseInt(player.totalPucks) !== undefined && !isNaN(parseInt(player.totalPucks)) ? parseInt(player.totalPucks) : (parseInt(player.pucks) || 0);
 
                 return `
                     <tr onclick="openPlayerInventoryModal('${cleanPlayerId}')" class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/40 transition cursor-pointer">
@@ -507,14 +507,13 @@
                             ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-500/20">📋 Starting Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
                         </td>
                         <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
-                        <td class="py-3.5 text-right font-bold text-slate-300">${pucksDisplay.toLocaleString()}</td>
+                        <td class="py-3.5 text-right font-bold text-slate-200">${pucksDisplay.toLocaleString()}</td>
                         <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
                     </tr>
                 `;
             }).join('');
         }
 
-        // --- DYNAMIC ROSTER VAULT DISPLAY OVERLAY ---
         function openPlayerInventoryModal(targetPlayerId) {
             const modal = document.getElementById('inventory-modal');
             const grid = document.getElementById('inventory-modal-grid');
@@ -573,7 +572,6 @@
 
         function closeInventoryModal() { document.getElementById('inventory-modal').classList.add('hidden'); }
 
-        // --- TRADE PROPOSAL DRAFT MODAL SLIP ---
         function openTradeProposalSlip(targetPlayerId, targetSpriteId) {
             tradeTargetPlayerId = targetPlayerId;
             tradeTargetSpriteId = targetSpriteId;
@@ -622,7 +620,7 @@
             const myOfferSpriteId = document.getElementById('trade-offer-selector').value;
 
             try {
-                const response = await fetch(`${API_URL}?action=proposeTrade&playerId=${currentAuthId}&targetPlayerId=${tradeTargetPlayerId}&offerSpriteId=${myOfferSpriteId}&requestSpriteId=${tradeTargetSpriteId}`, { method: 'POST' });
+                const response = await fetch(`${API_URL}?action=proposeTrade&playerId=${currentAuthId}&targetPlayerId=${tradeTargetPlayerId}&offerSpriteId=${myOfferOfferSpriteId}&requestSpriteId=${tradeTargetSpriteId}`, { method: 'POST' });
                 const res = await response.json();
                 alert(res.message);
                 if (res.success) {
@@ -633,7 +631,6 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- LOCKER ROOM MARKET DISPATCH LAYOUT ---
         function renderLockerRoomMarketLayout() {
             const pendingContainer = document.getElementById('market-pending-list');
             const historyContainer = document.getElementById('market-history-list');
@@ -805,6 +802,7 @@
             }
         }
 
+        // --- RENDER STORE INTEGRATION WITH PACK BULK QUANTITY QUANTIFIER ---
         function renderStoreInventoryLayout() {
             const grid = document.getElementById('sprite-store-grid');
             if (!playerData.storeSprites) return;
@@ -843,8 +841,11 @@
                 const finalImgDisplay = customImageSrc.trim() !== "" ? customImageSrc.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
                 const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
 
+                // Check if item is a consumable pack (like pucks) or stackable asset to allow multiple dropdown sizing logic
+                const isConsumableAsset = s.id.toString().toLowerCase().includes("puck") || spriteName.toLowerCase().includes("puck");
+
                 return `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned && !isConsumableAsset ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
                         <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">${rarityLabel}</span>
                         <img src="${finalImgDisplay}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-2 mt-3 object-contain">
                         <div class="space-y-0.5">
@@ -860,12 +861,22 @@
                                 <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${stockPercentage}%"></div>
                             </div>
                         </div>
-                        <div class="w-full mt-4">
-                            ${s.owned ? 
+                        <div class="w-full mt-4 space-y-2">
+                            ${s.owned && !isConsumableAsset ? 
                                 `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
                                 isSoldOut ? 
                                 `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
-                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${spriteCost} ★)</button>`
+                                `
+                                <div class="flex items-center gap-1.5">
+                                    <select id="qty-select-${s.id}" class="bg-slate-950 border border-slate-800 text-xs font-bold rounded-xl px-2 py-2 text-slate-300 focus:outline-none focus:border-blue-500">
+                                        <option value="1">1x</option>
+                                        <option value="3">3x</option>
+                                        <option value="5">5x</option>
+                                        <option value="10">10x</option>
+                                    </select>
+                                    <button onclick="executeSpriteStorePurchase('${s.id}', ${spriteCost})" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy</button>
+                                </div>
+                                `
                             }
                         </div>
                     </div>
@@ -873,38 +884,27 @@
             }).join('');
         }
 
-        async function executeSpriteStorePurchase(spriteId) {
+        async function executeSpriteStorePurchase(spriteId, baseCost) {
+            const qtySelect = document.getElementById(`qty-select-${spriteId}`);
+            const purchaseQty = qtySelect ? parseInt(qtySelect.value) : 1;
+            const finalTotalStarCost = baseCost * purchaseQty;
+
+            // Pre-validation checking star pool availability local registry
+            if (playerData.playerProfile && parseInt(playerData.playerProfile.totalStars) < finalTotalStarCost) {
+                alert(`Insufficient Star Funds. You need ${finalTotalStarCost} Stars to buy ${purchaseQty} units.`);
+                return;
+            }
+
             try {
-                const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
+                // Sent purchaseQty multiplier cleanly into the API endpoints
+                const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}&quantity=${purchaseQty}`, { method: 'POST' });
                 const res = await response.json();
                 
                 if (res.success) {
-                    const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
-                    const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
-                    alert(`🎉 Congrats! You successfully unlocked "${spriteName}"!`);
-                    
-                    playerData.storeSprites = playerData.storeSprites.map(s => {
-                        if (s.id.toString().trim() === spriteId.toString().trim()) {
-                            return { ...s, owned: true, stockLeft: s.stockLeft !== undefined ? Math.max(0, s.stockLeft - 1) : s.stockLeft };
-                        }
-                        return s;
-                    });
-
-                    if (playerData.playerProfile && playerData.playerProfile.ownedSprites) {
-                        if (!playerData.playerProfile.ownedSprites.some(item => item.id === spriteId)) {
-                            playerData.playerProfile.ownedSprites.push({ id: spriteId, name: spriteName });
-                        }
-                    }
-
-                    if (purchasedSprite && playerData.playerProfile) {
-                        const cost = parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0;
-                        playerData.playerProfile.totalStars = Math.max(0, playerData.playerProfile.totalStars - cost);
-                    }
-
-                    renderApplicationDashboardLayout(); registerStoreInventoryLayout();
+                    alert(`🎉 Success! Bought ${purchaseQty}x item(s).`);
                     fetchSynchronizedDataEngine();
                 } else {
-                    alert(res.message || "Purchase processing error.");
+                    alert(res.message || "Purchase processing error encountered.");
                 }
             } catch (err) { console.error("Store transaction fault handler:", err); }
         }
