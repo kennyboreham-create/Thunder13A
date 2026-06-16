@@ -88,6 +88,7 @@
 
         <main class="flex-1 max-w-6xl w-full mx-auto p-4">
             
+            
             <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
                 <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
                 <h2>New Lessons Added Weekly</h2>
@@ -113,7 +114,7 @@
                 <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
                     <div class="mb-4">
                         <h3 class="text-base font-black uppercase text-white tracking-tight flex items-center gap-2">🏆 Team Rankings</h3>
-                        <p class="text-slate-400 text-xs mt-0.5">Click on any teammate's row to inspect their card collection vault and request asset trades! It goes by active lineup then the most stars.</p>
+                        <p class="text-slate-400 text-xs mt-0.5">Click on any teammate's row to inspect their card collection vault and request asset trades!</p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-sm">
@@ -233,41 +234,6 @@
         </div>
     </div>
 
-            <div id="lesson-player-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-0 sm:p-4 hidden">
-            <div class="bg-slate-900 border border-slate-800 w-full h-full sm:h-[85vh] sm:max-w-4xl sm:rounded-2xl flex flex-col shadow-2xl relative overflow-hidden">
-                
-                <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
-                    <div>
-                        <span id="lesson-modal-badge" class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-md">Strategy Drill</span>
-                        <h3 id="lesson-modal-title" class="font-black text-white uppercase tracking-tight text-sm mt-1">Loading Content Module...</h3>
-                    </div>
-                    <button onclick="confirmCloseLessonPlayer()" class="text-slate-400 hover:text-rose-400 transition font-bold text-2xl px-3 py-1">×</button>
-                </div>
-
-                <div class="flex-1 bg-black flex items-center justify-center relative select-none">
-                    <div id="lesson-media-viewport" class="w-full h-full flex items-center justify-center">
-                        </div>
-                </div>
-
-                <div class="bg-slate-950 border-t border-slate-800 p-4 flex flex-col gap-3">
-                    <div class="flex items-center justify-between text-xs font-bold text-slate-400">
-                        <div class="flex items-center gap-2">
-                            <span id="lesson-progress-text">Progress: 0%</span>
-                            <span id="lesson-completion-status" class="text-rose-400 text-[10px] uppercase font-black tracking-wider animate-pulse">(Incomplete)</span>
-                        </div>
-                        <div class="text-amber-400 flex items-center gap-1">
-                            <span>Reward Value:</span>
-                            <span id="lesson-modal-reward-value" class="text-white font-black">★ 0</span>
-                        </div>
-                    </div>
-
-                    <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
-                        <div id="lesson-progress-bar" class="w-0 h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-300 ease-out"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     <div id="quiz-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl">
             <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
@@ -290,19 +256,6 @@
                 const data = await response.json();
                 if (data.success) {
                     playerData = data;
-
-                    // Capture incoming lesson elements from sheets and map into telemetry engine
-                    if (data.lessons && data.lessons.length > 0) {
-                        remoteLessonsDatabase = data.lessons.map(row => ({
-                            id: row.id || row.LessonID || "",
-                            type: String(row.type || row.Type || "video").toLowerCase().trim(),
-                            title: row.title || row.Title || "Unnamed Training Module",
-                            url: row.url || row.Url || row.Link || "",
-                            stars: parseInt(row.stars || row.Stars || 0, 10),
-                            category: String(row.category || row.Category || "strategy").toLowerCase().trim()
-                        }));
-                    }
-
                     renderApplicationDashboardLayout();
                 } else {
                     alert(data.message || "Session data fetch sync break occurred.");
@@ -327,170 +280,99 @@
             }
         }
 
-        // --- LESSON PLAYER CORE STATES ---
-        let currentActiveLesson = null;
-        let lessonTrackingInterval = null;
-        let lessonProgressPercentage = 0;
-        let isLessonRewardDispatched = false;
-
-        // Holding registry for remote data coming from Google Sheets
-        let remoteLessonsDatabase = [];
-
         function renderLessonsList() {
             const container = document.getElementById('lessons-list');
-            if (!container) return;
-
-            // Filter sheets database registry rows matching 'strategy', 'workout', or 'skills'
-            const activeDrills = remoteLessonsDatabase.filter(l => l.category === currentTrainingCategory);
-
-            if (activeDrills.length === 0) {
-                container.innerHTML = `
-                    <div class="p-6 bg-slate-900/40 border border-slate-800/60 rounded-xl text-center">
-                        <p class="text-slate-500 text-xs italic">No matching drills or tests found inside your Google Sheet for the "${currentTrainingCategory}" sub-deck.</p>
-                    </div>`;
+            if (!playerData.lessons) return;
+            
+            if (currentTrainingCategory.toLowerCase() === 'workout') {
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderGranularWorkoutSection(container);
                 return;
             }
 
-            container.innerHTML = activeDrills.map(l => {
-                // Determine whether target triggers the native viewport or the custom exam block modal
-                const actionButtonHtml = l.type === "test" ? 
-                    `<button onclick="openQuizModal('${l.id}')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition cursor-pointer shrink-0">
-                        Open Assessment (★${l.stars})
-                    </button>` :
-                    `<button onclick="launchLessonModulePlayer('${l.id}')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition cursor-pointer shrink-0">
-                        Start Drill (★${l.stars})
-                    </button>`;
+            if (currentTrainingCategory.toLowerCase() === 'skills') {
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderGranularSkillsSection(container);
+                return;
+            }
 
-                return `
-                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between gap-4 shadow-sm hover:border-slate-700 transition">
-                        <div>
-                            <span class="text-[9px] font-black uppercase text-blue-400 tracking-wider bg-blue-950/60 border border-blue-900/30 px-2 py-0.5 rounded-md">${l.type}</span>
-                            <h4 class="text-sm font-bold text-white uppercase mt-1.5">${l.title}</h4>
+            document.getElementById('strategy-filter-bar').classList.remove('hidden');
+            const filterValue = document.getElementById('strategy-status-filter').value; 
+            let filteredLessons = playerData.lessons.filter(l => l.category && l.category.toString().trim().toLowerCase() === 'strategy');
+            
+            if (filteredLessons.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded-xl border border-slate-800">No strategy content loaded yet.</p>`;
+                return;
+            }
+
+            filteredLessons.sort((a, b) => a.completed - b.completed);
+            let htmlOutput = "";
+
+            filteredLessons.forEach(l => {
+                const videoUrl = l.video_url ? l.video_url.trim() : "";
+                const isLessonComplete = l.completed;
+
+                if (filterValue === 'todo' && isLessonComplete) return;
+                if (filterValue === 'completed' && !isLessonComplete) return;
+
+                htmlOutput += `
+                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${isLessonComplete ? 'opacity-60' : ''}">
+                        <div> 
+                            <p class="font-bold ${isLessonComplete ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
+                            <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
                         </div>
-                        ${actionButtonHtml}
+                        <div class="flex items-center gap-3">
+                        ${isLessonComplete ? 
+                            `
+                            <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>
+                            ${videoUrl !== "" ? `<button onclick="window.open('${videoUrl}', '_blank')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold">Watch Again</button>` : ''}
+                            ` : 
+                            `<button onclick="handleLessonCompletion('${l.id}', '${videoUrl}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">Complete</button>`
+                        }
+                        </div>
                     </div>
                 `;
-            }).join('');
-        }
+            });
 
-        // --- ENGINE INITIALIZATION & MONITOR MATRIX ---
-        function launchLessonModulePlayer(lessonId) {
-            const lesson = remoteLessonsDatabase.find(l => l.id === lessonId);
-            if (!lesson) return;
+            if (playerData.tests) {
+                const uniqueLessonIdsInTests = [...new Set(playerData.tests.map(t => t.lesson_id))];
+                uniqueLessonIdsInTests.forEach(lId => {
+                    const correspondingLesson = playerData.lessons.find(l => l.id === lId);
+                    const matchingTestData = playerData.tests.find(t => t.lesson_id === lId);
+                    const isTestPassed = matchingTestData ? matchingTestData.completed === true : false;
+                    const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
 
-            currentActiveLesson = lesson;
-            lessonProgressPercentage = 0;
-            isLessonRewardDispatched = false;
+                    if (filterValue === 'todo' && isTestPassed) return;
+                    if (filterValue === 'completed' && !isTestPassed) return;
 
-            document.getElementById('lesson-modal-title').textContent = lesson.title;
-            document.getElementById('lesson-modal-badge').textContent = `${lesson.category} Module`;
-            document.getElementById('lesson-modal-reward-value').textContent = `★ ${lesson.stars}`;
-            updatePlayerProgressBar(0);
-
-            const viewport = document.getElementById('lesson-media-viewport');
-            viewport.innerHTML = ""; // Clear old frames safely
-
-            if (lesson.type === "video") {
-                // Embed Native Video Target Stream with Listeners hooked directly to progress loops
-                const videoElement = document.createElement('video');
-                videoElement.src = lesson.url;
-                videoElement.controls = true;
-                videoElement.autoplay = true;
-                videoElement.className = "max-w-full max-h-full aspect-video";
-                
-                videoElement.ontimeupdate = () => {
-                    if (videoElement.duration) {
-                        const currentProgress = Math.floor((videoElement.currentTime / videoElement.duration) * 100);
-                        if (currentProgress > lessonProgressPercentage) {
-                            updatePlayerProgressBar(currentProgress >= 98 ? 100 : currentProgress);
-                        }
-                    }
-                };
-                
-                videoElement.onended = () => updatePlayerProgressBar(100);
-                viewport.appendChild(videoElement);
-
-            } else if (lesson.type === "presentation") {
-                // Embed Google Presentation Framework Web Player Endpoint
-                const iframe = document.createElement('iframe');
-                iframe.src = `${lesson.url}?start=false&loop=false&delayms=3000`;
-                iframe.className = "w-full h-full border-0 bg-white";
-                viewport.appendChild(iframe);
-
-                // Simulated Deck Progression
-                let simulatedProgress = 0;
-                lessonTrackingInterval = setInterval(() => {
-                    if (simulatedProgress < 100) {
-                        simulatedProgress += 10; 
-                        updatePlayerProgressBar(simulatedProgress);
-                    } else {
-                        clearInterval(lessonTrackingInterval);
-                    }
-                }, 4000); 
+                    htmlOutput += `
+                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/40 transition ${isTestPassed ? 'opacity-60' : ''}">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-indigo-500/20">Exam Assess</span>
+                                    <p class="font-bold ${isTestPassed ? 'text-slate-400 line-through' : 'text-slate-100'}">${labelText}</p>
+                                </div>
+                                <p class="text-xs text-yellow-500 font-medium mt-0.5">+10 Stars <span class="text-slate-400">(Requires 100%)</span></p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                            ${isTestPassed ? 
+                                `
+                                <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Passed ✓</span>
+                                <button onclick="openQuizModal('${lId}')" class="text-indigo-400 hover:text-indigo-300 text-xs underline font-semibold">Review Exam</button>
+                                ` : 
+                                `<button onclick="openQuizModal('${lId}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">Take Test</button>`
+                            }
+                            </div>
+                        </div>
+                    `;
+                });
             }
-
-            document.getElementById('lesson-player-modal').classList.remove('hidden');
-        }
-
-        // --- PROGRESS EVALUATION & SECURITY LOCK GATEWAY ---
-        function updatePlayerProgressBar(percent) {
-            if (percent < 0 || percent > 100) return;
-            lessonProgressPercentage = percent;
-
-            const bar = document.getElementById('lesson-progress-bar');
-            const text = document.getElementById('lesson-progress-text');
-            const status = document.getElementById('lesson-completion-status');
-
-            if (bar) bar.style.width = `${percent}%`;
-            if (text) text.textContent = `Progress: ${percent}%`;
-
-            if (percent >= 100 && !isLessonRewardDispatched) {
-                isLessonRewardDispatched = true;
-                if (status) {
-                    status.textContent = "✓ Drill Completed";
-                    status.className = "text-emerald-400 text-[10px] uppercase font-black tracking-wider";
-                }
-                dispatchStarRewardsToDatabase(currentActiveLesson);
-            }
-        }
-
-        // --- TRANSACTION AUTHORIZATION DISPATCH CHANNEL ---
-        function dispatchStarRewardsToDatabase(lesson) {
-            if (!lesson) return;
-            
-            console.log(`%c[SYSTEM SECURITY AUTHORIZATION]: Transferring ${lesson.stars} Stars to profile registry id: ${currentAuthId}`, "color: #10b981; font-weight: bold;");
-            alert(`Drill Finished! Verification verified. Transmitting ★ ${lesson.stars} Stars directly to your Locker Wallet Account.`);
-
-            // Direct route mapping payload matching your exact Code.gs doPost routers
-            let postUrl = `${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=${lesson.category}&activityId=${lesson.id}`;
-            
-            fetch(postUrl, {
-                method: "POST",
-                mode: "no-cors"
-            })
-            .then(() => {
-                console.log("[TELEMETRY UPDATE]: Pipeline synchronized.");
-                setTimeout(fetchSynchronizedDataEngine, 1500); // Reload master system registries after write delay finish
-            })
-            .catch(err => console.error("[CRITICAL DB WIRE DISPATCH FAILURE]:", err));
-        }
-
-        function confirmCloseLessonPlayer() {
-            if (lessonProgressPercentage < 100 && !isLessonRewardDispatched) {
-                if (!confirm("Caution: This training drill is not fully completed yet. Exiting now will forfeit the pending Stars wallet reward points. Quit anyway?")) {
-                    return;
-                }
-            }
-            
-            if (lessonTrackingInterval) clearInterval(lessonTrackingInterval);
-            document.getElementById('lesson-media-viewport').innerHTML = "";
-            document.getElementById('lesson-player-modal').classList.add('hidden');
-            currentActiveLesson = null;
+            container.innerHTML = htmlOutput === "" ? `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No matching strategy items found.</p>` : htmlOutput;
         }
 
         function renderGranularWorkoutSection(container) {
             const workoutExercises = ["20 Pushups", "30 Squats", "20 Lunges", "30 Jumps", "10 Burpees", "100 Jumping Jacks"];
-            let baseWorkoutLesson = remoteLessonsDatabase.find(l => l.id === "L_WEEKLY_WORKOUT");
+            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
             const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
 
             let html = `
@@ -526,7 +408,7 @@
 
         function renderGranularSkillsSection(container) {
             const skillsExercises = ["100 Stickhandling Touches", "50 Shots"];
-            let baseSkillsLesson = remoteLessonsDatabase.find(l => l.id === "L_DAILY_SKILLS");
+            let baseSkillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
             const dateContext = baseSkillsLesson ? String(baseSkillsLesson.title) : "Today";
 
             let html = `
@@ -549,7 +431,7 @@
                             <input type="checkbox" ${isChecked ? 'checked disabled' : ''} onchange="submitIndividualItemProgress('${activityKey}', 2)" class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
                             <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
                         </div>
-                        <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-yellow-500/20' : 'border-yellow-500/20'}">
+                        <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
                             ${isChecked ? 'Cleared' : '+2 ★'}
                         </span>
                     </label>
@@ -576,54 +458,37 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS (NO PUCKS SYSTEM) ---
+        // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS ---
         function renderTeamLeaderboardLayout() {
             const tbody = document.getElementById('leaderboard-table-body');
             if (!playerData.leaderboard) return;
             
             const lineupPlayerIds = playerData.gameboardSlots ? 
-                playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim().toLowerCase() : "") : [];
+                playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim() : "") : [];
 
-            let sortedLeaderboard = [...playerData.leaderboard].sort((a, b) => {
-                const aCleanId = a.id.toString().trim().toLowerCase();
-                const bCleanId = b.id.toString().trim().toLowerCase();
-                
-                const aInLineup = lineupPlayerIds.includes(aCleanId) ? 1 : 0;
-                const bInLineup = lineupPlayerIds.includes(bCleanId) ? 1 : 0;
-
-                if (aInLineup !== bInLineup) {
-                    return bInLineup - aInLineup; 
-                }
-
-                const aStars = parseInt(a.totalStars) || 0;
-                const bStars = parseInt(b.totalStars) || 0;
-                return bStars - aStars;
-            });
-
-            tbody.innerHTML = sortedLeaderboard.map((player, idx) => {
+            tbody.innerHTML = playerData.leaderboard.map((player, idx) => {
                 const cleanPlayerId = player.id.toString().trim();
-                const isMe = cleanPlayerId.toLowerCase() === currentAuthId.toString().trim().toLowerCase();
-                const inLineup = lineupPlayerIds.includes(cleanPlayerId.toLowerCase());
-                const starBalance = parseInt(player.totalStars) || 0;
+                const isMe = cleanPlayerId === currentAuthId.toString().trim();
+                const inLineup = lineupPlayerIds.includes(cleanPlayerId);
 
                 return `
                     <tr onclick="openPlayerInventoryModal('${cleanPlayerId}')" class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/40 transition cursor-pointer">
-                        <td class="py-3.5 pl-3 font-mono text-xs text-center">${idx + 1}</td>
+                        <td class="py-3.5 pl-3 font-mono text-xs">${idx + 1}</td>
                         <td class="py-3.5 flex items-center gap-2">
                             <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId || 'S001'}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
                             <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
                         </td>
                         <td class="py-3.5 text-center text-sm">
-                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-emerald-500/20">📋 Active Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
+                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-500/20">盒 Starting Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
                         </td>
-                        <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber || '--'}</td>
-                        <td class="py-3.5 text-right pr-3 font-black text-amber-400">⭐ ${starBalance.toLocaleString()}</td>
+                        <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
+                        <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
                     </tr>
                 `;
             }).join('');
         }
 
-        // --- DYNAMIC ROSTER VAULT DISPLAY OVERLAY ---
+        // --- DYNAMIC ROSTER VAULT DISPLAY OVERLAY WITH FIXES ---
         function openPlayerInventoryModal(targetPlayerId) {
             const modal = document.getElementById('inventory-modal');
             const grid = document.getElementById('inventory-modal-grid');
@@ -634,16 +499,22 @@
 
             title.innerText = `${targetPlayer.name} - Vault Inventory`;
             const isMe = targetPlayerId.toString().trim() === currentAuthId.toString().trim();
+
+            // Handle reading raw arrays or mapped array rows securely
             const itemsOwned = targetPlayer.ownedSprites || [];
 
             if (itemsOwned.length === 0) {
                 grid.innerHTML = `<p class="col-span-full text-center py-8 text-slate-500 text-xs italic">This player doesn't have any sprites locked in their vault storage yet.</p>`;
             } else {
                 grid.innerHTML = itemsOwned.map(item => {
+                    // Normalize checking whether the record is a raw ID string or an object payload
                     const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
                     const cleanId = spriteId.toString().trim();
+                    
+                    // Discover corresponding store metadata records
                     const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
                     
+                    // Clean Fallback Name Selector Pipeline matching your exact sheet key ('sprite_name')
                     let nameLabel = "Unknown Sprite";
                     if (cleanId === "S001") {
                         nameLabel = "Starter Avatar";
@@ -680,25 +551,32 @@
 
         function closeInventoryModal() { document.getElementById('inventory-modal').classList.add('hidden'); }
 
-        // --- TRADE PROPOSAL DRAFT MODAL SLIP ---
+        // --- FIXED TRADE PROPOSAL DRAFT MODAL SLIP ---
         function openTradeProposalSlip(targetPlayerId, targetSpriteId) {
             tradeTargetPlayerId = targetPlayerId;
             tradeTargetSpriteId = targetSpriteId;
 
             const select = document.getElementById('trade-offer-selector');
+            
+            // Extract your owned inventory array
             const myProfileSprites = (playerData.playerProfile && playerData.playerProfile.ownedSprites) ? 
                                       playerData.playerProfile.ownedSprites : [];
 
             if (myProfileSprites.length === 0) {
+                // Safe absolute fallback if inventory arrays haven't loaded yet
                 select.innerHTML = `<option value="S001">Starter Avatar (S001)</option>`;
             } else {
                 select.innerHTML = myProfileSprites.map(item => {
+                    // 1. Extract raw ID safely whether item is an object or a plain string
                     const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
                     const cleanId = spriteId.toString().trim();
+                    
                     if (cleanId === "") return "";
 
+                    // 2. Cross-reference against store catalog dataset to find real name
                     const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
                     
+                    // 3. Resolve the human-readable label matching your spreadsheet keys
                     let nameLabel = "Unknown Sprite";
                     if (cleanId === "S001") {
                         nameLabel = "Starter Avatar";
@@ -738,7 +616,7 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- LOCKER ROOM MARKET DISPATCH LAYOUT ---
+        // --- LOCKER ROOM MARKET DISPATCH LAYOUT WITH MATCHING SHEET KEYS ---
         function renderLockerRoomMarketLayout() {
             const pendingContainer = document.getElementById('market-pending-list');
             const historyContainer = document.getElementById('market-history-list');
@@ -751,17 +629,24 @@
             const pendingTrades = playerData.activeTrades.filter(t => t.status.toString().trim() === "PENDING");
             const historyTrades = playerData.activeTrades.filter(t => t.status.toString().trim() !== "PENDING");
 
+            // Deep-inspection helper to resolve a human-readable name out of the trade row
             const resolveNamesFromTradeRow = (tradeRow, type) => {
+                // 1. Map to your exact spreadsheet keys discovered in console
+                // Offered ID uses 'offered_id', Requested ID uses 'requested_sprite_id'
                 const rawId = type === 'offer' ? tradeRow.offered_id : tradeRow.requested_sprite_id;
+                
                 if (rawId === undefined || rawId === null || rawId.toString().trim() === "") return "Empty Slot";
 
                 let cleanId = rawId.toString().trim().toUpperCase();
+                
+                // Pad numbers to standard S000 format if necessary
                 if (!cleanId.startsWith('S') && !isNaN(cleanId)) {
                     cleanId = 'S' + cleanId.padStart(3, '0');
                 }
                 
                 if (cleanId === "S001" || cleanId === "1") return "Starter Avatar";
 
+                // 2. Scan the store array using normalized comparisons
                 const sData = playerData.storeSprites ? playerData.storeSprites.find(i => {
                     if (!i.id) return false;
                     let storeId = i.id.toString().trim().toUpperCase();
@@ -774,15 +659,20 @@
                 if (sData) {
                     return sData.sprite_name || sData.name || `Sprite ${cleanId}`;
                 }
+
+                // 3. Fallback: If it's not found in store catalog metadata, display the sanitized ID tag
                 return `Item (${cleanId})`;
             };
 
+            // RENDER ACTIVE PENDING DEALS
             if (pendingTrades.length === 0) {
                 pendingContainer.innerHTML = `<p class="text-slate-500 text-xs italic p-4 bg-slate-950/40 rounded-xl border border-slate-800/60 text-center">No pending transaction contracts open on your ledger right now.</p>`;
             } else {
                 pendingContainer.innerHTML = pendingTrades.map(t => {
                     const isIncoming = t.receiver_id.toString().trim() === currentAuthId.toString().trim();
                     const otherPartyName = isIncoming ? `Player ID: ${t.sender_id}` : `Player ID: ${t.receiver_id}`;
+                    
+                    // Call the row inspector to pull the names mapping to the corrected keys
                     const offerName = resolveNamesFromTradeRow(t, 'offer');
                     const requestName = resolveNamesFromTradeRow(t, 'request');
                     
@@ -812,6 +702,7 @@
                 }).join('');
             }
 
+            // RENDER ARCHIVED HISTORY LEDGER
             if (historyTrades.length === 0) {
                 historyContainer.innerHTML = `<p class="text-slate-500 text-xs italic text-center p-3">No archived market transaction receipts discovered inside historical logs.</p>`;
             } else {
@@ -837,6 +728,15 @@
             }
         }
 
+        async function resolveTradeProposal(tradeId, actionType) {
+            try {
+                const response = await fetch(`${API_URL}?action=${actionType}&playerId=${currentAuthId}&tradeId=${tradeId}`, { method: 'POST' });
+                const res = await response.json();
+                alert(res.message);
+                if (res.success) { fetchSynchronizedDataEngine(); }
+            } catch (err) { console.error(err); }
+        }
+
         function renderStartingLineupLayout() {
             const grid = document.getElementById('lineup-slots-grid');
             if (!playerData.gameboardSlots) return;
@@ -844,7 +744,7 @@
             grid.innerHTML = playerData.gameboardSlots.map(slot => {
                 const hasOccupant = slot.playerId !== undefined && slot.playerId !== null && slot.playerId.toString().trim() !== "";
                 return `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
                         <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
                         <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
                         <div class="min-h-[44px] flex flex-col justify-center">
@@ -895,6 +795,7 @@
             const viewLineup = document.getElementById('sub-view-lineup');
             const viewTrading = document.getElementById('sub-view-trading');
 
+            // Hide everything first
             viewStandings.classList.add('hidden'); viewLineup.classList.add('hidden'); viewTrading.classList.add('hidden');
             btnStandings.className = btnLineup.className = btnTrading.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
 
@@ -914,11 +815,14 @@
             const grid = document.getElementById('sprite-store-grid');
             if (!playerData.storeSprites) return;
 
+            // Get the current selected value of the cost filter
             const costFilterEl = document.getElementById('store-cost-filter');
             const maxCostLimit = costFilterEl ? costFilterEl.value : "all";
 
+            // Filter the sprites array based on cost before mapping it to HTML
             let filteredSprites = playerData.storeSprites.filter(s => {
                 if (maxCostLimit === "all") return true;
+                
                 const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || 0;
                 return spriteCost <= parseInt(maxCostLimit);
             });
@@ -984,10 +888,14 @@
                 const res = await response.json();
                 
                 if (res.success) {
+                    // Find the purchased sprite in our local store catalog data
                     const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
                     const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
+                    
+                    // Display premium success message alert tray
                     alert(`🎉 Congrats! You successfully unlocked "${spriteName}"!`);
                     
+                    // Local state mutation: instantly update ownership flag so it reflects without page reload
                     playerData.storeSprites = playerData.storeSprites.map(s => {
                         if (s.id.toString().trim() === spriteId.toString().trim()) {
                             return { ...s, owned: true, stockLeft: s.stockLeft !== undefined ? Math.max(0, s.stockLeft - 1) : s.stockLeft };
@@ -995,23 +903,31 @@
                         return s;
                     });
 
+                    // Add to your profile's owned inventory array list so it's instantly available for trading/equipping
                     if (playerData.playerProfile && playerData.playerProfile.ownedSprites) {
                         if (!playerData.playerProfile.ownedSprites.some(item => item.id === spriteId)) {
                             playerData.playerProfile.ownedSprites.push({ id: spriteId, name: spriteName });
                         }
                     }
 
+                    // Deduct cost locally to instantly sync the top wallet star display bar
                     if (purchasedSprite && playerData.playerProfile) {
                         const cost = parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0;
                         playerData.playerProfile.totalStars = Math.max(0, playerData.playerProfile.totalStars - cost);
                     }
 
-                    renderApplicationDashboardLayout(); registerStoreInventoryLayout();
+                    // Force immediate UI re-renders across headers and stores
+                    renderApplicationDashboardLayout();
+                    renderStoreInventoryLayout();
+                    
+                    // Background sync with the sheet database to confirm everything matches up perfectly
                     fetchSynchronizedDataEngine();
                 } else {
                     alert(res.message || "Purchase processing error.");
                 }
-            } catch (err) { console.error("Store transaction fault handler:", err); }
+            } catch (err) { 
+                console.error("Store transaction fault handler:", err); 
+            }
         }
 
         async function executeAvatarProfileEquip(spriteId) {
@@ -1027,7 +943,7 @@
             activeQuizQuestionsCache = playerData.tests.filter(t => t.lesson_id.toString().trim() === lessonId.toString().trim());
             const titleEl = document.getElementById('quiz-modal-title');
             const bodyEl = document.getElementById('quiz-modal-body');
-            const correspondingLesson = remoteLessonsDatabase.find(l => l.id === lessonId);
+            const correspondingLesson = playerData.lessons.find(l => l.id === lessonId);
             titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Tactical Quiz Assessment";
             
             if (activeQuizQuestionsCache.length === 0) {
