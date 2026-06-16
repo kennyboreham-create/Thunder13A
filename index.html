@@ -90,14 +90,14 @@
             
             <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
                 <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-                <h2>New Lessons Added Weekly</h2>
-                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
-                <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
-                    <option value="all" selected>All Strategy Content</option>
-                    <option value="todo">To Do</option>
-                    <option value="completed">Completed</option>
-                </select>
-            </div>
+                    <h2>New Lessons Added Weekly</h2>
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
+                    <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
+                        <option value="all" selected>All Strategy Content</option>
+                        <option value="todo">To Do</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
             </div>  
 
             <div id="lessons-list" class="space-y-3"></div>
@@ -458,7 +458,6 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- RENDER DYNAMIC LEADERBOARD WITH REAL PUCKS PROPERTY ---
         function renderTeamLeaderboardLayout() {
             const tbody = document.getElementById('leaderboard-table-body');
             if (!playerData.leaderboard) return;
@@ -493,7 +492,6 @@
                 const isMe = cleanPlayerId === currentAuthId.toString().trim();
                 const inLineup = lineupPlayerIds.includes(cleanPlayerId);
                 
-                // Fallback architecture reads both 'totalPucks' and 'pucks' fields directly from the server engine matrix objects
                 const pucksDisplay = parseInt(player.totalPucks) !== undefined && !isNaN(parseInt(player.totalPucks)) ? parseInt(player.totalPucks) : (parseInt(player.pucks) || 0);
 
                 return `
@@ -620,7 +618,7 @@
             const myOfferSpriteId = document.getElementById('trade-offer-selector').value;
 
             try {
-                const response = await fetch(`${API_URL}?action=proposeTrade&playerId=${currentAuthId}&targetPlayerId=${tradeTargetPlayerId}&offerSpriteId=${myOfferOfferSpriteId}&requestSpriteId=${tradeTargetSpriteId}`, { method: 'POST' });
+                const response = await fetch(`${API_URL}?action=proposeTrade&playerId=${currentAuthId}&targetPlayerId=${tradeTargetPlayerId}&offerSpriteId=${myOfferSpriteId}&requestSpriteId=${tradeTargetSpriteId}`, { method: 'POST' });
                 const res = await response.json();
                 alert(res.message);
                 if (res.success) {
@@ -736,7 +734,7 @@
             grid.innerHTML = playerData.gameboardSlots.map(slot => {
                 const hasOccupant = slot.playerId !== undefined && slot.playerId !== null && slot.playerId.toString().trim() !== "";
                 return `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden">
                         <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
                         <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
                         <div class="min-h-[44px] flex flex-col justify-center">
@@ -802,7 +800,6 @@
             }
         }
 
-        // --- RENDER STORE INTEGRATION WITH PACK BULK QUANTITY QUANTIFIER ---
         function renderStoreInventoryLayout() {
             const grid = document.getElementById('sprite-store-grid');
             if (!playerData.storeSprites) return;
@@ -841,11 +838,11 @@
                 const finalImgDisplay = customImageSrc.trim() !== "" ? customImageSrc.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
                 const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
 
-                // Check if item is a consumable pack (like pucks) or stackable asset to allow multiple dropdown sizing logic
+                // Identify if the item is a puck or custom consumable asset
                 const isConsumableAsset = s.id.toString().toLowerCase().includes("puck") || spriteName.toLowerCase().includes("puck");
 
                 return `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned && !isConsumableAsset ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden">
                         <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">${rarityLabel}</span>
                         <img src="${finalImgDisplay}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-2 mt-3 object-contain">
                         <div class="space-y-0.5">
@@ -861,22 +858,15 @@
                                 <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${stockPercentage}%"></div>
                             </div>
                         </div>
-                        <div class="w-full mt-4 space-y-2">
+                        <div class="w-full mt-4 flex flex-col gap-2">
                             ${s.owned && !isConsumableAsset ? 
-                                `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
+                                `
+                                <button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer mb-1">Equip Avatar</button>
+                                <button onclick="executeSpriteStorePurchase('${s.id}', ${spriteCost})" class="w-full bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-xs font-bold py-2 rounded-xl transition border border-blue-500/20 cursor-pointer">🛒 Buy Duplicate (${spriteCost} ★)</button>
+                                ` :
                                 isSoldOut ? 
                                 `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
-                                `
-                                <div class="flex items-center gap-1.5">
-                                    <select id="qty-select-${s.id}" class="bg-slate-950 border border-slate-800 text-xs font-bold rounded-xl px-2 py-2 text-slate-300 focus:outline-none focus:border-blue-500">
-                                        <option value="1">1x</option>
-                                        <option value="3">3x</option>
-                                        <option value="5">5x</option>
-                                        <option value="10">10x</option>
-                                    </select>
-                                    <button onclick="executeSpriteStorePurchase('${s.id}', ${spriteCost})" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy</button>
-                                </div>
-                                `
+                                `<button onclick="executeSpriteStorePurchase('${s.id}', ${spriteCost})" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${spriteCost} ★)</button>`
                             }
                         </div>
                     </div>
@@ -885,23 +875,17 @@
         }
 
         async function executeSpriteStorePurchase(spriteId, baseCost) {
-            const qtySelect = document.getElementById(`qty-select-${spriteId}`);
-            const purchaseQty = qtySelect ? parseInt(qtySelect.value) : 1;
-            const finalTotalStarCost = baseCost * purchaseQty;
-
-            // Pre-validation checking star pool availability local registry
-            if (playerData.playerProfile && parseInt(playerData.playerProfile.totalStars) < finalTotalStarCost) {
-                alert(`Insufficient Star Funds. You need ${finalTotalStarCost} Stars to buy ${purchaseQty} units.`);
+            if (playerData.playerProfile && parseInt(playerData.playerProfile.totalStars) < baseCost) {
+                alert(`Insufficient Star Funds. You need ${baseCost} Stars to buy this item.`);
                 return;
             }
 
             try {
-                // Sent purchaseQty multiplier cleanly into the API endpoints
-                const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}&quantity=${purchaseQty}`, { method: 'POST' });
+                const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}&quantity=1`, { method: 'POST' });
                 const res = await response.json();
                 
                 if (res.success) {
-                    alert(`🎉 Success! Bought ${purchaseQty}x item(s).`);
+                    alert(`🎉 Purchase Successful!`);
                     fetchSynchronizedDataEngine();
                 } else {
                     alert(res.message || "Purchase processing error encountered.");
