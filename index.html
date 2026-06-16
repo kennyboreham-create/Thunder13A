@@ -26,7 +26,6 @@
         let tradeTargetSpriteId = null;
     </script>
 
-    <!-- AUTHENTICATION LAYER GATING SCREEN -->
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-md w-full shadow-2xl text-center">
             <div class="w-16 h-16 bg-blue-600/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
@@ -50,10 +49,8 @@
         </div>
     </div>
 
-    <!-- MAIN CORE ENGINE APP DASHBOARD VIEWPORT -->
     <div id="app-viewport" class="flex-1 flex flex-col hidden">
         
-        <!-- TELEMETRY HEADER STATUS SECTION -->
         <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
             <div class="max-w-6xl mx-auto flex justify-between items-center">
                 <div class="flex items-center gap-3">
@@ -79,7 +76,6 @@
             </div>
         </header>
 
-        <!-- GLOBAL APP NAVIGATION CONSOLE -->
         <nav class="bg-slate-900 border-b border-slate-800 px-2 sticky top-[65px] z-30">
             <div class="max-w-6xl mx-auto flex justify-around">
                 <button onclick="switchCategoryView('strategy')" id="nav-strategy" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer">Strategy</button>
@@ -90,36 +86,30 @@
             </div>
         </nav>
 
-        <!-- CORE INTERACTIVE DISPLAY COMPONENT WINDOW -->
         <main class="flex-1 max-w-6xl w-full mx-auto p-4">
             
-            <!-- CONTROLLABLE STRATEGY FILTER CONSOLE -->
             <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
                 <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-                    <h2>New Lessons Added Weekly</h2>
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
-                    <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
-                        <option value="all" selected>All Strategy Content</option>
-                        <option value="todo">To Do</option>
-                        <option value="completed">Completed</option>
-                    </select>
-                </div>
+                <h2>New Lessons Added Weekly</h2>
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
+                <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
+                    <option value="all" selected>All Strategy Content</option>
+                    <option value="todo">To Do</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
             </div>  
 
-            <!-- TRANSLATIONAL LISTING STREAM CONTAINER FOR INSTRUCTIONAL SYSTEMS -->
             <div id="lessons-list" class="space-y-3"></div>
 
-            <!-- GAMEBOARD MULTI-TAB MATRIX GRID CONSOLE -->
             <div id="gameboard-view-container" class="hidden space-y-4">
                 
-                <!-- MULTI-TAB REGISTRATION SYSTEM -->
                 <div class="flex gap-1.5 border-b border-slate-800 pb-3 overflow-x-auto">
                     <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white shrink-0 cursor-pointer">Leaderboard Standings</button>
                     <button onclick="switchSubTab('lineup')" id="sub-tab-lineup" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Starting Lineup</button>
                     <button onclick="switchSubTab('trading')" id="sub-tab-trading" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0 cursor-pointer">Market</button>
                 </div>
 
-                <!-- SUBTAB CORE AREA: STANDINGS RETAILER MATRIX -->
                 <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
                     <div class="mb-4">
                         <h3 class="text-base font-black uppercase text-white tracking-tight flex items-center gap-2">🏆 Team Rankings</h3>
@@ -142,7 +132,6 @@
                     </div>
                 </div>
 
-                <!-- SUBTAB CORE AREA: ROSTER ASSIGNMENT LINEUP SLOTS -->
                 <div id="sub-view-lineup" class="hidden space-y-4">
                     <div class="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-900/30 p-5 rounded-2xl shadow-xl">
                         <h3 class="text-base font-black uppercase text-white tracking-tight">🏒 Roster Positions</h3>
@@ -151,7 +140,6 @@
                     <div id="lineup-slots-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
                 </div>
 
-                <!-- SUBTAB CORE AREA: ASSET MARKET TRANSACTION CONSOLE -->
                 <div id="sub-view-trading" class="hidden space-y-5">
                     <div class="bg-gradient-to-r from-indigo-950 to-slate-900 border border-indigo-900/20 p-5 rounded-2xl shadow-xl">
                         <h3 class="text-base font-black uppercase text-white tracking-tight">💼 Locker Room Trade Desk</h3>
@@ -171,7 +159,6 @@
                 </div>
             </div>
 
-            <!-- STORE FRONT END LAYOUT SYSTEM CONSOLE -->
             <div id="store-view-container" class="hidden space-y-4">
                 
                 <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
@@ -197,9 +184,6 @@
         </main>
     </div>
 
-    <!-- MODAL PORTAL WINDOWS SECTION -->
-    
-    <!-- VAULT PROFILE INVENTORY EXPLORATION DISPLAY -->
     <div id="inventory-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl">
             <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/20">
@@ -216,7 +200,6 @@
         </div>
     </div>
 
-    <!-- TRANSACTION PROPOSAL WRITER SYSTEM MODAL -->
     <div id="trade-proposal-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full shadow-2xl p-6 space-y-4">
             <div>
@@ -234,7 +217,6 @@
         </div>
     </div>
 
-    <!-- POSITION DEPLOYMENT MODAL PROMPT -->
     <div id="lineup-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full shadow-2xl p-6 space-y-4">
             <div>
@@ -252,7 +234,6 @@
         </div>
     </div>
 
-    <!-- ASSESSMENT EXAMINATION SHEET PLATFORM WINDOW -->
     <div id="quiz-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl">
             <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
@@ -267,7 +248,6 @@
         </div>
     </div>
 
-    <!-- CORE TELEMETRY OPERATIONS CONTROLLER ENGINE -->
     <script>
         async function fetchSynchronizedDataEngine() {
             if (!currentAuthId) return;
@@ -478,6 +458,7 @@
             } catch (err) { console.error(err); }
         }
 
+        // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS AND PUCKS COLUMN ---
         function renderTeamLeaderboardLayout() {
             const tbody = document.getElementById('leaderboard-table-body');
             if (!playerData.leaderboard) return;
@@ -485,6 +466,7 @@
             const lineupPlayerIds = playerData.gameboardSlots ? 
                 playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim() : "") : [];
 
+            // Sort logic setup
             let sortedLeaderboard = [...playerData.leaderboard].sort((a, b) => {
                 const aCleanId = a.id.toString().trim();
                 const bCleanId = b.id.toString().trim();
@@ -507,12 +489,12 @@
                 return bStars - aStars;
             });
 
+            // Render output containing dynamic Pucks property injection
             tbody.innerHTML = sortedLeaderboard.map((player, idx) => {
                 const cleanPlayerId = player.id.toString().trim();
                 const isMe = cleanPlayerId === currentAuthId.toString().trim();
                 const inLineup = lineupPlayerIds.includes(cleanPlayerId);
-                
-                const pucksDisplay = parseInt(player.totalPucks) !== undefined && !isNaN(parseInt(player.totalPucks)) ? parseInt(player.totalPucks) : (parseInt(player.pucks) || 0);
+                const pucksDisplay = parseInt(player.totalPucks) || parseInt(player.pucks) || 0;
 
                 return `
                     <tr onclick="openPlayerInventoryModal('${cleanPlayerId}')" class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/40 transition cursor-pointer">
@@ -525,13 +507,14 @@
                             ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-500/20">📋 Starting Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
                         </td>
                         <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
-                        <td class="py-3.5 text-right font-bold text-slate-200">${pucksDisplay.toLocaleString()}</td>
+                        <td class="py-3.5 text-right font-bold text-slate-300">${pucksDisplay.toLocaleString()}</td>
                         <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
                     </tr>
                 `;
             }).join('');
         }
 
+        // --- DYNAMIC ROSTER VAULT DISPLAY OVERLAY ---
         function openPlayerInventoryModal(targetPlayerId) {
             const modal = document.getElementById('inventory-modal');
             const grid = document.getElementById('inventory-modal-grid');
@@ -590,6 +573,7 @@
 
         function closeInventoryModal() { document.getElementById('inventory-modal').classList.add('hidden'); }
 
+        // --- TRADE PROPOSAL DRAFT MODAL SLIP ---
         function openTradeProposalSlip(targetPlayerId, targetSpriteId) {
             tradeTargetPlayerId = targetPlayerId;
             tradeTargetSpriteId = targetSpriteId;
@@ -649,6 +633,7 @@
             } catch (err) { console.error(err); }
         }
 
+        // --- LOCKER ROOM MARKET DISPATCH LAYOUT ---
         function renderLockerRoomMarketLayout() {
             const pendingContainer = document.getElementById('market-pending-list');
             const historyContainer = document.getElementById('market-history-list');
@@ -754,7 +739,7 @@
             grid.innerHTML = playerData.gameboardSlots.map(slot => {
                 const hasOccupant = slot.playerId !== undefined && slot.playerId !== null && slot.playerId.toString().trim() !== "";
                 return `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
                         <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
                         <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
                         <div class="min-h-[44px] flex flex-col justify-center">
@@ -859,7 +844,7 @@
                 const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
 
                 return `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
                         <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">${rarityLabel}</span>
                         <img src="${finalImgDisplay}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-2 mt-3 object-contain">
                         <div class="space-y-0.5">
@@ -875,15 +860,12 @@
                                 <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${stockPercentage}%"></div>
                             </div>
                         </div>
-                        <div class="w-full mt-4 flex flex-col gap-2">
+                        <div class="w-full mt-4">
                             ${s.owned ? 
-                                `
-                                <button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer mb-1">Equip Avatar</button>
-                                <button onclick="executeSpriteStorePurchase('${s.id}', ${spriteCost})" class="w-full bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-xs font-bold py-2 rounded-xl transition border border-blue-500/20 cursor-pointer">🛒 Buy Duplicate (${spriteCost} ★)</button>
-                                ` :
+                                `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
                                 isSoldOut ? 
                                 `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
-                                `<button onclick="executeSpriteStorePurchase('${s.id}', ${spriteCost})" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${spriteCost} ★)</button>`
+                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${spriteCost} ★)</button>`
                             }
                         </div>
                     </div>
@@ -891,21 +873,38 @@
             }).join('');
         }
 
-        async function executeSpriteStorePurchase(spriteId, baseCost) {
-            if (playerData.playerProfile && parseInt(playerData.playerProfile.totalStars) < baseCost) {
-                alert(`Insufficient Star Funds. You need ${baseCost} Stars to buy this item.`);
-                return;
-            }
-
+        async function executeSpriteStorePurchase(spriteId) {
             try {
-                const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}&quantity=1`, { method: 'POST' });
+                const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
                 const res = await response.json();
                 
                 if (res.success) {
-                    alert(`🎉 Purchase Successful!`);
+                    const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
+                    const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
+                    alert(`🎉 Congrats! You successfully unlocked "${spriteName}"!`);
+                    
+                    playerData.storeSprites = playerData.storeSprites.map(s => {
+                        if (s.id.toString().trim() === spriteId.toString().trim()) {
+                            return { ...s, owned: true, stockLeft: s.stockLeft !== undefined ? Math.max(0, s.stockLeft - 1) : s.stockLeft };
+                        }
+                        return s;
+                    });
+
+                    if (playerData.playerProfile && playerData.playerProfile.ownedSprites) {
+                        if (!playerData.playerProfile.ownedSprites.some(item => item.id === spriteId)) {
+                            playerData.playerProfile.ownedSprites.push({ id: spriteId, name: spriteName });
+                        }
+                    }
+
+                    if (purchasedSprite && playerData.playerProfile) {
+                        const cost = parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0;
+                        playerData.playerProfile.totalStars = Math.max(0, playerData.playerProfile.totalStars - cost);
+                    }
+
+                    renderApplicationDashboardLayout(); registerStoreInventoryLayout();
                     fetchSynchronizedDataEngine();
                 } else {
-                    alert(res.message || "Purchase processing error encountered.");
+                    alert(res.message || "Purchase processing error.");
                 }
             } catch (err) { console.error("Store transaction fault handler:", err); }
         }
