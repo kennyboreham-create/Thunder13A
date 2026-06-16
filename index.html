@@ -233,11 +233,9 @@
         </div>
     </div>
 
-            <!-- MODAL 2: UNIVERSAL LESSON PLAYER ENGINE -->
-        <div id="lesson-player-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-0 sm:p-4 hidden">
+            <div id="lesson-player-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-0 sm:p-4 hidden">
             <div class="bg-slate-900 border border-slate-800 w-full h-full sm:h-[85vh] sm:max-w-4xl sm:rounded-2xl flex flex-col shadow-2xl relative overflow-hidden">
                 
-                <!-- Header Bar -->
                 <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
                     <div>
                         <span id="lesson-modal-badge" class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-md">Strategy Drill</span>
@@ -246,14 +244,11 @@
                     <button onclick="confirmCloseLessonPlayer()" class="text-slate-400 hover:text-rose-400 transition font-bold text-2xl px-3 py-1">×</button>
                 </div>
 
-                <!-- Media Canvas Body Viewport -->
                 <div class="flex-1 bg-black flex items-center justify-center relative select-none">
                     <div id="lesson-media-viewport" class="w-full h-full flex items-center justify-center">
-                        <!-- Media frames inject dynamically here -->
-                    </div>
+                        </div>
                 </div>
 
-                <!-- Footer Track: Metrics & Authorization Matrix -->
                 <div class="bg-slate-950 border-t border-slate-800 p-4 flex flex-col gap-3">
                     <div class="flex items-center justify-between text-xs font-bold text-slate-400">
                         <div class="flex items-center gap-2">
@@ -266,7 +261,6 @@
                         </div>
                     </div>
 
-                    <!-- Completion Tracker Bar Track -->
                     <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
                         <div id="lesson-progress-bar" class="w-0 h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-300 ease-out"></div>
                     </div>
@@ -296,6 +290,19 @@
                 const data = await response.json();
                 if (data.success) {
                     playerData = data;
+
+                    // Capture incoming lesson elements from sheets and map into telemetry engine
+                    if (data.lessons && data.lessons.length > 0) {
+                        remoteLessonsDatabase = data.lessons.map(row => ({
+                            id: row.id || row.LessonID || "",
+                            type: String(row.type || row.Type || "video").toLowerCase().trim(),
+                            title: row.title || row.Title || "Unnamed Training Module",
+                            url: row.url || row.Url || row.Link || "",
+                            stars: parseInt(row.stars || row.Stars || 0, 10),
+                            category: String(row.category || row.Category || "strategy").toLowerCase().trim()
+                        }));
+                    }
+
                     renderApplicationDashboardLayout();
                 } else {
                     alert(data.message || "Session data fetch sync break occurred.");
@@ -321,40 +328,54 @@
         }
 
         // --- LESSON PLAYER CORE STATES ---
-let currentActiveLesson = null;
-let lessonTrackingInterval = null;
-let lessonProgressPercentage = 0;
-let isLessonRewardDispatched = false;
+        let currentActiveLesson = null;
+        let lessonTrackingInterval = null;
+        let lessonProgressPercentage = 0;
+        let isLessonRewardDispatched = false;
 
-// Mock list modeling database backend mapping structure
-const mockLessonsData = [
-    { id: "L001", type: "video", title: "Defensive Zone Containment Strategy", url: "https://www.w3schools.com/html/mov_bbb.mp4", stars: 5, category: "strategy" },
-    { id: "L002", type: "presentation", title: "Powerplay Breakout Formations", url: "https://docs.google.com/presentation/d/e/2PACX-1vRsK-U4vD7z7Xw8p/embed", stars: 10, category: "strategy" }
-];
+        // Holding registry for remote data coming from Google Sheets
+        let remoteLessonsDatabase = [];
 
         function renderLessonsList() {
             const container = document.getElementById('lessons-list');
             if (!container) return;
 
-            // Map out interactive lesson cards triggering the local engine rather than blank hyper-targets
-            container.innerHTML = mockLessonsData
-                .filter(l => l.category === currentTrainingCategory)
-                .map(l => `
+            // Filter sheets database registry rows matching 'strategy', 'workout', or 'skills'
+            const activeDrills = remoteLessonsDatabase.filter(l => l.category === currentTrainingCategory);
+
+            if (activeDrills.length === 0) {
+                container.innerHTML = `
+                    <div class="p-6 bg-slate-900/40 border border-slate-800/60 rounded-xl text-center">
+                        <p class="text-slate-500 text-xs italic">No matching drills or tests found inside your Google Sheet for the "${currentTrainingCategory}" sub-deck.</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = activeDrills.map(l => {
+                // Determine whether target triggers the native viewport or the custom exam block modal
+                const actionButtonHtml = l.type === "test" ? 
+                    `<button onclick="openQuizModal('${l.id}')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition cursor-pointer shrink-0">
+                        Open Assessment (★${l.stars})
+                    </button>` :
+                    `<button onclick="launchLessonModulePlayer('${l.id}')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition cursor-pointer shrink-0">
+                        Start Drill (★${l.stars})
+                    </button>`;
+
+                return `
                     <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between gap-4 shadow-sm hover:border-slate-700 transition">
                         <div>
                             <span class="text-[9px] font-black uppercase text-blue-400 tracking-wider bg-blue-950/60 border border-blue-900/30 px-2 py-0.5 rounded-md">${l.type}</span>
                             <h4 class="text-sm font-bold text-white uppercase mt-1.5">${l.title}</h4>
                         </div>
-                        <button onclick="launchLessonModulePlayer('${l.id}')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xl transition cursor-pointer shrink-0">
-                            Start Drill (★${l.stars})
-                        </button>
+                        ${actionButtonHtml}
                     </div>
-                `).join('') || `<p class="text-slate-500 text-xs italic">No drill logs mapped under this training deck configuration.</p>`;
+                `;
+            }).join('');
         }
 
         // --- ENGINE INITIALIZATION & MONITOR MATRIX ---
         function launchLessonModulePlayer(lessonId) {
-            const lesson = mockLessonsData.find(l => l.id === lessonId);
+            const lesson = remoteLessonsDatabase.find(l => l.id === lessonId);
             if (!lesson) return;
 
             currentActiveLesson = lesson;
@@ -380,7 +401,6 @@ const mockLessonsData = [
                 videoElement.ontimeupdate = () => {
                     if (videoElement.duration) {
                         const currentProgress = Math.floor((videoElement.currentTime / videoElement.duration) * 100);
-                        // Clamp up to maintain accuracy checks but let 98%+ count as finished to bypass final video tail frames
                         if (currentProgress > lessonProgressPercentage) {
                             updatePlayerProgressBar(currentProgress >= 98 ? 100 : currentProgress);
                         }
@@ -393,21 +413,20 @@ const mockLessonsData = [
             } else if (lesson.type === "presentation") {
                 // Embed Google Presentation Framework Web Player Endpoint
                 const iframe = document.createElement('iframe');
-                // append delayed delay cycles to auto-start triggers if needed
                 iframe.src = `${lesson.url}?start=false&loop=false&delayms=3000`;
-                iframe.className = "w-full h-full border-0";
+                iframe.className = "w-full h-full border-0 bg-white";
                 viewport.appendChild(iframe);
 
-                // Simulated Deck Progression: Track interaction viewing windows safely over standard execution intervals
+                // Simulated Deck Progression
                 let simulatedProgress = 0;
                 lessonTrackingInterval = setInterval(() => {
                     if (simulatedProgress < 100) {
-                        simulatedProgress += 10; // Increments by 10% every milestone interval block
+                        simulatedProgress += 10; 
                         updatePlayerProgressBar(simulatedProgress);
                     } else {
                         clearInterval(lessonTrackingInterval);
                     }
-                }, 4000); // Expects standard 40 second run time minimum to capture slide layouts
+                }, 4000); 
             }
 
             document.getElementById('lesson-player-modal').classList.remove('hidden');
@@ -440,28 +459,18 @@ const mockLessonsData = [
             if (!lesson) return;
             
             console.log(`%c[SYSTEM SECURITY AUTHORIZATION]: Transferring ${lesson.stars} Stars to profile registry id: ${currentAuthId}`, "color: #10b981; font-weight: bold;");
-            
-            // Notify user immediately that validation matrix is loading
             alert(`Drill Finished! Verification verified. Transmitting ★ ${lesson.stars} Stars directly to your Locker Wallet Account.`);
 
-            // Route execution payloads directly through to Google Apps Script endpoint via fetch matrix
-            const payload = {
-                action: "awardStars",
-                playerId: currentAuthId,
-                starsEarned: lesson.stars,
-                lessonReference: lesson.id
-            };
-
-            fetch(API_URL, {
+            // Direct route mapping payload matching your exact Code.gs doPost routers
+            let postUrl = `${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=${lesson.category}&activityId=${lesson.id}`;
+            
+            fetch(postUrl, {
                 method: "POST",
-                mode: "no-cors", // Bypasses CORS browser check blocks on Apps Script POST deployment requests
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
+                mode: "no-cors"
             })
             .then(() => {
-                // Force reload master system core registers locally after updating database points
                 console.log("[TELEMETRY UPDATE]: Pipeline synchronized.");
-                // If your script layout fetches data from sheets on boot, re-run login refresh routines here
+                setTimeout(fetchSynchronizedDataEngine, 1500); // Reload master system registries after write delay finish
             })
             .catch(err => console.error("[CRITICAL DB WIRE DISPATCH FAILURE]:", err));
         }
@@ -473,10 +482,7 @@ const mockLessonsData = [
                 }
             }
             
-            // Kill monitoring intervals to prevent rogue background tracking leaks
             if (lessonTrackingInterval) clearInterval(lessonTrackingInterval);
-            
-            // Wipe layout viewports
             document.getElementById('lesson-media-viewport').innerHTML = "";
             document.getElementById('lesson-player-modal').classList.add('hidden');
             currentActiveLesson = null;
@@ -484,7 +490,7 @@ const mockLessonsData = [
 
         function renderGranularWorkoutSection(container) {
             const workoutExercises = ["20 Pushups", "30 Squats", "20 Lunges", "30 Jumps", "10 Burpees", "100 Jumping Jacks"];
-            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
+            let baseWorkoutLesson = remoteLessonsDatabase.find(l => l.id === "L_WEEKLY_WORKOUT");
             const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
 
             let html = `
@@ -520,7 +526,7 @@ const mockLessonsData = [
 
         function renderGranularSkillsSection(container) {
             const skillsExercises = ["100 Stickhandling Touches", "50 Shots"];
-            let baseSkillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
+            let baseSkillsLesson = remoteLessonsDatabase.find(l => l.id === "L_DAILY_SKILLS");
             const dateContext = baseSkillsLesson ? String(baseSkillsLesson.title) : "Today";
 
             let html = `
@@ -575,30 +581,25 @@ const mockLessonsData = [
             const tbody = document.getElementById('leaderboard-table-body');
             if (!playerData.leaderboard) return;
             
-            // Create an array mapping all unique player IDs currently occupying starting lineup slots
             const lineupPlayerIds = playerData.gameboardSlots ? 
                 playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim().toLowerCase() : "") : [];
 
-            // Sort logic setup aligned with the required sorting hierarchy rules
             let sortedLeaderboard = [...playerData.leaderboard].sort((a, b) => {
                 const aCleanId = a.id.toString().trim().toLowerCase();
                 const bCleanId = b.id.toString().trim().toLowerCase();
                 
-                // Primary Sort Filter: If lineup status differs, put the active lineup player first
                 const aInLineup = lineupPlayerIds.includes(aCleanId) ? 1 : 0;
                 const bInLineup = lineupPlayerIds.includes(bCleanId) ? 1 : 0;
 
                 if (aInLineup !== bInLineup) {
-                    return bInLineup - aInLineup; // True values (1) bubble to the top position
+                    return bInLineup - aInLineup; 
                 }
 
-                // Secondary Sort Filter (Tie-Breaker): Sort descending by total stars
                 const aStars = parseInt(a.totalStars) || 0;
                 const bStars = parseInt(b.totalStars) || 0;
                 return bStars - aStars;
             });
 
-            // Render output mapping perfectly across variable properties (Pucks column references completely removed)
             tbody.innerHTML = sortedLeaderboard.map((player, idx) => {
                 const cleanPlayerId = player.id.toString().trim();
                 const isMe = cleanPlayerId.toLowerCase() === currentAuthId.toString().trim().toLowerCase();
@@ -633,7 +634,6 @@ const mockLessonsData = [
 
             title.innerText = `${targetPlayer.name} - Vault Inventory`;
             const isMe = targetPlayerId.toString().trim() === currentAuthId.toString().trim();
-
             const itemsOwned = targetPlayer.ownedSprites || [];
 
             if (itemsOwned.length === 0) {
@@ -642,7 +642,6 @@ const mockLessonsData = [
                 grid.innerHTML = itemsOwned.map(item => {
                     const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
                     const cleanId = spriteId.toString().trim();
-                    
                     const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
                     
                     let nameLabel = "Unknown Sprite";
@@ -687,7 +686,6 @@ const mockLessonsData = [
             tradeTargetSpriteId = targetSpriteId;
 
             const select = document.getElementById('trade-offer-selector');
-            
             const myProfileSprites = (playerData.playerProfile && playerData.playerProfile.ownedSprites) ? 
                                       playerData.playerProfile.ownedSprites : [];
 
@@ -697,7 +695,6 @@ const mockLessonsData = [
                 select.innerHTML = myProfileSprites.map(item => {
                     const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
                     const cleanId = spriteId.toString().trim();
-                    
                     if (cleanId === "") return "";
 
                     const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
@@ -847,7 +844,7 @@ const mockLessonsData = [
             grid.innerHTML = playerData.gameboardSlots.map(slot => {
                 const hasOccupant = slot.playerId !== undefined && slot.playerId !== null && slot.playerId.toString().trim() !== "";
                 return `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden">
                         <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
                         <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
                         <div class="min-h-[44px] flex flex-col justify-center">
@@ -1030,7 +1027,7 @@ const mockLessonsData = [
             activeQuizQuestionsCache = playerData.tests.filter(t => t.lesson_id.toString().trim() === lessonId.toString().trim());
             const titleEl = document.getElementById('quiz-modal-title');
             const bodyEl = document.getElementById('quiz-modal-body');
-            const correspondingLesson = playerData.lessons.find(l => l.id === lessonId);
+            const correspondingLesson = remoteLessonsDatabase.find(l => l.id === lessonId);
             titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Tactical Quiz Assessment";
             
             if (activeQuizQuestionsCache.length === 0) {
