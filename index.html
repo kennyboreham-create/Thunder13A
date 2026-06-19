@@ -274,7 +274,7 @@
     <div id="quiz-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl">
             <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-                <h3 id="quiz-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Tactical Quiz Assessment</h3>
+                <h3 id="quiz-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Will you score</h3>
                 <button onclick="closeQuizModal()" class="text-slate-400 hover:text-white transition font-bold text-xl px-2">×</button>
             </div>
             <div id="quiz-modal-body" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6"></div>
@@ -1344,7 +1344,7 @@
             const titleEl = document.getElementById('quiz-modal-title');
             const bodyEl = document.getElementById('quiz-modal-body');
             const correspondingLesson = playerData.lessons.find(l => l.id === lessonId);
-            titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Tactical Quiz Assessment";
+            titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Test";
             
             if (activeQuizQuestionsCache.length === 0) {
                 bodyEl.innerHTML = `<p class="text-slate-500 italic text-center p-4">No exam sheet configurations registered.</p>`;
