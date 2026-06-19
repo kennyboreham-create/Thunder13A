@@ -1274,15 +1274,23 @@
         }
 
         async function executeSpriteStorePurchase(spriteId) {
+            // 1. Find the target sprite in the local catalog to check its cost
+            const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
+            const spriteCost = purchasedSprite ? (parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0) : 0;
+            const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
+
+            // 2. Budget Guard: Prevent players from buying things they can't afford
+            const currentStars = playerData.playerProfile ? (parseInt(playerData.playerProfile.totalStars) || 0) : 0;
+            if (currentStars < spriteCost) {
+                alert(`❌ Insufficient Stars! "${spriteName}" costs ${spriteCost} ★, but you only have ${currentStars} ★.`);
+                return; // Halt execution immediately!
+            }
+
             try {
                 const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
                 const res = await response.json();
                 
                 if (res.success) {
-                    // Find the purchased sprite in our local store catalog data
-                    const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
-                    const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
-                    
                     // Display premium success message alert tray
                     alert(`🎉 Congrats! You successfully unlocked "${spriteName}"!`);
                     
@@ -1302,9 +1310,8 @@
                     }
 
                     // Deduct cost locally to instantly sync the top wallet star display bar
-                    if (purchasedSprite && playerData.playerProfile) {
-                        const cost = parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0;
-                        playerData.playerProfile.totalStars = Math.max(0, playerData.playerProfile.totalStars - cost);
+                    if (playerData.playerProfile) {
+                        playerData.playerProfile.totalStars = Math.max(0, currentStars - spriteCost);
                     }
 
                     // Force immediate UI re-renders across headers and stores
