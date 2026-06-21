@@ -1334,8 +1334,39 @@
             try {
                 const response = await fetch(`${API_URL}?action=equipSprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
                 const res = await response.json();
-                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
-            } catch (err) { console.error(err); }
+                
+                if (res.success) {
+                    alert("✨ Avatar equipped successfully!");
+
+                    // 1. Instantly update your local player profile state
+                    if (playerData.playerProfile) {
+                        playerData.playerProfile.activeSpriteId = spriteId;
+                    }
+
+                    // 2. Instantly update your identity row inside the local leaderboard list
+                    if (playerData.leaderboard) {
+                        playerData.leaderboard = playerData.leaderboard.map(player => {
+                            if (player.id.toString().trim() === currentAuthId.toString().trim()) {
+                                return { ...player, activeSpriteId: spriteId };
+                            }
+                            return player;
+                        });
+                    }
+
+                    // 3. Force immediate UI paint updates across the app viewport
+                    renderApplicationDashboardLayout();
+                    if (currentTrainingCategory === 'gameboard' && activeSubTab === 'standings') {
+                        renderTeamLeaderboardLayout();
+                    }
+                    
+                    // 4. Run background sync to double check with server integrity
+                    fetchSynchronizedDataEngine();
+                } else {
+                    alert(res.message || "Equip processing error.");
+                }
+            } catch (err) { 
+                console.error("Avatar equipment execution fault:", err); 
+            }
         }
 
         function openQuizModal(lessonId) {
