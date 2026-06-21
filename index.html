@@ -302,20 +302,27 @@
         }
 
         function renderApplicationDashboardLayout() {
-                    const p = playerData.playerProfile;
-                    document.getElementById('user-name-display').innerText = p.name;
-                    document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
-                    document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
-                    document.getElementById('user-avatar-display').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${p.activeSpriteId}`;
-                    
-                    if (currentTrainingCategory === 'gameboard') {
-                        if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
-                        else if (activeSubTab === 'lineup') renderStartingLineupLayout();
-                        else renderLockerRoomMarketLayout();
-                    } else {
-                        renderLessonsList();
-                    }
-                }
+            const p = playerData.playerProfile;
+            document.getElementById('user-name-display').innerText = p.name;
+            document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
+            document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
+            
+            // ALLOW ALL LINKS FIX: Handle custom images vs DiceBear seeds dynamically
+            const activeSprite = p.activeSpriteId ? p.activeSpriteId.toString().trim() : 'S001';
+            const avatarUrl = (activeSprite.startsWith('http://') || activeSprite.startsWith('https://'))
+                ? activeSprite
+                : `https://api.dicebear.com/7.x/bottts/svg?seed=${activeSprite}`;
+                
+            document.getElementById('user-avatar-display').src = avatarUrl;
+            
+            if (currentTrainingCategory === 'gameboard') {
+                if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
+                else if (activeSubTab === 'lineup') renderStartingLineupLayout();
+                else renderLockerRoomMarketLayout();
+            } else {
+                renderLessonsList();
+            }
+        }
 
                 function renderLessonsList() {
             const container = document.getElementById('lessons-list');
@@ -851,31 +858,79 @@
             }
         }
 
-        // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS ---
-        function renderTeamLeaderboardLayout() {
-            const tbody = document.getElementById('leaderboard-table-body');
-            if (!playerData.leaderboard) return;
-            
-            const lineupPlayerIds = playerData.gameboardSlots ? 
-                playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim() : "") : [];
+       function renderTeamLeaderboardLayout() {
+            const container = document.getElementById('main-content-display');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-md max-w-4xl mx-auto">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-100 tracking-tight flex items-center gap-2">
+                                🏆 Team Leaderboard
+                            </h2>
+                            <p class="text-slate-400 text-xs mt-1">Track total training stars earned and current active starting lineup positions.</p>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs font-semibold bg-slate-950 px-3 py-2 rounded-xl border border-slate-800/60">
+                            <span class="flex items-center gap-1.5 text-blue-400">
+                                <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Lineup Top Priority
+                            </span>
+                            <span class="text-slate-600">|</span>
+                            <span class="text-slate-400">★ Total Stars</span>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400 text-[11px] font-black uppercase tracking-wider">
+                                    <th class="py-3 pl-3 w-12">Rank</th>
+                                    <th class="py-3">Player Identity</th>
+                                    <th class="py-3 text-center w-28">Status</th>
+                                    <th class="py-3 text-right pr-4 w-32">Wallet Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-rows-target" class="divide-y divide-slate-800/40 text-sm">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            const tbody = document.getElementById('leaderboard-rows-target');
+            if (!tbody || !playerData.leaderboard) return;
+
+            const lineupPlayerIds = (playerData.gameboardSlots || [])
+                .map(slot => slot.playerId ? slot.playerId.toString().trim().toLowerCase() : "")
+                .filter(Boolean);
 
             tbody.innerHTML = playerData.leaderboard.map((player, idx) => {
                 const cleanPlayerId = player.id.toString().trim();
                 const isMe = cleanPlayerId === currentAuthId.toString().trim();
-                const inLineup = lineupPlayerIds.includes(cleanPlayerId);
+                const inLineup = lineupPlayerIds.includes(cleanPlayerId.toLowerCase());
+
+                // ALLOW ALL LINKS FIX: Dynamic profile address parsing for standings
+                const activeSprite = player.activeSpriteId ? player.activeSpriteId.toString().trim() : 'S001';
+                const avatarUrl = (activeSprite.startsWith('http://') || activeSprite.startsWith('https://'))
+                    ? activeSprite
+                    : `https://api.dicebear.com/7.x/bottts/svg?seed=${activeSprite}`;
 
                 return `
                     <tr onclick="openPlayerInventoryModal('${cleanPlayerId}')" class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/40 transition cursor-pointer">
-                        <td class="py-3.5 pl-3 font-mono text-xs">${idx + 1}</td>
+                        <td class="py-3.5 pl-3 font-mono text-xs text-slate-400">${idx + 1}</td>
                         <td class="py-3.5 flex items-center gap-2">
-                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId || 'S001'}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
+                            <img src="${avatarUrl}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800 object-contain" alt="Teammate">
                             <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
                         </td>
-                        <td class="py-3.5 text-center text-sm">
-                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-500/20">盒 Starting Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
+                        <td class="py-3.5 text-center">
+                            ${inLineup 
+                                ? `<span class="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-black uppercase tracking-wide">Lineup</span>`
+                                : `<span class="text-[10px] bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full font-bold">Bench</span>`
+                            }
                         </td>
-                        <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
-                        <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
+                        <td class="py-3.5 text-right pr-4 font-mono font-bold text-amber-400">
+                            ★ ${parseInt(player.totalStars).toLocaleString()}
+                        </td>
                     </tr>
                 `;
             }).join('');
@@ -1205,71 +1260,97 @@
         }
 
         function renderStoreInventoryLayout() {
-            const grid = document.getElementById('sprite-store-grid');
-            if (!playerData.storeSprites) return;
+            const container = document.getElementById('main-content-display');
+            if (!container) return;
 
-            // Get the current selected value of the cost filter
-            const costFilterEl = document.getElementById('store-cost-filter');
-            const maxCostLimit = costFilterEl ? costFilterEl.value : "all";
-
-            // Filter the sprites array based on cost before mapping it to HTML
-            let filteredSprites = playerData.storeSprites.filter(s => {
-                if (maxCostLimit === "all") return true;
-                
-                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || 0;
-                return spriteCost <= parseInt(maxCostLimit);
-            });
-
-            if (filteredSprites.length === 0) {
-                grid.innerHTML = `
-                    <div class="col-span-full text-center py-12 bg-slate-900/40 border border-slate-800 rounded-2xl">
-                        <p class="text-slate-500 text-xs italic">No items found within this price range selection.</p>
+            container.innerHTML = `
+                <div class="max-w-6xl mx-auto space-y-8">
+                    <!-- Header Section -->
+                    <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-100 tracking-tight flex items-center gap-2">
+                                🏪 Locker Room Market
+                            </h2>
+                            <p class="text-slate-400 text-xs mt-1">Spend your hard-earned stars to unlock new custom sprites for your profile avatar.</p>
+                        </div>
+                        <div class="flex items-center gap-2 bg-amber-500/10 text-amber-400 font-mono font-black text-sm px-4 py-2.5 rounded-xl border border-amber-500/20 shadow-inner">
+                            <span class="text-xs text-amber-500/70 font-sans font-bold uppercase tracking-wider mr-1">Your Balance:</span>
+                            ★ ${parseInt(playerData.playerProfile?.totalStars || 0).toLocaleString()}
+                        </div>
                     </div>
-                `;
-                return;
-            }
 
-            grid.innerHTML = filteredSprites.map(s => {
-                const spriteName = s.sprite_name || s.name || s.NAME || "Unknown Name";
-                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || 0;
-                const totalQty = parseInt(s.rarity) || 999;
-                const stockLeft = s.stockLeft !== undefined ? s.stockLeft : totalQty;
-                const isSoldOut = s.soldOut === true;
-                
-                let rarityLabel = "Common"; let rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
-                if (totalQty === 1) { rarityLabel = "👑 Legendary"; rarityColor = "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse"; }
-                else if (totalQty === 2) { rarityLabel = "🔥 Epic"; rarityColor = "bg-purple-500/10 text-purple-400 border-purple-500/30"; }
-                else if (totalQty === 3) { rarityLabel = "✨ Rare"; rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30"; }
+                    <!-- Sprites Store Grid Grid -->
+                    <div id="sprite-store-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <!-- Cards injected dynamically below -->
+                    </div>
+                </div>
+            `;
 
-                const customImageSrc = s.image_url || "";
-                const finalImgDisplay = customImageSrc.trim() !== "" ? customImageSrc.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
-                const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
+            const grid = document.getElementById('sprite-store-grid');
+            if (!grid || !playerData.storeInventory) return;
+
+            grid.innerHTML = playerData.storeInventory.map(s => {
+                // ALLOW ALL LINKS FIX: Dynamic profile address processing for catalog display
+                const itemSpriteId = s.id.toString().trim();
+                const avatarUrl = (itemSpriteId.startsWith('http://') || itemSpriteId.startsWith('https://'))
+                    ? itemSpriteId
+                    : `https://api.dicebear.com/7.x/bottts/svg?seed=${itemSpriteId}`;
+
+                let actionButtonHtml = "";
+
+                if (s.owned) {
+                    // Check if this specific sprite matches what you currently have active on your profile
+                    const isCurrentlyEquipped = playerData.playerProfile && 
+                        playerData.playerProfile.activeSpriteId && 
+                        playerData.playerProfile.activeSpriteId.toString().trim() === itemSpriteId;
+
+                    if (isCurrentlyEquipped) {
+                        actionButtonHtml = `
+                            <button class="w-full mt-auto bg-emerald-600/20 text-emerald-400 text-xs font-black py-2.5 rounded-xl border border-emerald-500/30 cursor-default flex items-center justify-center gap-1" disabled>
+                                ✓ Equipped
+                            </button>
+                        `;
+                    } else {
+                        actionButtonHtml = `
+                            <button onclick="executeAvatarProfileEquip('${itemSpriteId}')" class="w-full mt-auto bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-black py-2.5 rounded-xl transition border border-slate-700/60 cursor-pointer shadow-sm hover:text-white">
+                                Equip Sprite
+                            </button>
+                        `;
+                    }
+                } else {
+                    const userStars = parseInt(playerData.playerProfile?.totalStars || 0);
+                    const canAfford = userStars >= parseInt(s.cost);
+
+                    if (canAfford) {
+                        actionButtonHtml = `
+                            <button onclick="buyStoreSprite('${itemSpriteId}', ${s.cost}, '${s.sprite_name || s.name}')" class="w-full mt-auto bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2.5 rounded-xl transition shadow-md cursor-pointer border border-blue-500/40">
+                                Buy for ★ ${s.cost}
+                            </button>
+                        `;
+                    } else {
+                        actionButtonHtml = `
+                            <button class="w-full mt-auto bg-slate-950 text-slate-600 text-xs font-black py-2.5 rounded-xl border border-slate-900 cursor-not-allowed" disabled>
+                                Locked (★ ${s.cost})
+                            </button>
+                        `;
+                    }
+                }
 
                 return `
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
-                        <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">${rarityLabel}</span>
-                        <img src="${finalImgDisplay}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-2 mt-3 object-contain">
-                        <div class="space-y-0.5">
-                            <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${spriteName}</p>
-                            <p class="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest">${s.id || 'No ID'}</p>
+                    <div class="bg-slate-900/40 border ${s.owned ? 'border-slate-800' : 'border-slate-900'} rounded-2xl p-4 flex flex-col items-center text-center backdrop-blur-sm hover:border-slate-700/50 transition duration-200 group">
+                        <div class="relative w-20 h-20 bg-slate-950 rounded-xl border border-slate-800 p-2 mb-3 flex items-center justify-center group-hover:scale-105 transition duration-200 shadow-inner">
+                            <img src="${avatarUrl}" class="w-full h-full object-contain" alt="Store Item">
+                            ${s.owned ? '<span class="absolute -top-1.5 -right-1.5 bg-slate-800 text-slate-400 text-[9px] font-black px-1.5 py-0.5 rounded-md border border-slate-700 uppercase tracking-wider shadow-sm">Owned</span>' : ''}
                         </div>
-                        <div class="w-full mt-3 px-1">
-                            <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 mb-1">
-                                <span>Stock Left</span>
-                                <span class="${stockLeft === 0 ? 'text-rose-400 font-black' : 'text-slate-300'}">${stockLeft} / ${totalQty}</span>
-                            </div>
-                            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800/60">
-                                <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${stockPercentage}%"></div>
-                            </div>
+                        
+                        <div class="mb-4">
+                            <h3 class="text-xs font-black text-slate-200 tracking-wide truncate max-w-[130px] group-hover:text-slate-100">
+                                ${s.sprite_name || s.name || 'Unnamed Item'}
+                            </h3>
+                            <p class="text-[10px] text-slate-500 font-mono mt-0.5">${itemSpriteId}</p>
                         </div>
-                        <div class="w-full mt-4">
-                            ${s.owned ? 
-                                `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
-                                isSoldOut ? 
-                                `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
-                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${spriteCost} ★)</button>`
-                            }
-                        </div>
+
+                        ${actionButtonHtml}
                     </div>
                 `;
             }).join('');
@@ -1334,38 +1415,35 @@
             try {
                 const response = await fetch(`${API_URL}?action=equipSprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
                 const res = await response.json();
-                
                 if (res.success) {
                     alert("✨ Avatar equipped successfully!");
-
-                    // 1. Instantly update your local player profile state
+                    
+                    // 1. Instantly update your local player profile state variables
                     if (playerData.playerProfile) {
                         playerData.playerProfile.activeSpriteId = spriteId;
                     }
-
-                    // 2. Instantly update your identity row inside the local leaderboard list
+                    
+                    // 2. Instantly update your identity row inside the local leaderboard list cache
                     if (playerData.leaderboard) {
-                        playerData.leaderboard = playerData.leaderboard.map(player => {
-                            if (player.id.toString().trim() === currentAuthId.toString().trim()) {
-                                return { ...player, activeSpriteId: spriteId };
+                        playerData.leaderboard = playerData.leaderboard.map(p => {
+                            if (p.id.toString().trim() === currentAuthId.toString().trim()) {
+                                return { ...p, activeSpriteId: spriteId };
                             }
-                            return player;
+                            return p;
                         });
                     }
-
-                    // 3. Force immediate UI paint updates across the app viewport
-                    renderApplicationDashboardLayout();
-                    if (currentTrainingCategory === 'gameboard' && activeSubTab === 'standings') {
-                        renderTeamLeaderboardLayout();
-                    }
                     
-                    // 4. Run background sync to double check with server integrity
+                    // INSTANT SYNC FIX: Re-render UI and store lists right now
+                    renderApplicationDashboardLayout();
+                    renderStoreInventoryLayout();
+                    
+                    // Background update to confirm everything synced matches perfectly
                     fetchSynchronizedDataEngine();
                 } else {
                     alert(res.message || "Equip processing error.");
                 }
-            } catch (err) { 
-                console.error("Avatar equipment execution fault:", err); 
+            } catch (err) {
+                console.error("Store transaction fault handler:", err);
             }
         }
 
