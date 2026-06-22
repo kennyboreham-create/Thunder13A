@@ -1032,116 +1032,62 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- LOCKER ROOM MARKET DISPATCH LAYOUT WITH MATCHING SHEET KEYS ---
         function renderLockerRoomMarketLayout() {
-            const pendingContainer = document.getElementById('market-pending-list');
-            const historyContainer = document.getElementById('market-history-list');
-            
-            if (!playerData.activeTrades) {
-                pendingContainer.innerHTML = historyContainer.innerHTML = `<p class="text-slate-500 text-xs italic">No trade contract records loaded.</p>`;
-                return;
-            }
+            const container = document.getElementById('market-inventory-grid');
+            if (!playerData.storeSprites) return;
 
-            const pendingTrades = playerData.activeTrades.filter(t => t.status.toString().trim() === "PENDING");
-            const historyTrades = playerData.activeTrades.filter(t => t.status.toString().trim() !== "PENDING");
+            // Get the player's currently active sprite ID and their array of unlocked inventory IDs
+            const activeSpriteId = playerData.playerProfile?.activeSpriteId ? playerData.playerProfile.activeSpriteId.toString().trim().toUpperCase() : "";
+            const unlockedIds = playerData.playerProfile?.inventory ? playerData.playerProfile.inventory.map(id => id.toString().trim().toUpperCase()) : [];
 
-            // Deep-inspection helper to resolve a human-readable name out of the trade row
-            const resolveNamesFromTradeRow = (tradeRow, type) => {
-                // 1. Map to your exact spreadsheet keys discovered in console
-                // Offered ID uses 'offered_id', Requested ID uses 'requested_sprite_id'
-                const rawId = type === 'offer' ? tradeRow.offered_id : tradeRow.requested_sprite_id;
-                
-                if (rawId === undefined || rawId === null || rawId.toString().trim() === "") return "Empty Slot";
+            container.innerHTML = playerData.storeSprites.map(sprite => {
+                const cleanSpriteId = sprite.id.toString().trim().toUpperCase();
+                const isOwned = unlockedIds.includes(cleanSpriteId);
+                const isActive = cleanSpriteId === activeSpriteId;
 
-                let cleanId = rawId.toString().trim().toUpperCase();
-                
-                // Pad numbers to standard S000 format if necessary
-                if (!cleanId.startsWith('S') && !isNaN(cleanId)) {
-                    cleanId = 'S' + cleanId.padStart(3, '0');
-                }
-                
-                if (cleanId === "S001" || cleanId === "1") return "Starter Avatar";
-
-                // 2. Scan the store array using normalized comparisons
-                const sData = playerData.storeSprites ? playerData.storeSprites.find(i => {
-                    if (!i.id) return false;
-                    let storeId = i.id.toString().trim().toUpperCase();
-                    if (!storeId.startsWith('S') && !isNaN(storeId)) {
-                        storeId = 'S' + storeId.padStart(3, '0');
-                    }
-                    return storeId === cleanId;
-                }) : null;
-
-                if (sData) {
-                    return sData.sprite_name || sData.name || `Sprite ${cleanId}`;
+                // Determine button styling and text based on ownership and active status
+                let buttonHtml = '';
+                if (isActive) {
+                    buttonHtml = `
+                        <button disabled class="w-full mt-3 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-black py-2 rounded-xl flex items-center justify-center gap-1">
+                            ✓ Equipped
+                        </button>
+                    `;
+                } else if (isOwned) {
+                    buttonHtml = `
+                        <button onclick="equipSprite('${sprite.id}')" class="w-full mt-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-black py-2 rounded-xl transition cursor-pointer">
+                            Equip Avatar
+                        </button>
+                    `;
+                } else {
+                    buttonHtml = `
+                        <button onclick="buySprite('${sprite.id}', ${sprite.cost})" class="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black py-2 rounded-xl transition shadow-md shadow-blue-600/5 cursor-pointer">
+                            🛒 Unlock (${sprite.cost} ★)
+                        </button>
+                    `;
                 }
 
-                // 3. Fallback: If it's not found in store catalog metadata, display the sanitized ID tag
-                return `Item (${cleanId})`;
-            };
+                // Use the custom image_url if populated, fallback to dicebear
+                const finalAvatarUrl = (sprite.image_url && sprite.image_url.trim() !== "") 
+                    ? sprite.image_url.trim() 
+                    : `https://api.dicebear.com/7.x/bottts/svg?seed=${sprite.id}`;
 
-            // RENDER ACTIVE PENDING DEALS
-            if (pendingTrades.length === 0) {
-                pendingContainer.innerHTML = `<p class="text-slate-500 text-xs italic p-4 bg-slate-950/40 rounded-xl border border-slate-800/60 text-center">No pending transaction contracts open on your ledger right now.</p>`;
-            } else {
-                pendingContainer.innerHTML = pendingTrades.map(t => {
-                    const isIncoming = t.receiver_id.toString().trim() === currentAuthId.toString().trim();
-                    const otherPartyName = isIncoming ? `Player ID: ${t.sender_id}` : `Player ID: ${t.receiver_id}`;
-                    
-                    // Call the row inspector to pull the names mapping to the corrected keys
-                    const offerName = resolveNamesFromTradeRow(t, 'offer');
-                    const requestName = resolveNamesFromTradeRow(t, 'request');
-                    
-                    return `
-                        <div class="p-4 bg-slate-900 border ${isIncoming ? 'border-amber-500/30 bg-amber-500/5' : 'border-slate-800'} rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${isIncoming ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300'}">${isIncoming ? '📥 Incoming' : '📤 Outgoing'}</span>
-                                    <span class="text-xs font-mono font-bold text-slate-400">${t.id}</span>
-                                </div>
-                                <p class="text-xs font-extrabold text-white mt-1.5">
-                                    Offer: <span class="text-blue-400 font-sans">${offerName}</span> ➔ Requesting: <span class="text-indigo-400 font-sans">${requestName}</span>
-                                </p>
-                                <p class="text-[10px] text-slate-500 mt-0.5">Counterparty Account Connection: ${otherPartyName}</p>
-                            </div>
-                            
-                            ${isIncoming ? `
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <button onclick="resolveTradeProposal('${t.id}', 'denyTrade')" class="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-rose-500 hover:text-white transition cursor-pointer">Decline</button>
-                                    <button onclick="resolveTradeProposal('${t.id}', 'acceptTrade')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-black transition shadow-md shadow-emerald-600/10 cursor-pointer">Accept Deal</button>
-                                </div>
-                            ` : `
-                                <span class="text-[11px] font-semibold text-slate-500 italic shrink-0 self-center">Awaiting Team Response...</span>
-                            `}
+                return `
+                    <div class="bg-slate-900 border ${isActive ? 'border-emerald-500/40 shadow-lg shadow-emerald-950/20' : 'border-slate-800'} rounded-2xl p-4 flex flex-col items-center text-center relative transition">
+                        ${isActive ? '<span class="absolute top-2 right-2 text-[9px] font-black bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wide">Active</span>' : ''}
+                        <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">${sprite.id}</span>
+                        
+                        <img src="${finalAvatarUrl}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 object-contain">
+                        
+                        <div class="min-h-[40px] flex flex-col justify-center">
+                            <p class="text-xs font-black text-white uppercase tracking-wide leading-tight">${sprite.name}</p>
+                            <p class="text-[9px] text-slate-500 font-medium mt-0.5">${sprite.description || 'Custom Avatar Card'}</p>
                         </div>
-                    `;
-                }).join('');
-            }
-
-            // RENDER ARCHIVED HISTORY LEDGER
-            if (historyTrades.length === 0) {
-                historyContainer.innerHTML = `<p class="text-slate-500 text-xs italic text-center p-3">No archived market transaction receipts discovered inside historical logs.</p>`;
-            } else {
-                historyContainer.innerHTML = historyTrades.map(t => {
-                    const statusStr = t.status.toString().trim().toUpperCase();
-                    let badgeColor = "bg-slate-950 text-slate-500 border-slate-800";
-                    if (statusStr === 'ACCEPTED') badgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-                    if (statusStr === 'DECLINED') badgeColor = "bg-rose-500/10 text-rose-400 border-rose-500/20";
-
-                    const offerName = resolveNamesFromTradeRow(t, 'offer');
-                    const requestName = resolveNamesFromTradeRow(t, 'request');
-
-                    return `
-                        <div class="p-3.5 bg-slate-900/60 border border-slate-800/80 rounded-xl flex items-center justify-between opacity-70">
-                            <div>
-                                <p class="text-xs font-bold text-slate-300">Contract Ticket <span class="font-mono text-slate-400">${t.id}</span></p>
-                                <p class="text-[11px] text-slate-400 mt-0.5">Swapped <span class="font-sans text-slate-300">${offerName}</span> for <span class="font-sans text-slate-300">${requestName}</span></p>
-                            </div>
-                            <span class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border ${badgeColor}">${statusStr}</span>
-                        </div>
-                    `;
-                }).join('');
-            }
+                        
+                        ${buttonHtml}
+                    </div>
+                `;
+            }).join('');
         }
 
         async function resolveTradeProposal(tradeId, actionType) {
