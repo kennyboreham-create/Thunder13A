@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hockey Team Training Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { background-color: #0b1329; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    </style>
+</head>
+<body class="text-slate-100 font-sans min-h-screen flex flex-col antialiased">
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec"; 
+        let playerData = {};
+        let currentAuthId = localStorage.getItem('hockey_player_id') || "";
+        let currentTrainingCategory = "strategy"; 
+        let activeSubTab = "standings"; // Tracking subbuttons inside leaderboard main view
+    </script>
+
+    <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-md w-full shadow-2xl text-center">
+            <div class="w-16 h-16 bg-blue-600/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 002-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <h1 class="text-2xl font-black tracking-tight mb-1 text-white uppercase">Locker Room Gate</h1>
+            <p class="text-xs text-slate-400 mb-6">Enter credentials to synchronize dashboard telemetry</p>
+            
+            <div class="space-y-4 text-left">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Player Profile ID</label>
+                    <input type="text" id="auth-player-id" placeholder="e.g. P001" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition text-white font-mono">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Access Gate Password</label>
+                    <input type="password" id="auth-password" placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition text-white">
+                </div>
+                <button onclick="attemptSystemLogin()" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/20 transition mt-2 cursor-pointer">Verify Credentials</button>
+            </div>
+            <p id="auth-error" class="text-xs text-rose-500 font-semibold mt-4 hidden"></p>
+        </div>
+    </div>
+
+    <div id="app-viewport" class="flex-1 flex flex-col hidden">
+        
+        <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
+            <div class="max-w-6xl mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <img id="user-avatar-display" src="https://api.dicebear.com/7.x/bottts/svg?seed=Starter" class="w-10 h-10 bg-slate-950 border border-slate-700 rounded-xl p-1" alt="Avatar">
+                    <div>
+                        <h2 id="user-name-display" class="font-black text-white leading-none text-sm uppercase tracking-wide">Loading Profile...</h2>
+                        <p id="user-jersey-display" class="text-[10px] text-slate-400 font-bold mt-0.5">Jersey #--</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="bg-slate-950 border border-slate-800 px-4 py-1.5 rounded-xl flex items-center gap-2">
+                        <span class="text-yellow-500 font-black text-lg">★</span>
+                        <div>
+                            <p id="user-stars-display" class="text-sm font-black leading-none text-white">0</p>
+                            <p class="text-[8px] text-slate-500 font-bold uppercase tracking-wider">Wallet Balance</p>
+                        </div>
+                    </div>
+                    <button onclick="logSystemOut()" class="text-slate-500 hover:text-rose-400 transition p-1.5 rounded-lg hover:bg-slate-800/60">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="bg-slate-900 border-b border-slate-800 px-2 sticky top-[65px] z-30">
+            <div class="max-w-6xl mx-auto flex justify-around">
+                <button onclick="switchCategoryView('strategy')" id="nav-strategy" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer">Strategy</button>
+                <button onclick="switchCategoryView('workout')" id="nav-workout" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Workout</button>
+                <button onclick="switchCategoryView('skills')" id="nav-skills" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Skills</button>
+                <button onclick="switchCategoryView('gameboard')" id="nav-gameboard" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Leaderboard</button>
+                <button onclick="switchCategoryView('store')" id="nav-store" class="flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer">Store</button>
+            </div>
+        </nav>
+
+        <main class="flex-1 max-w-6xl w-full mx-auto p-4">
+            
+            <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
+                <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
+                    <option value="all" selected>All Strategy Content</option>
+                    <option value="todo">To Do</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+
+            <div id="lessons-list" class="space-y-3"></div>
+
+            <div id="gameboard-view-container" class="hidden space-y-4">
+                
+                <div class="flex gap-2 border-b border-slate-800 pb-3">
+                    <button onclick="switchSubTab('standings')" id="sub-tab-standings" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer">Leaderboard Standings</button>
+                    <button onclick="switchSubTab('lineup')" id="sub-tab-lineup" class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer">Starting Lineup</button>
+                </div>
+
+                <div id="sub-view-standings" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-lg font-black uppercase text-white tracking-tight mb-4 flex items-center gap-2">
+                        <span class="text-yellow-500">🏆</span> Team Standings Leaderboard
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase font-bold tracking-wider">
+                                    <th class="pb-3 pl-2">Rank</th>
+                                    <th class="pb-3">Player</th>
+                                    <th class="pb-3">Jersey</th>
+                                    <th class="pb-3 text-right pr-2">Total Stars</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leaderboard-table-body" class="divide-y divide-slate-800/50"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="sub-view-lineup" class="hidden space-y-4">
+                    <div class="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-900/30 p-6 rounded-2xl shadow-xl">
+                        <h3 class="text-xl font-black uppercase text-white tracking-tight">🏒 Starting Lineup</h3>
+                        <p class="text-xs text-slate-400 mt-1">Claim a card slot in the starting line! Evict the occupant by buying them out. The buyout price climbs by +1 Star with every capture.</p>
+                    </div>
+                    <div id="lineup-slots-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+                </div>
+            </div>
+
+            <div id="store-view-container" class="hidden">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="sprite-store-grid"></div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="lineup-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full shadow-2xl p-6 space-y-4">
+            <div>
+                <h3 class="font-black text-white text-base uppercase tracking-tight">Deploy Roster Card</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Select an owned sprite to represent you in this slot.</p>
+            </div>
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Your Card Inventory:</label>
+                <select id="lineup-sprite-selector" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-bold text-slate-200 focus:outline-none focus:border-blue-500 transition"></select>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeLineupModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Cancel</button>
+                <button onclick="confirmLineupSlotPurchase()" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-5 py-2 rounded-xl text-xs transition shadow-lg shadow-blue-600/10">Confirm Buyout</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="quiz-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h3 id="quiz-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Tactical Quiz Assessment</h3>
+                <button onclick="closeQuizModal()" class="text-slate-400 hover:text-white transition font-bold text-xl px-2">×</button>
+            </div>
+            <div id="quiz-modal-body" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6"></div>
+            <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end gap-3">
+                <button onclick="closeQuizModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Cancel</button>
+                <button onclick="evaluateActiveQuizAnswers()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition shadow-md shadow-indigo-600/10">Submit Answers</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchSynchronizedDataEngine() {
+            if (!currentAuthId) return;
+            try {
+                const response = await fetch(`${API_URL}?action=getDashboard&playerId=${currentAuthId}`);
+                const data = await response.json();
+                if (data.success) {
+                    playerData = data;
+                    renderApplicationDashboardLayout();
+                } else {
+                    alert(data.message || "Session data fetch sync break occurred.");
+                    logSystemOut();
+                }
+            } catch (err) { console.error("Master read hook matrix fault:", err); }
+        }
+
+        function renderApplicationDashboardLayout() {
+            const p = playerData.playerProfile;
+            document.getElementById('user-name-display').innerText = p.name;
+            document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
+            document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
+            document.getElementById('user-avatar-display').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${p.activeSpriteId}`;
+            
+            if (currentTrainingCategory === 'gameboard') {
+                if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
+                else renderStartingLineupLayout();
+            } else {
+                renderLessonsList();
+            }
+        }
+
+        function renderLessonsList() {
+            const container = document.getElementById('lessons-list');
+            if (!playerData.lessons) return;
+            
+            if (currentTrainingCategory.toLowerCase() === 'workout') {
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderGranularWorkoutSection(container);
+                return;
+            }
+
+            if (currentTrainingCategory.toLowerCase() === 'skills') {
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderGranularSkillsSection(container);
+                return;
+            }
+
+            document.getElementById('strategy-filter-bar').classList.remove('hidden');
+            const filterValue = document.getElementById('strategy-status-filter').value; 
+            
+            let filteredLessons = playerData.lessons.filter(l => l.category && l.category.toString().trim().toLowerCase() === 'strategy');
+            
+            if (filteredLessons.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded-xl border border-slate-800">No strategy content loaded yet.</p>`;
+                return;
+            }
+
+            filteredLessons.sort((a, b) => a.completed - b.completed);
+            let htmlOutput = "";
+
+            filteredLessons.forEach(l => {
+                const videoUrl = l.video_url ? l.video_url.trim() : "";
+                const isLessonComplete = l.completed;
+
+                if (filterValue === 'todo' && isLessonComplete) return;
+                if (filterValue === 'completed' && !isLessonComplete) return;
+
+                htmlOutput += `
+                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${isLessonComplete ? 'opacity-60' : ''}">
+                        <div>
+                            <p class="font-bold ${isLessonComplete ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
+                            <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                        ${isLessonComplete ? 
+                            `
+                            <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>
+                            ${videoUrl !== "" ? `<button onclick="window.open('${videoUrl}', '_blank')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold">Watch Again</button>` : ''}
+                            ` : 
+                            `<button onclick="handleLessonCompletion('${l.id}', '${videoUrl}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">Complete</button>`
+                        }
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (playerData.tests) {
+                const uniqueLessonIdsInTests = [...new Set(playerData.tests.map(t => t.lesson_id))];
+                uniqueLessonIdsInTests.forEach(lId => {
+                    const correspondingLesson = playerData.lessons.find(l => l.id === lId);
+                    const matchingTestData = playerData.tests.find(t => t.lesson_id === lId);
+                    const isTestPassed = matchingTestData ? matchingTestData.completed === true : false;
+                    const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
+
+                    if (filterValue === 'todo' && isTestPassed) return;
+                    if (filterValue === 'completed' && !isTestPassed) return;
+
+                    htmlOutput += `
+                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/40 transition ${isTestPassed ? 'opacity-60' : ''}">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-indigo-500/20">Exam Assess</span>
+                                    <p class="font-bold ${isTestPassed ? 'text-slate-400 line-through' : 'text-slate-100'}">${labelText}</p>
+                                </div>
+                                <p class="text-xs text-yellow-500 font-medium mt-0.5">+10 Stars <span class="text-slate-400">(Requires 100%)</span></p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                            ${isTestPassed ? 
+                                `
+                                <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Passed ✓</span>
+                                <button onclick="openQuizModal('${lId}')" class="text-indigo-400 hover:text-indigo-300 text-xs underline font-semibold">Review Exam</button>
+                                ` : 
+                                `<button onclick="openQuizModal('${lId}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">Take Test</button>`
+                            }
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            container.innerHTML = htmlOutput === "" ? `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No matching strategy items found.</p>` : htmlOutput;
+        }
+
+        function renderGranularWorkoutSection(container) {
+            const workoutExercises = [
+                "20 Pushups",
+                "30 Squats",
+                "20 Lunges",
+                "30 Jumps",
+                "10 Burpees", 
+                "100 Jumping Jacks"
+            ];
+            
+            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
+            const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
+
+            let html = `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <div>
+                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Granular Training Set</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Weekly Workouts (${weekContext})</h3>
+                        <p class="text-xs text-slate-400 mt-1">Check off each training unit as you complete it. Earning +2 Stars per unit!</p>
+                    </div>
+                    <div class="space-y-2 pt-2">
+            `;
+
+            workoutExercises.forEach(ex => {
+                const cleanExName = ex.replace(/'/g, "").replace(/\s+/g, '_');
+                const activityKey = `WORKOUT_${cleanExName}_${weekContext.replace(/\s+/g, '_')}`;
+                const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
+
+                html += `
+                    <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" 
+                                   ${isChecked ? 'checked disabled' : ''} 
+                                   onchange="submitIndividualItemProgress('${activityKey}', 2)"
+                                   class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
+                        </div>
+                        <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
+                            ${isChecked ? 'Cleared' : '+2 ★'}
+                        </span>
+                    </label>
+                `;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function renderGranularSkillsSection(container) {
+            const skillsExercises = [
+                "100 Stickhandling Touches",
+                "50 Shots"
+            ];
+
+            let baseSkillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
+            const dateContext = baseSkillsLesson ? String(baseSkillsLesson.title) : "Today";
+
+            let html = `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                    <div>
+                        <span class="bg-amber-500/10 text-amber-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-amber-500/20">Daily Calibration</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Skills Drills (${dateContext})</h3>
+                        <p class="text-xs text-slate-400 mt-1">Complete your technical elements to claim +2 Stars per unit!</p>
+                    </div>
+                    <div class="space-y-2 pt-2">
+            `;
+
+            skillsExercises.forEach(ex => {
+                const activityKey = `SKILLS_${ex.replace(/\s+/g, '_')}_${dateContext.replace(/\s+/g, '_')}`;
+                const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
+
+                html += `
+                    <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" 
+                                   ${isChecked ? 'checked disabled' : ''} 
+                                   onchange="submitIndividualItemProgress('${activityKey}', 2)"
+                                   class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
+                        </div>
+                        <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
+                            ${isChecked ? 'Cleared' : '+2 ★'}
+                        </span>
+                    </label>
+                `;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        async function submitIndividualItemProgress(activityKey, starBonus) {
+            try {
+                const response = await fetch(`${API_URL}?action=completeWorkoutModule&playerId=${currentAuthId}&activityId=${activityKey}&starBonus=${starBonus}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
+        }
+
+        async function handleLessonCompletion(lessonId, videoUrl) {
+            if (videoUrl !== "") window.open(videoUrl, '_blank');
+            try {
+                const response = await fetch(`${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=LESSON&activityId=${lessonId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
+        }
+
+        function renderTeamLeaderboardLayout() {
+            const tbody = document.getElementById('leaderboard-table-body');
+            if (!playerData.leaderboard) return;
+            
+            // 1. Map out a quick list of all player IDs currently holding a starting lineup spot
+            const lineupPlayerIds = playerData.gameboardSlots ? 
+                playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim() : "") : [];
+
+            // Update the table header dynamically to include the new column if it isn't already there
+            const thead = tbody.closest('table').querySelector('thead tr');
+            if (thead && !thead.innerHTML.includes('Starting Lineup')) {
+                thead.innerHTML = `
+                    <th class="pb-3 pl-2">Rank</th>
+                    <th class="pb-3">Player</th>
+                    <th class="pb-3 text-center">Starting Lineup</th>
+                    <th class="pb-3">Jersey</th>
+                    <th class="pb-3 text-right pr-2">Total Stars</th>
+                `;
+            }
+
+            tbody.innerHTML = playerData.leaderboard.map((player, idx) => {
+                const cleanPlayerId = player.id.toString().trim();
+                const isMe = cleanPlayerId === currentAuthId.toString().trim();
+                
+                // 2. Check if this specific player is on the gameboard
+                const inLineup = lineupPlayerIds.includes(cleanPlayerId);
+
+                return `
+                    <tr class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/30 transition">
+                        <td class="py-3.5 pl-3 font-mono text-xs">${idx + 1}</td>
+                        <td class="py-3.5 flex items-center gap-2">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
+                            <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
+                        </td>
+                        <!-- New Roster Status Indicator Column -->
+                        <td class="py-3.5 text-center text-sm">
+                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-1 rounded-full font-black uppercase tracking-wider border border-blue-500/20">🏒 Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
+                        </td>
+                        <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
+                        <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // --- STARTING LINEUP LAYOUT MODAL LOGIC ---
+        let selectedSlotToPurchase = null;
+
+        function renderStartingLineupLayout() {
+            const grid = document.getElementById('lineup-slots-grid');
+            if (!playerData.gameboardSlots) return;
+
+            grid.innerHTML = playerData.gameboardSlots.map(slot => {
+                // Robust verification: ensure playerId exists, isn't null, and isn't a blank string
+                const hasOccupant = slot.playerId !== undefined && slot.playerId !== null && slot.playerId.toString().trim() !== "";
+                
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
+                        <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
+                        
+                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
+                        
+                        <div class="min-h-[44px] flex flex-col justify-center">
+                            <p class="text-xs font-black text-white uppercase tracking-wide leading-tight">${hasOccupant ? slot.playerName : 'Empty Slot'}</p>
+                            ${hasOccupant ? `<p class="text-[9px] text-slate-400 font-bold mt-0.5">Jersey #${slot.jerseyNumber} • ${slot.spriteName}</p>` : '<p class="text-[9px] text-slate-500 font-medium">Available Position</p>'}
+                        </div>
+
+                        <button onclick="openLineupModal('${slot.slotId}')" class="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black py-2 rounded-xl transition shadow-md shadow-blue-600/5 cursor-pointer">
+                            🛒 Buyout (${slot.currentCost} ★)
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openLineupModal(slotId) {
+            selectedSlotToPurchase = slotId;
+            const selector = document.getElementById('lineup-sprite-selector');
+            const owned = playerData.playerProfile.ownedSprites || [];
+
+            if (owned.length === 0) {
+                selector.innerHTML = `<option value="S001">Starter Avatar</option>`;
+            } else {
+                selector.innerHTML = owned.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+            }
+            document.getElementById('lineup-modal').classList.remove('hidden');
+        }
+
+        function closeLineupModal() { document.getElementById('lineup-modal').classList.add('hidden'); selectedSlotToPurchase = null; }
+
+        async function confirmLineupSlotPurchase() {
+            if (!selectedSlotToPurchase) return;
+            const spriteId = document.getElementById('lineup-sprite-selector').value;
+
+            try {
+                const response = await fetch(`${API_URL}?action=buyLineupSlot&playerId=${currentAuthId}&slotId=${selectedSlotToPurchase}&spriteId=${spriteId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    closeLineupModal();
+                    fetchSynchronizedDataEngine();
+                } else {
+                    alert(res.message);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function switchSubTab(subTab) {
+            activeSubTab = subTab;
+            const btnStandings = document.getElementById('sub-tab-standings');
+            const btnLineup = document.getElementById('sub-tab-lineup');
+            const viewStandings = document.getElementById('sub-view-standings');
+            const viewLineup = document.getElementById('sub-view-lineup');
+
+            if (subTab === 'standings') {
+                btnStandings.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
+                btnLineup.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
+                viewStandings.classList.remove('hidden');
+                viewLineup.classList.add('hidden');
+                renderTeamLeaderboardLayout();
+            } else {
+                btnStandings.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
+                btnLineup.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-blue-600 text-white cursor-pointer";
+                viewStandings.classList.add('hidden');
+                viewLineup.classList.remove('hidden');
+                renderStartingLineupLayout();
+            }
+        }
+
+        // --- COMPLETE HIGH-FEATURE SPRITE STOREFRONT GRID ---
+        function renderStoreInventoryLayout() {
+            const grid = document.getElementById('sprite-store-grid');
+            if (!playerData.storeSprites) return;
+
+            // Debugging tool: Inspect incoming structure keys in the browser console (F12)
+            console.log("--- SYSTEM STORE SYNC TRANSMISSION INSPECTION ---");
+            console.log("First item data structure received from Google Sheet:", playerData.storeSprites[0]);
+
+            grid.innerHTML = playerData.storeSprites.map(s => {
+                // 1. Matches your EXACT spreadsheet keys ('sprite_name' and 'cost_in_stars')
+                const spriteName = s.sprite_name || s.name || s.NAME || "Unknown Name";
+                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || parseInt(s.COST) || 0;
+                
+                // 2. Rarity and Stock Counters
+                const totalQty = parseInt(s.rarity) || parseInt(s.RARITY) || 999;
+                const stockLeft = s.stockLeft !== undefined ? s.stockLeft : totalQty;
+                const isSoldOut = s.soldOut === true;
+                
+                // 3. Dynamic Rarity Tier Engine Labels
+                let rarityLabel = "Common";
+                let rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
+                if (totalQty === 1) {
+                    rarityLabel = "👑 Legendary";
+                    rarityColor = "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse";
+                } else if (totalQty <= 5) {
+                    rarityLabel = "🔥 Epic";
+                    rarityColor = "bg-purple-500/10 text-purple-400 border-purple-500/30";
+                } else if (totalQty <= 15) {
+                    rarityLabel = "✨ Rare";
+                    rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30";
+                }
+
+                // 4. Image Loader with DiceBear Pixel-Art/Bottts Fallbacks
+                const customImageSrc = s.image_url || s.url || "";
+                const finalImgDisplay = customImageSrc.trim() !== "" ? 
+                    customImageSrc.trim() : 
+                    `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
+
+                // 5. Calculate Stock Percentage for the Progress Bar
+                const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
+
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
+                        
+                        <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">
+                            ${rarityLabel}
+                        </span>
+
+                        <img src="${finalImgDisplay}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-2 mt-3 object-contain">
+                        
+                        <div class="space-y-0.5">
+                            <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${spriteName}</p>
+                            <p class="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest">${s.id || 'No ID'}</p>
+                        </div>
+
+                        <div class="w-full mt-3 px-1">
+                            <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 mb-1">
+                                <span>Stock Left</span>
+                                <span class="${stockLeft === 0 ? 'text-rose-400 font-black' : 'text-slate-300'}">${stockLeft} / ${totalQty}</span>
+                            </div>
+                            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800/60">
+                                <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${stockPercentage}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="w-full mt-4">
+                            ${s.owned ? 
+                                `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
+                                isSoldOut ? 
+                                `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
+                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">
+                                    🛒 Buy (${spriteCost} ★)
+                                </button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function executeSpriteStorePurchase(spriteId) {
+            try {
+                const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
+        }
+
+        async function executeAvatarProfileEquip(spriteId) {
+            try {
+                const response = await fetch(`${API_URL}?action=equipSprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
+        }
+
+        function openQuizModal(lessonId) {
+            activeQuizLessonTarget = lessonId;
+            activeQuizQuestionsCache = playerData.tests.filter(t => t.lesson_id.toString().trim() === lessonId.toString().trim());
+            
+            const titleEl = document.getElementById('quiz-modal-title');
+            const bodyEl = document.getElementById('quiz-modal-body');
+            const correspondingLesson = playerData.lessons.find(l => l.id === lessonId);
+            
+            titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Tactical Quiz Assessment";
+            
+            if (activeQuizQuestionsCache.length === 0) {
+                bodyEl.innerHTML = `<p class="text-slate-500 italic text-center p-4">No exam sheet configurations registered.</p>`;
+                document.getElementById('quiz-modal').classList.remove('hidden');
+                return;
+            }
+
+            bodyEl.innerHTML = activeQuizQuestionsCache.map((q, idx) => {
+                const questionText = q.question || q.QUESTION || q.Text || q.text || "Missing Question Text";
+                const optA = q.option_a || q.OPTION_A || q.a || q.A || "";
+                const optB = q.option_b || q.OPTION_B || q.b || q.B || "";
+                const optC = q.option_c || q.OPTION_C || q.c || q.C || "";
+                const optD = q.option_d || q.OPTION_D || q.d || q.D || "";
+                const qId = q.id || q.ID || idx;
+
+                return `
+                    <div class="space-y-2.5 pb-4 border-b border-slate-800 last:border-0">
+                        <p class="text-sm font-bold text-slate-100 flex gap-2"><span class="text-indigo-400 font-mono">${idx + 1}.</span> ${questionText}</p>
+                        <div class="grid grid-cols-1 gap-2 pl-4">
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="A" class="accent-indigo-500"> <span>${optA}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="B" class="accent-indigo-500"> <span>${optB}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="C" class="accent-indigo-500"> <span>${optC}</span></label>
+                            <label class="flex items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800 hover:border-slate-700 transition text-xs font-semibold cursor-pointer"><input type="radio" name="q_${qId}" value="D" class="accent-indigo-500"> <span>${optD}</span></label>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('quiz-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('quiz-modal').classList.add('hidden');
+
+        async function evaluateActiveQuizAnswers() {
+            let correctCount = 0;
+            let total = activeQuizQuestionsCache.length;
+            let missingAnswerGuard = false;
+
+            activeQuizQuestionsCache.forEach((q, idx) => {
+                const qId = q.id || q.ID || idx;
+                const correctAns = q.correct_answer || q.CORRECT_ANSWER || q.answer || q.ANSWER || "";
+                
+                const selected = document.querySelector(`input[name="q_${qId}"]:checked`);
+                if (!selected) { missingAnswerGuard = true; return; }
+                if (selected.value.trim().toUpperCase() === correctAns.toString().trim().toUpperCase()) {
+                    correctCount++;
+                }
+            });
+
+            if (missingAnswerGuard) { alert("Please answer all questions before submitting."); return; }
+
+            const perfectScoreEarned = correctCount === total;
+            const scorePercent = Math.round((correctCount / total) * 100);
+
+            try {
+                const response = await fetch(`${API_URL}?action=submitTestResult&playerId=${currentAuthId}&lessonId=${activeQuizLessonTarget}&score=${scorePercent}&passed=${perfectScoreEarned}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    if (perfectScoreEarned) { alert(`🎉 Perfect Score! 100% Correct. You earned +10 Stars!`); } 
+                    else { alert(`Quiz Finished. Result: ${scorePercent}%. 100% required to pass. Try again!`); }
+                    closeQuizModal();
+                    fetchSynchronizedDataEngine();
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function switchCategoryView(targetTab) {
+            currentTrainingCategory = targetTab;
+            
+            ['strategy', 'workout', 'skills', 'gameboard', 'store'].forEach(tab => {
+                const el = document.getElementById(`nav-${tab}`);
+                el.className = tab === targetTab ? "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer" : "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer";
+            });
+
+            const lessonsList = document.getElementById('lessons-list');
+            const gameboardView = document.getElementById('gameboard-view-container');
+            const storeView = document.getElementById('store-view-container');
+
+            lessonsList.classList.add('hidden');
+            gameboardView.classList.add('hidden');
+            storeView.classList.add('hidden');
+
+            if (targetTab === 'gameboard') {
+                gameboardView.classList.remove('hidden');
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                switchSubTab(activeSubTab); 
+            } else if (targetTab === 'store') {
+                storeView.classList.remove('hidden');
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderStoreInventoryLayout();
+            } else {
+                lessonsList.classList.remove('hidden');
+                renderLessonsList();
+            }
+        }
+
+        async function attemptSystemLogin() {
+            const idInput = document.getElementById('auth-player-id').value.trim();
+            const passInput = document.getElementById('auth-password').value.trim();
+            const errorEl = document.getElementById('auth-error');
+            const btn = document.getElementById('login-btn');
+
+            if(!idInput || !passInput) return;
+            btn.innerText = "Authorizing...";
+            errorEl.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_URL}?action=login&playerId=${idInput}&password=${encodeURIComponent(passInput)}`, { method: 'POST' });
+                const res = await response.json();
+                if (res.success) {
+                    currentAuthId = idInput;
+                    localStorage.setItem('hockey_player_id', idInput);
+                    document.getElementById('auth-screen').classList.add('hidden');
+                    document.getElementById('app-viewport').classList.remove('hidden');
+                    fetchSynchronizedDataEngine();
+                } else {
+                    errorEl.innerText = res.message; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
+                }
+            } catch (err) {
+                errorEl.innerText = "Network connection failed."; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
+            }
+        }
+
+        function logSystemOut() {
+            localStorage.removeItem('hockey_player_id');
+            currentAuthId = ""; playerData = {};
+            document.getElementById('auth-player-id').value = ""; document.getElementById('auth-password').value = "";
+            document.getElementById('login-btn').innerText = "Verify Credentials";
+            document.getElementById('app-viewport').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden');
+        }
+
+        if (currentAuthId) {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-viewport').classList.remove('hidden');
+            fetchSynchronizedDataEngine();
+        }
+    </script>
+</body>
+</html>

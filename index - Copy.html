@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hockey Team Training Portal</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         body { background-color: #0b1329; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -25,19 +24,6 @@
         // Trading State Registers
         let tradeTargetPlayerId = null;
         let tradeTargetSpriteId = null;
-
-        // Lesson modal state
-        let activeLessonId = null;
-        let activeLessonAlreadyCompleted = false;
-        let activeLessonMediaType = null;
-        let activeLessonStarReward = 2;
-        let lessonProgressTimer = null;
-        let ytPlayer = null;
-        let lessonCompletionSubmitted = false;
-        let pendingYouTubeVideoId = null;
-        let activeSlidesBaseUrl = '';
-        let activeSlideIndex = 1;
-        let activeSlideTotal = 0;
     </script>
 
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
@@ -45,12 +31,12 @@
             <div class="w-16 h-16 bg-blue-600/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 002-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             </div>
-            <h1 class="text-2xl font-black tracking-tight mb-1 text-white uppercase">Thunder Bowl</h1>
-            <p class="text-xs text-slate-400 mb-6">Enter your credentials to access the storm</p>
+            <h1 class="text-2xl font-black tracking-tight mb-1 text-white uppercase">Locker Room Gate</h1>
+            <p class="text-xs text-slate-400 mb-6">Enter credentials to synchronize dashboard telemetry</p>
             
             <div class="space-y-4 text-left">
                 <div>
-                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Jersey Number</label>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Player Profile ID</label>
                     <input type="text" id="auth-player-id" placeholder="e.g. P001" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition text-white font-mono">
                 </div>
                 <div>
@@ -248,33 +234,10 @@
         </div>
     </div>
 
-    <div id="lesson-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl">
-            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
-                <div>
-                    <h3 id="lesson-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Strategy Lesson</h3>
-                    <p id="lesson-modal-reward" class="text-[10px] text-yellow-500 font-bold mt-0.5">+2 Stars</p>
-                </div>
-                <button onclick="closeLessonModal()" class="text-slate-400 hover:text-white transition font-bold text-xl px-2 cursor-pointer">×</button>
-            </div>
-            <div id="lesson-modal-content" class="flex-1 min-h-[50vh] bg-black relative overflow-hidden"></div>
-            <div class="p-4 border-t border-slate-800 bg-slate-950/50 shrink-0">
-                <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                    <span id="lesson-progress-label">Lesson Progress</span>
-                    <span id="lesson-progress-percent">0%</span>
-                </div>
-                <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700/50">
-                    <div id="lesson-progress-bar" class="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
-                </div>
-                <p id="lesson-completion-message" class="text-xs mt-2 font-semibold hidden"></p>
-            </div>
-        </div>
-    </div>
-
     <div id="quiz-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[85vh] flex flex-col shadow-2xl">
             <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-                <h3 id="quiz-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Will you score</h3>
+                <h3 id="quiz-modal-title" class="font-black text-white uppercase tracking-tight text-sm">Tactical Quiz Assessment</h3>
                 <button onclick="closeQuizModal()" class="text-slate-400 hover:text-white transition font-bold text-xl px-2">×</button>
             </div>
             <div id="quiz-modal-body" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6"></div>
@@ -306,19 +269,7 @@
             document.getElementById('user-name-display').innerText = p.name;
             document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
             document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
-            
-            // Cross-reference activeSpriteId with the store inventory catalog to extract the image URL
-            const activeSpriteData = playerData.storeSprites ? playerData.storeSprites.find(s => {
-                if (!s.id || !p.activeSpriteId) return false;
-                return s.id.toString().trim().toUpperCase() === p.activeSpriteId.toString().trim().toUpperCase();
-            }) : null;
-
-            // Pull the image link if available, otherwise apply your dicebear failsafe
-            const finalAvatarUrl = (activeSpriteData && activeSpriteData.image_url && activeSpriteData.image_url.trim() !== "") 
-                ? activeSpriteData.image_url.trim() 
-                : `https://api.dicebear.com/7.x/bottts/svg?seed=${p.activeSpriteId || 'Starter'}`;
-
-            document.getElementById('user-avatar-display').src = finalAvatarUrl;
+            document.getElementById('user-avatar-display').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${p.activeSpriteId}`;
             
             if (currentTrainingCategory === 'gameboard') {
                 if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
@@ -329,7 +280,7 @@
             }
         }
 
-                function renderLessonsList() {
+        function renderLessonsList() {
             const container = document.getElementById('lessons-list');
             if (!playerData.lessons) return;
             
@@ -374,9 +325,9 @@
                         ${isLessonComplete ? 
                             `
                             <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>
-                            ${videoUrl !== "" ? `<button onclick="openLessonModal('${l.id}')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold cursor-pointer">Watch Again</button>` : ''}
+                            ${videoUrl !== "" ? `<button onclick="window.open('${videoUrl}', '_blank')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold">Watch Again</button>` : ''}
                             ` : 
-                            `<button onclick="openLessonModal('${l.id}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition cursor-pointer">${videoUrl !== "" ? 'Start Lesson' : 'Open Lesson'}</button>`
+                            `<button onclick="handleLessonCompletion('${l.id}', '${videoUrl}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition">Complete</button>`
                         }
                         </div>
                     </div>
@@ -389,9 +340,7 @@
                     const correspondingLesson = playerData.lessons.find(l => l.id === lId);
                     const matchingTestData = playerData.tests.find(t => t.lesson_id === lId);
                     const isTestPassed = matchingTestData ? matchingTestData.completed === true : false;
-                    
-                    // Prioritize test title property, fallback to matching lesson name, fallback to hardcoded default text
-                    const labelText = (matchingTestData && matchingTestData.title) ? matchingTestData.title : (correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment");
+                    const labelText = correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment";
 
                     if (filterValue === 'todo' && isTestPassed) return;
                     if (filterValue === 'completed' && !isTestPassed) return;
@@ -458,7 +407,7 @@
         }
 
         function renderGranularSkillsSection(container) {
-            const skillsExercises = ["100 Stickhandling Touches(Goalies: 20 touches a day with catcher and blocker)", "50 Shots(Goalies: Shots with catcher and blocker)"];
+            const skillsExercises = ["100 Stickhandling Touches", "50 Shots"];
             let baseSkillsLesson = playerData.lessons.find(l => l.id === "L_DAILY_SKILLS");
             const dateContext = baseSkillsLesson ? String(baseSkillsLesson.title) : "Today";
 
@@ -500,367 +449,13 @@
             } catch (err) { console.error(err); }
         }
 
-        function extractYouTubeVideoId(url) {
-            const patterns = [
-                /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-                /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
-                /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-                /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
-            ];
-            for (const pattern of patterns) {
-                const match = url.match(pattern);
-                if (match) return match[1];
-            }
-            return null;
-        }
-
-        function toGoogleSlidesEmbedUrl(url) {
-            let embedUrl = url.trim().split('#')[0];
-            const pubMatch = url.match(/\/presentation\/d\/e\/([a-zA-Z0-9_-]+)/);
-            if (pubMatch) {
-                embedUrl = `https://docs.google.com/presentation/d/e/${pubMatch[1]}/embed?start=false&loop=false&rm=minimal`;
-            } else {
-                const idMatch = url.match(/\/presentation\/d\/([a-zA-Z0-9_-]+)/);
-                if (idMatch) {
-                    embedUrl = `https://docs.google.com/presentation/d/${idMatch[1]}/embed?start=false&loop=false&rm=minimal`;
-                }
-            }
-            return embedUrl;
-        }
-
-        function buildSlideFrameUrl(slideIndex1Based) {
-            return `${activeSlidesBaseUrl}#slide=id.p${slideIndex1Based - 1}`;
-        }
-
-        function updateSlideNavControls() {
-            const indicator = document.getElementById('lesson-slide-indicator');
-            const prevBtn = document.getElementById('lesson-slide-prev');
-            const nextBtn = document.getElementById('lesson-slide-next');
-            if (indicator) indicator.innerText = `Slide ${activeSlideIndex} of ${activeSlideTotal}`;
-            if (prevBtn) {
-                prevBtn.disabled = activeSlideIndex <= 1;
-                prevBtn.classList.toggle('opacity-40', activeSlideIndex <= 1);
-                prevBtn.classList.toggle('cursor-not-allowed', activeSlideIndex <= 1);
-            }
-            if (nextBtn) {
-                const onLast = activeSlideIndex >= activeSlideTotal;
-                nextBtn.innerText = onLast ? 'Finish' : 'Next →';
-                nextBtn.classList.toggle('bg-emerald-600', onLast);
-                nextBtn.classList.toggle('hover:bg-emerald-500', onLast);
-                nextBtn.classList.toggle('bg-blue-600', !onLast);
-                nextBtn.classList.toggle('hover:bg-blue-500', !onLast);
-            }
-        }
-
-        function goToLessonSlide(index, triggerComplete = true) {
-            if (activeSlideTotal <= 0) return;
-            activeSlideIndex = Math.max(1, Math.min(index, activeSlideTotal));
-            const frame = document.getElementById('lesson-slides-frame');
-            if (frame) frame.src = buildSlideFrameUrl(activeSlideIndex);
-            updateSlideNavControls();
-            setLessonProgress((activeSlideIndex / activeSlideTotal) * 100);
-            if (triggerComplete && activeSlideIndex >= activeSlideTotal) {
-                onLessonMediaComplete();
-            }
-        }
-
-        function lessonSlideNext() {
-            if (activeSlideIndex < activeSlideTotal) {
-                goToLessonSlide(activeSlideIndex + 1);
-            } else {
-                setLessonProgress(100);
-                onLessonMediaComplete();
-            }
-        }
-
-        function lessonSlidePrev() {
-            if (activeSlideIndex > 1) goToLessonSlide(activeSlideIndex - 1, false);
-        }
-
-        function mountGoogleSlidesViewer(embedUrl, slideCount) {
-            const container = document.getElementById('lesson-modal-content');
-            activeSlidesBaseUrl = embedUrl;
-            activeSlideTotal = slideCount;
-            activeSlideIndex = 1;
-
-            if (slideCount <= 0) {
-                container.innerHTML = `
-                    <div class="flex flex-col h-full absolute inset-0">
-                        <div class="p-3 bg-amber-950/40 border-b border-amber-500/30 text-amber-300 text-xs text-center shrink-0">
-                            Add <strong>slide_count</strong> to this lesson row in your Google Sheet (total number of slides) to enable progress tracking and star rewards.
-                        </div>
-                        <iframe class="flex-1 w-full min-h-0 border-0 bg-black" src="${embedUrl}" allowfullscreen></iframe>
-                    </div>`;
-                setLessonProgress(0);
-                document.getElementById('lesson-progress-label').innerText = 'Slide count required';
-                return;
-            }
-
-            container.innerHTML = `
-                <div class="flex flex-col h-full absolute inset-0">
-                    <iframe id="lesson-slides-frame" class="flex-1 w-full min-h-0 border-0 bg-black" allowfullscreen></iframe>
-                    <div class="flex items-center justify-between gap-3 px-4 py-3 bg-slate-900 border-t border-slate-800 shrink-0">
-                        <button id="lesson-slide-prev" type="button" onclick="lessonSlidePrev()" class="bg-slate-800 hover:bg-slate-700 disabled:hover:bg-slate-800 text-slate-200 text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer">← Previous</button>
-                        <span id="lesson-slide-indicator" class="text-xs font-bold text-slate-300 tabular-nums">Slide 1 of ${slideCount}</span>
-                        <button id="lesson-slide-next" type="button" onclick="lessonSlideNext()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer">Next →</button>
-                    </div>
-                </div>`;
-            document.getElementById('lesson-progress-label').innerText = 'Use Next to reach the last slide';
-            goToLessonSlide(1, slideCount === 1);
-        }
-
-        function parseLessonMedia(url) {
-            if (!url || !url.trim()) return { type: 'none' };
-            const u = url.trim();
-
-            const ytId = extractYouTubeVideoId(u);
-            if (ytId) return { type: 'youtube', videoId: ytId };
-
-            if (/docs\.google\.com\/presentation/.test(u)) {
-                return { type: 'slides', embedUrl: toGoogleSlidesEmbedUrl(u) };
-            }
-
-            if (/\.(mp4|webm|ogg)(\?|$)/i.test(u)) {
-                return { type: 'video', src: u };
-            }
-
-            const driveMatch = u.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-            if (driveMatch) {
-                return { type: 'drive', embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview` };
-            }
-
-            return { type: 'iframe', embedUrl: u };
-        }
-
-        function setLessonProgress(percent) {
-            const clamped = Math.max(0, Math.min(100, Math.round(percent)));
-            document.getElementById('lesson-progress-bar').style.width = `${clamped}%`;
-            document.getElementById('lesson-progress-percent').innerText = `${clamped}%`;
-            if (clamped >= 100) {
-                document.getElementById('lesson-progress-label').innerText = activeLessonAlreadyCompleted ? 'Previously Completed' : 'Lesson Complete';
-            }
-        }
-
-        function showLessonCompletionMessage(text, isSuccess) {
-            const el = document.getElementById('lesson-completion-message');
-            el.innerText = text;
-            el.className = `text-xs mt-2 font-semibold ${isSuccess ? 'text-emerald-400' : 'text-amber-400'}`;
-            el.classList.remove('hidden');
-        }
-
-        function handleDrivePostMessage(event) {
-            if (!activeLessonId || activeLessonMediaType !== 'drive') return;
-            const origin = event.origin || '';
-            if (!origin.includes('google.com')) return;
-
-            let data = event.data;
-            if (typeof data === 'string') {
-                try { data = JSON.parse(data); } catch { return; }
-            }
-            if (!data || typeof data !== 'object') return;
-
-            if (data.event === 'videoEnded' || data.event === 'onVideoEnd') {
-                setLessonProgress(100);
-                onLessonMediaComplete();
-                return;
-            }
-            if (data.event === 'videoProgress' && data.info) {
-                const pct = parseFloat(data.info.progress ?? data.info.currentTime / data.info.duration * 100);
-                if (!isNaN(pct)) setLessonProgress(pct);
-            }
-        }
-
-        function startYouTubeProgressPolling() {
-            if (lessonProgressTimer) clearInterval(lessonProgressTimer);
-            lessonProgressTimer = setInterval(() => {
-                if (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
-                const duration = ytPlayer.getDuration();
-                const current = ytPlayer.getCurrentTime();
-                if (duration > 0) setLessonProgress((current / duration) * 100);
-            }, 500);
-        }
-
-        function onYouTubePlayerReady() {
-            if (pendingYouTubeVideoId) {
-                initYouTubeLessonPlayer(pendingYouTubeVideoId);
-                pendingYouTubeVideoId = null;
-            }
-        }
-
-        window.onYouTubeIframeAPIReady = onYouTubePlayerReady;
-
-        function initYouTubeLessonPlayer(videoId) {
-            const container = document.getElementById('lesson-yt-player');
-            if (!container) return;
-
-            if (typeof YT === 'undefined' || !YT.Player) {
-                pendingYouTubeVideoId = videoId;
-                return;
-            }
-
-            if (ytPlayer && ytPlayer.destroy) {
-                ytPlayer.destroy();
-                ytPlayer = null;
-            }
-
-            ytPlayer = new YT.Player('lesson-yt-player', {
-                height: '100%',
-                width: '100%',
-                videoId: videoId,
-                playerVars: { rel: 0, modestbranding: 1 },
-                events: {
-                    onReady: () => startYouTubeProgressPolling(),
-                    onStateChange: (event) => {
-                        if (event.data === YT.PlayerState.ENDED) {
-                            setLessonProgress(100);
-                            onLessonMediaComplete();
-                        }
-                    }
-                }
-            });
-        }
-
-        function mountLessonMedia(media) {
-            const container = document.getElementById('lesson-modal-content');
-            activeLessonMediaType = media.type;
-
-            if (media.type === 'youtube') {
-                container.innerHTML = `<div id="lesson-yt-player" class="absolute inset-0 w-full h-full"></div>`;
-                initYouTubeLessonPlayer(media.videoId);
-                return;
-            }
-
-            if (media.type === 'video') {
-                container.innerHTML = `
-                    <video id="lesson-html5-video" class="absolute inset-0 w-full h-full object-contain" controls playsinline>
-                        <source src="${media.src}">
-                    </video>`;
-                const videoEl = document.getElementById('lesson-html5-video');
-                videoEl.addEventListener('timeupdate', () => {
-                    if (videoEl.duration > 0) setLessonProgress((videoEl.currentTime / videoEl.duration) * 100);
-                });
-                videoEl.addEventListener('ended', () => {
-                    setLessonProgress(100);
-                    onLessonMediaComplete();
-                });
-                return;
-            }
-
-            if (media.type === 'slides') {
-                mountGoogleSlidesViewer(media.embedUrl, media.slideCount || 0);
-                return;
-            }
-
-            if (media.type === 'drive') {
-                window.addEventListener('message', handleDrivePostMessage);
-                container.innerHTML = `<iframe id="lesson-embed-frame" class="absolute inset-0 w-full h-full border-0" src="${media.embedUrl}" allow="autoplay" allowfullscreen></iframe>`;
-                return;
-            }
-
-            if (media.type === 'iframe') {
-                container.innerHTML = `<iframe id="lesson-embed-frame" class="absolute inset-0 w-full h-full border-0" src="${media.embedUrl}" allowfullscreen></iframe>`;
-                return;
-            }
-
-            container.innerHTML = `<div class="flex items-center justify-center h-full p-8 text-slate-400 text-sm">No media linked to this lesson. Close this window to return.</div>`;
-        }
-
-        function openLessonModal(lessonId) {
-            const lesson = playerData.lessons.find(l => l.id.toString().trim() === lessonId.toString().trim());
-            if (!lesson) return;
-
-            closeLessonModal(false);
-
-            activeLessonId = lessonId;
-            activeLessonAlreadyCompleted = lesson.completed === true;
-            activeLessonStarReward = parseInt(lesson.star_reward) || 2;
-            lessonCompletionSubmitted = activeLessonAlreadyCompleted;
-
-            document.getElementById('lesson-modal-title').innerText = lesson.title || 'Strategy Lesson';
-            document.getElementById('lesson-modal-reward').innerText = activeLessonAlreadyCompleted
-                ? 'Already earned +' + activeLessonStarReward + ' Stars'
-                : '+' + activeLessonStarReward + ' Stars on completion';
-
-            const msgEl = document.getElementById('lesson-completion-message');
-            msgEl.classList.add('hidden');
-            msgEl.innerText = '';
-
-            const videoUrl = lesson.video_url ? lesson.video_url.trim() : '';
-            activeSlideTotal = parseInt(lesson.slide_count || lesson.total_slides || lesson.slides_count) || 0;
-            const media = parseLessonMedia(videoUrl);
-            if (media.type === 'slides') media.slideCount = activeSlideTotal;
-
-            if (activeLessonAlreadyCompleted) {
-                setLessonProgress(0);
-                document.getElementById('lesson-progress-label').innerText = 'Review Progress';
-            } else {
-                setLessonProgress(0);
-                document.getElementById('lesson-progress-label').innerText = 'Lesson Progress';
-            }
-
-            mountLessonMedia(media);
-
-            if (!videoUrl && !activeLessonAlreadyCompleted) {
-                setLessonProgress(100);
-                onLessonMediaComplete();
-            }
-
-            document.getElementById('lesson-modal').classList.remove('hidden');
-        }
-
-        function closeLessonModal(resetState = true) {
-            if (lessonProgressTimer) {
-                clearInterval(lessonProgressTimer);
-                lessonProgressTimer = null;
-            }
-            if (ytPlayer && typeof ytPlayer.destroy === 'function') {
-                ytPlayer.destroy();
-                ytPlayer = null;
-            }
-            window.removeEventListener('message', handleDrivePostMessage);
-            document.getElementById('lesson-modal-content').innerHTML = '';
-            document.getElementById('lesson-modal').classList.add('hidden');
-
-            if (resetState) {
-                activeLessonId = null;
-                activeLessonAlreadyCompleted = false;
-                activeLessonMediaType = null;
-                lessonCompletionSubmitted = false;
-                activeSlidesBaseUrl = '';
-                activeSlideIndex = 1;
-                activeSlideTotal = 0;
-            }
-        }
-
-        async function onLessonMediaComplete() {
-            setLessonProgress(100);
-
-            if (activeLessonAlreadyCompleted || lessonCompletionSubmitted) {
-                showLessonCompletionMessage('You have already completed this lesson.', false);
-                return;
-            }
-
-            lessonCompletionSubmitted = true;
-
+        async function handleLessonCompletion(lessonId, videoUrl) {
+            if (videoUrl !== "") window.open(videoUrl, '_blank');
             try {
-                const response = await fetch(`${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=LESSON&activityId=${activeLessonId}`, { method: 'POST' });
+                const response = await fetch(`${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=LESSON&activityId=${lessonId}`, { method: 'POST' });
                 const res = await response.json();
-                if (res.success) {
-                    activeLessonAlreadyCompleted = true;
-                    showLessonCompletionMessage(`Lesson complete! You earned +${activeLessonStarReward} Stars!`, true);
-                    fetchSynchronizedDataEngine();
-                } else {
-                    lessonCompletionSubmitted = false;
-                    const friendlyMsg = (res.message && res.message.toLowerCase().includes('duplication'))
-                        ? 'You have already completed this lesson.'
-                        : (res.message || 'Could not record completion.');
-                    showLessonCompletionMessage(friendlyMsg, false);
-                }
-            } catch (err) {
-                lessonCompletionSubmitted = false;
-                console.error(err);
-                showLessonCompletionMessage('Network error while saving completion.', false);
-            }
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
         }
 
         // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS ---
@@ -1288,23 +883,15 @@
         }
 
         async function executeSpriteStorePurchase(spriteId) {
-            // 1. Find the target sprite in the local catalog to check its cost
-            const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
-            const spriteCost = purchasedSprite ? (parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0) : 0;
-            const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
-
-            // 2. Budget Guard: Prevent players from buying things they can't afford
-            const currentStars = playerData.playerProfile ? (parseInt(playerData.playerProfile.totalStars) || 0) : 0;
-            if (currentStars < spriteCost) {
-                alert(`❌ Insufficient Stars! "${spriteName}" costs ${spriteCost} ★, but you only have ${currentStars} ★.`);
-                return; // Halt execution immediately!
-            }
-
             try {
                 const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
                 const res = await response.json();
                 
                 if (res.success) {
+                    // Find the purchased sprite in our local store catalog data
+                    const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
+                    const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
+                    
                     // Display premium success message alert tray
                     alert(`🎉 Congrats! You successfully unlocked "${spriteName}"!`);
                     
@@ -1324,8 +911,9 @@
                     }
 
                     // Deduct cost locally to instantly sync the top wallet star display bar
-                    if (playerData.playerProfile) {
-                        playerData.playerProfile.totalStars = Math.max(0, currentStars - spriteCost);
+                    if (purchasedSprite && playerData.playerProfile) {
+                        const cost = parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0;
+                        playerData.playerProfile.totalStars = Math.max(0, playerData.playerProfile.totalStars - cost);
                     }
 
                     // Force immediate UI re-renders across headers and stores
@@ -1346,39 +934,8 @@
             try {
                 const response = await fetch(`${API_URL}?action=equipSprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
                 const res = await response.json();
-                
-                if (res.success) {
-                    alert("✨ Avatar equipped successfully!");
-
-                    // 1. Instantly update your local player profile state
-                    if (playerData.playerProfile) {
-                        playerData.playerProfile.activeSpriteId = spriteId;
-                    }
-
-                    // 2. Instantly update your identity row inside the local leaderboard list
-                    if (playerData.leaderboard) {
-                        playerData.leaderboard = playerData.leaderboard.map(player => {
-                            if (player.id.toString().trim() === currentAuthId.toString().trim()) {
-                                return { ...player, activeSpriteId: spriteId };
-                            }
-                            return player;
-                        });
-                    }
-
-                    // 3. Force immediate UI paint updates across the app viewport
-                    renderApplicationDashboardLayout();
-                    if (currentTrainingCategory === 'gameboard' && activeSubTab === 'standings') {
-                        renderTeamLeaderboardLayout();
-                    }
-                    
-                    // 4. Run background sync to double check with server integrity
-                    fetchSynchronizedDataEngine();
-                } else {
-                    alert(res.message || "Equip processing error.");
-                }
-            } catch (err) { 
-                console.error("Avatar equipment execution fault:", err); 
-            }
+                if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
+            } catch (err) { console.error(err); }
         }
 
         function openQuizModal(lessonId) {
@@ -1387,7 +944,7 @@
             const titleEl = document.getElementById('quiz-modal-title');
             const bodyEl = document.getElementById('quiz-modal-body');
             const correspondingLesson = playerData.lessons.find(l => l.id === lessonId);
-            titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Playoffs";
+            titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Tactical Quiz Assessment";
             
             if (activeQuizQuestionsCache.length === 0) {
                 bodyEl.innerHTML = `<p class="text-slate-500 italic text-center p-4">No exam sheet configurations registered.</p>`;
@@ -1495,7 +1052,6 @@
             document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
             fetchSynchronizedDataEngine();
         }
-        
     </script>
 </body>
 </html>
