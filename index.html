@@ -38,8 +38,6 @@
         let activeSlidesBaseUrl = '';
         let activeSlideIndex = 1;
         let activeSlideTotal = 0;
-        // The function outputs the URL directly to whatever calls it
-        let playerImageUrl = resolveSpriteImageUrl(player.activeSpriteId);
     </script>
 
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
@@ -308,7 +306,7 @@
                     document.getElementById('user-name-display').innerText = p.name;
                     document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
                     document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
-                    document.getElementById('user-avatar-display').src = playerImageUrl;
+                    document.getElementById('user-avatar-display').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${p.activeSpriteId}`;
                     
                     if (currentTrainingCategory === 'gameboard') {
                         if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
@@ -1474,38 +1472,6 @@
             } catch (err) { errorEl.innerText = "Network connection failed."; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials"; }
         }
 
-        function resolveSpriteImageUrl(spriteId) {
-            if (!spriteId) return '';
-            const cleanId = spriteId.toString().trim();
-            
-            // Create a new variable to hold our target image URL context
-            let active_sprite_url = '';
-
-            // 1. If it's already a direct URL string from the updated backend, assign it immediately
-            if (cleanId.startsWith('http://') || cleanId.startsWith('https://')) {
-                active_sprite_url = cleanId;
-            } 
-            // 2. Otherwise, look up the raw ID in the synchronized storeSprites data array
-            else if (playerData && playerData.storeSprites) {
-                const matched = playerData.storeSprites.find(s => s.id.toString().trim() === cleanId);
-                if (matched) {
-                    // Checks for 'image_url' or common variant column references
-                    const foundUrl = matched.image_url || matched.image || matched.sprite_url;
-                    if (foundUrl && foundUrl.toString().trim() !== "") {
-                        active_sprite_url = foundUrl.toString().trim();
-                    }
-                }
-            }
-
-            // 3. Fallback to Dicebear avatar seed if no active URL could be resolved
-            if (!active_sprite_url) {
-                active_sprite_url = `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanId}`;
-            }
-
-            // Return the resolved variable instead of standard conditional flows
-            return active_sprite_url;
-        }
-        
         function logSystemOut() {
             localStorage.removeItem('hockey_player_id'); currentAuthId = ""; playerData = {};
             document.getElementById('auth-player-id').value = ""; document.getElementById('auth-password').value = "";
