@@ -1159,10 +1159,22 @@
 
             grid.innerHTML = playerData.gameboardSlots.map(slot => {
                 const hasOccupant = slot.playerId !== undefined && slot.playerId !== null && slot.playerId.toString().trim() !== "";
+                
+                // Cross-reference the slot's assigned spriteId with the store inventory catalog
+                const activeSpriteData = playerData.storeSprites ? playerData.storeSprites.find(s => {
+                    if (!s.id || !slot.spriteId) return false;
+                    return s.id.toString().trim().toUpperCase() === slot.spriteId.toString().trim().toUpperCase();
+                }) : null;
+
+                // Pull the image link if available, otherwise apply your dicebear failsafe
+                const finalAvatarUrl = (activeSpriteData && activeSpriteData.image_url && activeSpriteData.image_url.trim() !== "") 
+                    ? activeSpriteData.image_url.trim() 
+                    : `https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}`;
+
                 return `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
                         <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
-                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
+                        <img src="${finalAvatarUrl}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 object-contain ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
                         <div class="min-h-[44px] flex flex-col justify-center">
                             <p class="text-xs font-black text-white uppercase tracking-wide leading-tight">${hasOccupant ? slot.playerName : 'Empty Slot'}</p>
                             ${hasOccupant ? `<p class="text-[9px] text-slate-400 font-bold mt-0.5">Jersey #${slot.jerseyNumber} • ${slot.spriteName}</p>` : '<p class="text-[9px] text-slate-500 font-medium">Available Position</p>'}
