@@ -1456,10 +1456,13 @@
 
         // --- CHOOSE AND EQUIP AN UNLOCKED SPRITE ---
         async function equipSprite(spriteId) {
+            // Force capture the window event if it wasn't passed implicitly
+            const currentEvent = window.event || event;
+            const btn = currentEvent ? currentEvent.target : document.querySelector(`button[onclick*="'${spriteId}'"]`);
+            const originalText = btn ? btn.innerText : "Equip Avatar";
+
             try {
-                // Find the clicked button to show a temporary loading indicator
-                const btn = event?.target || document.querySelector(`button[onclick*="'${spriteId}'"]`);
-                const originalText = btn ? btn.innerText : "Equip Avatar";
+                // 1. Immediately visually change the button to show it registered the click
                 if (btn) {
                     btn.innerText = "Equipping...";
                     btn.disabled = true;
@@ -1472,19 +1475,17 @@
                 const res = await response.json();
 
                 if (res.success) {
-                    // 1. Update the local client state cache
+                    // 2. Update the local client state cache
                     if (!playerData.playerProfile) playerData.playerProfile = {};
                     playerData.playerProfile.activeSpriteId = spriteId;
                     
-                    // 2. Re-trigger the application dashboard header to change your profile picture instantly
+                    // 3. Re-trigger the application dashboard header to change your profile picture instantly
                     renderApplicationDashboardLayout();
                     
-                    // 3. Instantly refresh the store grid to switch the button label to "✓ Equipped"
-                    if (currentTrainingCategory === 'store' || (currentTrainingCategory === 'gameboard' && activeSubTab === 'market')) {
-                        renderStoreInventoryLayout();
-                    }
+                    // 4. Instantly refresh the store grid to switch the button label to "✓ Equipped"
+                    renderLockerRoomMarketLayout();
                 } else {
-                    alert("Failed to equip sprite: " + (res.message || "Unknown validation error"));
+                    alert("Failed to equip sprite: " + (res.message || "Unknown error"));
                     if (btn) {
                         btn.innerText = originalText;
                         btn.disabled = false;
@@ -1492,10 +1493,9 @@
                 }
             } catch (err) {
                 console.error("Error updating player active sprite configuration:", err);
-                alert("Network matrix timeout. Check connectivity and try again.");
-                const btn = document.querySelector(`button[onclick*="'${spriteId}'"]`);
+                alert("Network timeout. Check connectivity and try again.");
                 if (btn) {
-                    btn.innerText = "Equip Avatar";
+                    btn.innerText = originalText;
                     btn.disabled = false;
                 }
             }
