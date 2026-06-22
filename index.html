@@ -38,12 +38,8 @@
         let activeSlidesBaseUrl = '';
         let activeSlideIndex = 1;
         let activeSlideTotal = 0;
-
-        // Quiz State Registers
-        let activeQuizLessonTarget = null;
-        let activeQuizQuestionsCache = [];
-        let activeQuizAlreadyCompleted = false;
-        let selectedSlotToPurchase = null;
+        // The function outputs the URL directly to whatever calls it
+        const playerImageUrl = resolveSpriteImageUrl(player.activeSpriteId);
     </script>
 
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
@@ -74,7 +70,7 @@
         <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-4 py-3 shadow-md">
             <div class="max-w-6xl mx-auto flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                    <img id="user-avatar-display" src="" class="w-10 h-10 bg-slate-950 border border-slate-700 rounded-xl p-1 object-contain" alt="Avatar">
+                    <img id="user-avatar-display" src="https://api.dicebear.com/7.x/bottts/svg?seed=Starter" class="w-10 h-10 bg-slate-950 border border-slate-700 rounded-xl p-1" alt="Avatar">
                     <div>
                         <h2 id="user-name-display" class="font-black text-white leading-none text-sm uppercase tracking-wide">Loading Profile...</h2>
                         <p id="user-jersey-display" class="text-[10px] text-slate-400 font-bold mt-0.5">Jersey #--</p>
@@ -108,18 +104,17 @@
 
         <main class="flex-1 max-w-6xl w-full mx-auto p-4">
             
+            
             <div id="strategy-filter-bar" class="mb-4 flex justify-end items-center gap-2 hidden">
-                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md w-full">
-                    <h2>New Lessons Added Weekly</h2>
-                    <div class="flex items-center gap-2">
-                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
-                        <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
-                            <option value="all" selected>All Strategy Content</option>
-                            <option value="todo">To Do</option>
-                            <option value="completed">Completed</option>
-                        </select>
-                    </div>
-                </div>
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                <h2>New Lessons Added Weekly</h2>
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Filter Status:</label>
+                <select id="strategy-status-filter" onchange="renderLessonsList()" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 font-semibold rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 transition">
+                    <option value="all" selected>All Strategy Content</option>
+                    <option value="todo">To Do</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
             </div>  
 
             <div id="lessons-list" class="space-y-3"></div>
@@ -181,6 +176,7 @@
             </div>
 
             <div id="store-view-container" class="hidden space-y-4">
+                
                 <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
                     <div>
                         <h4 class="text-xs font-black uppercase text-white tracking-wider">💰 Budget Filter</h4>
@@ -198,7 +194,7 @@
                     </div>
                 </div>
 
-                <div id="sprite-store-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="sprite-store-grid"></div>
             </div>
 
         </main>
@@ -285,9 +281,8 @@
             </div>
             <div id="quiz-modal-body" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6"></div>
             <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end gap-3">
-                <p id="quiz-completion-alert" class="text-xs text-amber-400 font-bold self-center mr-auto hidden"></p>
                 <button onclick="closeQuizModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl text-xs transition">Cancel</button>
-                <button id="quiz-submit-action-btn" onclick="evaluateActiveQuizAnswers()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition shadow-md shadow-indigo-600/10">Submit Answers</button>
+                <button onclick="evaluateActiveQuizAnswers()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-xl text-xs transition shadow-md shadow-indigo-600/10">Submit Answers</button>
             </div>
         </div>
     </div>
@@ -308,42 +303,23 @@
             } catch (err) { console.error("Master read hook matrix fault:", err); }
         }
 
-        function resolveSpriteImageUrl(spriteId) {
-            if (!spriteId) return '';
-            const cleanId = spriteId.toString().trim();
-            if (cleanId.startsWith('http://') || cleanId.startsWith('https://')) {
-                return cleanId;
-            }
-            if (playerData.storeInventory) {
-                const matched = playerData.storeInventory.find(s => s.id.toString().trim() === cleanId);
-                if (matched && matched.image_url && matched.image_url.trim() !== "") {
-                    return matched.image_url.trim();
-                }
-            }
-            return `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanId}`;
-        }
-
         function renderApplicationDashboardLayout() {
-            if (!playerData.playerProfile) return;
-            const p = playerData.playerProfile;
-            document.getElementById('user-name-display').innerText = p.name;
-            document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
-            document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
-            
-            document.getElementById('user-avatar-display').src = resolveSpriteImageUrl(p.activeSpriteId);
-            console.log(p.activeSpriteId);
-            if (currentTrainingCategory === 'gameboard') {
-                if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
-                else if (activeSubTab === 'lineup') renderStartingLineupLayout();
-                else renderLockerRoomMarketLayout();
-            } else if (currentTrainingCategory === 'store') {
-                renderStoreInventoryLayout();
-            } else {
-                renderLessonsList();
-            }
-        }
+                    const p = playerData.playerProfile;
+                    document.getElementById('user-name-display').innerText = p.name;
+                    document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
+                    document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
+                    document.getElementById('user-avatar-display').src = playerImageUrl;
+                    
+                    if (currentTrainingCategory === 'gameboard') {
+                        if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
+                        else if (activeSubTab === 'lineup') renderStartingLineupLayout();
+                        else renderLockerRoomMarketLayout();
+                    } else {
+                        renderLessonsList();
+                    }
+                }
 
-        function renderLessonsList() {
+                function renderLessonsList() {
             const container = document.getElementById('lessons-list');
             if (!playerData.lessons) return;
             
@@ -363,7 +339,7 @@
             const filterValue = document.getElementById('strategy-status-filter').value; 
             let filteredLessons = playerData.lessons.filter(l => l.category && l.category.toString().trim().toLowerCase() === 'strategy');
             
-            if (filteredLessons.length === 0 && (!playerData.tests || playerData.tests.length === 0)) {
+            if (filteredLessons.length === 0) {
                 container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded-xl border border-slate-800">No strategy content loaded yet.</p>`;
                 return;
             }
@@ -404,17 +380,18 @@
                     const matchingTestData = playerData.tests.find(t => t.lesson_id === lId);
                     const isTestPassed = matchingTestData ? matchingTestData.completed === true : false;
                     
+                    // Prioritize test title property, fallback to matching lesson name, fallback to hardcoded default text
                     const labelText = (matchingTestData && matchingTestData.title) ? matchingTestData.title : (correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment");
 
                     if (filterValue === 'todo' && isTestPassed) return;
                     if (filterValue === 'completed' && !isTestPassed) return;
 
                     htmlOutput += `
-                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/40 transition ${isTestPassed ? 'opacity-75 border-emerald-500/30' : ''}">
+                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/40 transition ${isTestPassed ? 'opacity-60' : ''}">
                             <div>
                                 <div class="flex items-center gap-2">
                                     <span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-indigo-500/20">Exam Assess</span>
-                                    <p class="font-bold text-slate-100">${labelText}</p>
+                                    <p class="font-bold ${isTestPassed ? 'text-slate-400 line-through' : 'text-slate-100'}">${labelText}</p>
                                 </div>
                                 <p class="text-xs text-yellow-500 font-medium mt-0.5">+10 Stars <span class="text-slate-400">(Requires 100%)</span></p>
                             </div>
@@ -422,7 +399,7 @@
                             ${isTestPassed ? 
                                 `
                                 <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Passed ✓</span>
-                                <button onclick="openQuizModal('${lId}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-4 py-2 rounded-lg transition border border-slate-700">Review Exam</button>
+                                <button onclick="openQuizModal('${lId}')" class="text-indigo-400 hover:text-indigo-300 text-xs underline font-semibold">Review Exam</button>
                                 ` : 
                                 `<button onclick="openQuizModal('${lId}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">Take Test</button>`
                             }
@@ -703,6 +680,9 @@
         window.onYouTubeIframeAPIReady = onYouTubePlayerReady;
 
         function initYouTubeLessonPlayer(videoId) {
+            const container = document.getElementById('lesson-yt-player');
+            if (!container) return;
+
             if (typeof YT === 'undefined' || !YT.Player) {
                 pendingYouTubeVideoId = videoId;
                 return;
@@ -873,41 +853,37 @@
             }
         }
 
+        // --- RENDER DYNAMIC LEADERBOARD WITH VAULT POPUPS ---
         function renderTeamLeaderboardLayout() {
             const tbody = document.getElementById('leaderboard-table-body');
-            if (!tbody || !playerData.leaderboard) return;
-
-            const lineupPlayerIds = (playerData.gameboardSlots || [])
-                .map(slot => slot.playerId ? slot.playerId.toString().trim().toLowerCase() : "")
-                .filter(Boolean);
+            if (!playerData.leaderboard) return;
+            
+            const lineupPlayerIds = playerData.gameboardSlots ? 
+                playerData.gameboardSlots.map(slot => slot.playerId ? slot.playerId.toString().trim() : "") : [];
 
             tbody.innerHTML = playerData.leaderboard.map((player, idx) => {
                 const cleanPlayerId = player.id.toString().trim();
                 const isMe = cleanPlayerId === currentAuthId.toString().trim();
-                const inLineup = lineupPlayerIds.includes(cleanPlayerId.toLowerCase());
+                const inLineup = lineupPlayerIds.includes(cleanPlayerId);
 
                 return `
                     <tr onclick="openPlayerInventoryModal('${cleanPlayerId}')" class="${isMe ? 'bg-blue-600/10 font-bold text-blue-400 border-l-4 border-blue-500' : 'text-slate-300'} hover:bg-slate-800/40 transition cursor-pointer">
-                        <td class="py-3.5 pl-3 font-mono text-xs text-slate-400">${idx + 1}</td>
+                        <td class="py-3.5 pl-3 font-mono text-xs">${idx + 1}</td>
                         <td class="py-3.5 flex items-center gap-2">
-                            <img src="${resolveSpriteImageUrl(player.activeSpriteId)}" class="w-7 h-7 bg-slate-950 rounded p-0.5 border border-slate-800 object-contain" alt="Teammate">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${player.activeSpriteId || 'S001'}" class="w-6 h-6 bg-slate-950 rounded p-0.5 border border-slate-800">
                             <span>${player.name} ${isMe ? '<span class="text-[9px] bg-blue-500/20 text-blue-300 font-black px-1.5 py-0.5 rounded ml-1 border border-blue-500/20">You</span>' : ''}</span>
                         </td>
-                        <td class="py-3.5 text-center">
-                            ${inLineup 
-                                ? `<span class="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-black uppercase tracking-wide">Lineup</span>`
-                                : `<span class="text-[10px] bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full font-bold">Bench</span>`
-                            }
+                        <td class="py-3.5 text-center text-sm">
+                            ${inLineup ? '<span class="inline-flex items-center gap-1 bg-blue-500/10 text-blue-400 text-[10px] px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider border border-blue-500/20">盒 Starting Lineup</span>' : '<span class="text-slate-600 font-bold text-xs">—</span>'}
                         </td>
-                        <td class="py-3.5 font-mono text-slate-400 text-xs">${player.jerseyNumber || '--'}</td>
-                        <td class="py-3.5 text-right pr-4 font-mono font-bold text-amber-400">
-                            ★ ${parseInt(player.totalStars).toLocaleString()}
-                        </td>
+                        <td class="py-3.5 font-mono text-xs">#${player.jerseyNumber}</td>
+                        <td class="py-3.5 text-right pr-3 font-black text-white">${parseInt(player.totalStars).toLocaleString()}</td>
                     </tr>
                 `;
             }).join('');
         }
 
+        // --- DYNAMIC ROSTER VAULT DISPLAY OVERLAY WITH FIXES ---
         function openPlayerInventoryModal(targetPlayerId) {
             const modal = document.getElementById('inventory-modal');
             const grid = document.getElementById('inventory-modal-grid');
@@ -918,18 +894,24 @@
 
             title.innerText = `${targetPlayer.name} - Vault Inventory`;
             const isMe = targetPlayerId.toString().trim() === currentAuthId.toString().trim();
+
+            // Handle reading raw arrays or mapped array rows securely
             const itemsOwned = targetPlayer.ownedSprites || [];
 
             if (itemsOwned.length === 0) {
                 grid.innerHTML = `<p class="col-span-full text-center py-8 text-slate-500 text-xs italic">This player doesn't have any sprites locked in their vault storage yet.</p>`;
             } else {
                 grid.innerHTML = itemsOwned.map(item => {
+                    // Normalize checking whether the record is a raw ID string or an object payload
                     const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
                     const cleanId = spriteId.toString().trim();
+                    
+                    // Discover corresponding store metadata records
                     const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
                     
+                    // Clean Fallback Name Selector Pipeline matching your exact sheet key ('sprite_name')
                     let nameLabel = "Unknown Sprite";
-                    if (cleanId === "S001" || cleanId === "Starter") {
+                    if (cleanId === "S001") {
                         nameLabel = "Starter Avatar";
                     } else if (typeof item === 'object' && item !== null && item.name) {
                         nameLabel = item.name;
@@ -939,11 +921,14 @@
                         nameLabel = `Sprite ${cleanId}`;
                     }
 
+                    const customImg = sData ? sData.image_url : "";
+                    const imgDisplay = customImg && customImg.trim() !== "" ? customImg.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanId}`;
+
                     return `
                         <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col items-center text-center shadow">
-                            <img src="${resolveSpriteImageUrl(cleanId)}" class="w-14 h-14 bg-slate-950 rounded-lg p-1 border border-slate-800 mb-2 object-contain">
+                            <img src="${imgDisplay}" class="w-14 h-14 bg-slate-950 rounded-lg p-1 border border-slate-800 mb-2 object-contain">
                             <p class="text-xs font-bold text-white truncate w-full px-1" title="${nameLabel}">${nameLabel}</p>
-                            <p class="text-[9px] font-mono text-slate-500 font-bold truncate w-full px-1">${cleanId}</p>
+                            <p class="text-[9px] font-mono text-slate-500 font-bold">${cleanId}</p>
                             
                             ${!isMe ? `
                                 <button onclick="openTradeProposalSlip('${targetPlayerId}', '${cleanId}')" class="w-full mt-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-extrabold py-1.5 rounded-lg transition tracking-wide uppercase cursor-pointer">
@@ -961,26 +946,34 @@
 
         function closeInventoryModal() { document.getElementById('inventory-modal').classList.add('hidden'); }
 
+        // --- FIXED TRADE PROPOSAL DRAFT MODAL SLIP ---
         function openTradeProposalSlip(targetPlayerId, targetSpriteId) {
             tradeTargetPlayerId = targetPlayerId;
             tradeTargetSpriteId = targetSpriteId;
 
             const select = document.getElementById('trade-offer-selector');
+            
+            // Extract your owned inventory array
             const myProfileSprites = (playerData.playerProfile && playerData.playerProfile.ownedSprites) ? 
                                       playerData.playerProfile.ownedSprites : [];
 
             if (myProfileSprites.length === 0) {
-                select.innerHTML = `<option value="Starter">Starter Avatar</option>`;
+                // Safe absolute fallback if inventory arrays haven't loaded yet
+                select.innerHTML = `<option value="S001">Starter Avatar (S001)</option>`;
             } else {
                 select.innerHTML = myProfileSprites.map(item => {
+                    // 1. Extract raw ID safely whether item is an object or a plain string
                     const spriteId = (typeof item === 'object' && item !== null) ? (item.id || '') : item;
                     const cleanId = spriteId.toString().trim();
+                    
                     if (cleanId === "") return "";
 
+                    // 2. Cross-reference against store catalog dataset to find real name
                     const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
                     
+                    // 3. Resolve the human-readable label matching your spreadsheet keys
                     let nameLabel = "Unknown Sprite";
-                    if (cleanId === "S001" || cleanId === "Starter") {
+                    if (cleanId === "S001") {
                         nameLabel = "Starter Avatar";
                     } else if (typeof item === 'object' && item !== null && item.name) {
                         nameLabel = item.name;
@@ -990,7 +983,7 @@
                         nameLabel = `Sprite ${cleanId}`;
                     }
 
-                    return `<option value="${cleanId}">${nameLabel} (${cleanId.substring(0, 15)})</option>`;
+                    return `<option value="${cleanId}">${nameLabel} (${cleanId})</option>`;
                 }).join('');
             }
             
@@ -1018,6 +1011,7 @@
             } catch (err) { console.error(err); }
         }
 
+        // --- LOCKER ROOM MARKET DISPATCH LAYOUT WITH MATCHING SHEET KEYS ---
         function renderLockerRoomMarketLayout() {
             const pendingContainer = document.getElementById('market-pending-list');
             const historyContainer = document.getElementById('market-history-list');
@@ -1030,20 +1024,42 @@
             const pendingTrades = playerData.activeTrades.filter(t => t.status.toString().trim() === "PENDING");
             const historyTrades = playerData.activeTrades.filter(t => t.status.toString().trim() !== "PENDING");
 
+            // Deep-inspection helper to resolve a human-readable name out of the trade row
             const resolveNamesFromTradeRow = (tradeRow, type) => {
+                // 1. Map to your exact spreadsheet keys discovered in console
+                // Offered ID uses 'offered_id', Requested ID uses 'requested_sprite_id'
                 const rawId = type === 'offer' ? tradeRow.offered_id : tradeRow.requested_sprite_id;
+                
                 if (rawId === undefined || rawId === null || rawId.toString().trim() === "") return "Empty Slot";
 
-                let cleanId = rawId.toString().trim();
-                if (cleanId === "S001" || cleanId === "1" || cleanId === "Starter") return "Starter Avatar";
+                let cleanId = rawId.toString().trim().toUpperCase();
+                
+                // Pad numbers to standard S000 format if necessary
+                if (!cleanId.startsWith('S') && !isNaN(cleanId)) {
+                    cleanId = 'S' + cleanId.padStart(3, '0');
+                }
+                
+                if (cleanId === "S001" || cleanId === "1") return "Starter Avatar";
 
-                const sData = playerData.storeSprites ? playerData.storeSprites.find(i => i.id.toString().trim() === cleanId) : null;
+                // 2. Scan the store array using normalized comparisons
+                const sData = playerData.storeSprites ? playerData.storeSprites.find(i => {
+                    if (!i.id) return false;
+                    let storeId = i.id.toString().trim().toUpperCase();
+                    if (!storeId.startsWith('S') && !isNaN(storeId)) {
+                        storeId = 'S' + storeId.padStart(3, '0');
+                    }
+                    return storeId === cleanId;
+                }) : null;
+
                 if (sData) {
                     return sData.sprite_name || sData.name || `Sprite ${cleanId}`;
                 }
-                return `Item (${cleanId.substring(0, 10)})`;
+
+                // 3. Fallback: If it's not found in store catalog metadata, display the sanitized ID tag
+                return `Item (${cleanId})`;
             };
 
+            // RENDER ACTIVE PENDING DEALS
             if (pendingTrades.length === 0) {
                 pendingContainer.innerHTML = `<p class="text-slate-500 text-xs italic p-4 bg-slate-950/40 rounded-xl border border-slate-800/60 text-center">No pending transaction contracts open on your ledger right now.</p>`;
             } else {
@@ -1051,6 +1067,7 @@
                     const isIncoming = t.receiver_id.toString().trim() === currentAuthId.toString().trim();
                     const otherPartyName = isIncoming ? `Player ID: ${t.sender_id}` : `Player ID: ${t.receiver_id}`;
                     
+                    // Call the row inspector to pull the names mapping to the corrected keys
                     const offerName = resolveNamesFromTradeRow(t, 'offer');
                     const requestName = resolveNamesFromTradeRow(t, 'request');
                     
@@ -1080,6 +1097,7 @@
                 }).join('');
             }
 
+            // RENDER ARCHIVED HISTORY LEDGER
             if (historyTrades.length === 0) {
                 historyContainer.innerHTML = `<p class="text-slate-500 text-xs italic text-center p-3">No archived market transaction receipts discovered inside historical logs.</p>`;
             } else {
@@ -1105,20 +1123,28 @@
             }
         }
 
+        async function resolveTradeProposal(tradeId, actionType) {
+            try {
+                const response = await fetch(`${API_URL}?action=${actionType}&playerId=${currentAuthId}&tradeId=${tradeId}`, { method: 'POST' });
+                const res = await response.json();
+                alert(res.message);
+                if (res.success) { fetchSynchronizedDataEngine(); }
+            } catch (err) { console.error(err); }
+        }
+
         function renderStartingLineupLayout() {
             const grid = document.getElementById('lineup-slots-grid');
             if (!playerData.gameboardSlots) return;
 
             grid.innerHTML = playerData.gameboardSlots.map(slot => {
                 const hasOccupant = slot.playerId !== undefined && slot.playerId !== null && slot.playerId.toString().trim() !== "";
-
                 return `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative">
                         <span class="absolute top-2 left-2 text-[10px] font-mono font-bold bg-slate-950 px-2 py-0.5 rounded text-slate-400 border border-slate-800/60">Slot #${slot.slotId}</span>
-                        <img src="${resolveSpriteImageUrl(slot.spriteId)}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 object-contain ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
+                        <img src="https://api.dicebear.com/7.x/bottts/svg?seed=${slot.spriteId}" class="w-16 h-16 bg-slate-950 rounded-xl p-1 border border-slate-800 mb-2 mt-4 ${!hasOccupant ? 'opacity-20 grayscale' : ''}">
                         <div class="min-h-[44px] flex flex-col justify-center">
                             <p class="text-xs font-black text-white uppercase tracking-wide leading-tight">${hasOccupant ? slot.playerName : 'Empty Slot'}</p>
-                            ${hasOccupant ? `<p class="text-[9px] text-slate-400 font-bold mt-0.5">Jersey #${slot.jerseyNumber || '--'} • ${slot.spriteName || 'Sprite'}</p>` : '<p class="text-[9px] text-slate-500 font-medium">Available Position</p>'}
+                            ${hasOccupant ? `<p class="text-[9px] text-slate-400 font-bold mt-0.5">Jersey #${slot.jerseyNumber} • ${slot.spriteName}</p>` : '<p class="text-[9px] text-slate-500 font-medium">Available Position</p>'}
                         </div>
                         <button onclick="openLineupModal('${slot.slotId}')" class="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black py-2 rounded-xl transition shadow-md shadow-blue-600/5 cursor-pointer">
                             🛒 Buyout (${slot.currentCost} ★)
@@ -1131,16 +1157,12 @@
         function openLineupModal(slotId) {
             selectedSlotToPurchase = slotId;
             const selector = document.getElementById('lineup-sprite-selector');
-            const owned = playerData.playerProfile?.ownedSprites || [];
+            const owned = playerData.playerProfile.ownedSprites || [];
 
             if (owned.length === 0) {
-                selector.innerHTML = `<option value="Starter">Starter Avatar</option>`;
+                selector.innerHTML = `<option value="S001">Starter Avatar</option>`;
             } else {
-                selector.innerHTML = owned.map(s => {
-                    const id = (typeof s === 'object' && s !== null) ? s.id : s;
-                    const name = (typeof s === 'object' && s !== null) ? (s.name || id) : `Sprite ${id}`;
-                    return `<option value="${id}">${name}</option>`;
-                }).join('');
+                selector.innerHTML = owned.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
             }
             document.getElementById('lineup-modal').classList.remove('hidden');
         }
@@ -1168,6 +1190,7 @@
             const viewLineup = document.getElementById('sub-view-lineup');
             const viewTrading = document.getElementById('sub-view-trading');
 
+            // Hide everything first
             viewStandings.classList.add('hidden'); viewLineup.classList.add('hidden'); viewTrading.classList.add('hidden');
             btnStandings.className = btnLineup.className = btnTrading.className = "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition bg-slate-800 text-slate-400 hover:text-slate-200 cursor-pointer";
 
@@ -1185,85 +1208,86 @@
 
         function renderStoreInventoryLayout() {
             const grid = document.getElementById('sprite-store-grid');
-            if (!grid || !playerData.storeInventory) return;
+            if (!playerData.storeSprites) return;
 
-            const costFilter = document.getElementById('store-cost-filter')?.value || 'all';
+            // Get the current selected value of the cost filter
+            const costFilterEl = document.getElementById('store-cost-filter');
+            const maxCostLimit = costFilterEl ? costFilterEl.value : "all";
 
-            grid.innerHTML = playerData.storeInventory.map(s => {
-                const itemSpriteId = s.id.toString().trim();
-                const spriteCost = parseInt(s.cost) || 0;
+            // Filter the sprites array based on cost before mapping it to HTML
+            let filteredSprites = playerData.storeSprites.filter(s => {
+                if (maxCostLimit === "all") return true;
+                
+                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || 0;
+                return spriteCost <= parseInt(maxCostLimit);
+            });
 
-                if (costFilter !== 'all' && spriteCost > parseInt(costFilter)) return '';
+            if (filteredSprites.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-12 bg-slate-900/40 border border-slate-800 rounded-2xl">
+                        <p class="text-slate-500 text-xs italic">No items found within this price range selection.</p>
+                    </div>
+                `;
+                return;
+            }
 
-                let actionButtonHtml = "";
+            grid.innerHTML = filteredSprites.map(s => {
+                const spriteName = s.sprite_name || s.name || s.NAME || "Unknown Name";
+                const spriteCost = parseInt(s.cost_in_stars) || parseInt(s.cost) || 0;
+                const totalQty = parseInt(s.rarity) || 999;
+                const stockLeft = s.stockLeft !== undefined ? s.stockLeft : totalQty;
+                const isSoldOut = s.soldOut === true;
+                
+                let rarityLabel = "Common"; let rarityColor = "bg-slate-800 text-slate-400 border-slate-700";
+                if (totalQty === 1) { rarityLabel = "👑 Legendary"; rarityColor = "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse"; }
+                else if (totalQty === 2) { rarityLabel = "🔥 Epic"; rarityColor = "bg-purple-500/10 text-purple-400 border-purple-500/30"; }
+                else if (totalQty === 3) { rarityLabel = "✨ Rare"; rarityColor = "bg-blue-500/10 text-blue-400 border-blue-500/30"; }
 
-                if (s.owned) {
-                    const isCurrentlyEquipped = playerData.playerProfile && 
-                        playerData.playerProfile.activeSpriteId && 
-                        playerData.playerProfile.activeSpriteId.toString().trim() === itemSpriteId;
-
-                    if (isCurrentlyEquipped) {
-                        actionButtonHtml = `
-                            <button class="w-full mt-auto bg-emerald-600/20 text-emerald-400 text-xs font-black py-2.5 rounded-xl border border-emerald-500/30 cursor-default flex items-center justify-center gap-1" disabled>
-                                ✓ Equipped
-                            </button>
-                        `;
-                    } else {
-                        actionButtonHtml = `
-                            <button onclick="executeAvatarProfileEquip('${itemSpriteId}')" class="w-full mt-auto bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-black py-2.5 rounded-xl transition border border-slate-700/60 cursor-pointer shadow-sm hover:text-white">
-                                Equip Sprite
-                            </button>
-                        `;
-                    }
-                } else {
-                    const userStars = parseInt(playerData.playerProfile?.totalStars || 0);
-                    const canAfford = userStars >= spriteCost;
-
-                    if (canAfford) {
-                        actionButtonHtml = `
-                            <button onclick="executeSpriteStorePurchase('${itemSpriteId}')" class="w-full mt-auto bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2.5 rounded-xl transition shadow-md cursor-pointer border border-blue-500/40">
-                                Buy for ★ ${spriteCost}
-                            </button>
-                        `;
-                    } else {
-                        actionButtonHtml = `
-                            <button class="w-full mt-auto bg-slate-950 text-slate-600 text-xs font-black py-2.5 rounded-xl border border-slate-900 cursor-not-allowed" disabled>
-                                Locked (★ ${spriteCost})
-                            </button>
-                        `;
-                    }
-                }
+                const customImageSrc = s.image_url || "";
+                const finalImgDisplay = customImageSrc.trim() !== "" ? customImageSrc.trim() : `https://api.dicebear.com/7.x/bottts/svg?seed=${s.id || 'fallback'}`;
+                const stockPercentage = Math.max(0, Math.min(100, (stockLeft / totalQty) * 100));
 
                 return `
-                    <div class="bg-slate-900/40 border ${s.owned ? 'border-slate-800' : 'border-slate-900'} rounded-2xl p-4 flex flex-col items-center text-center backdrop-blur-sm hover:border-slate-700/50 transition duration-200 group">
-                        <div class="relative w-20 h-20 bg-slate-950 rounded-xl border border-slate-800 p-2 mb-3 flex items-center justify-center group-hover:scale-105 transition duration-200 shadow-inner">
-                            <img src="${resolveSpriteImageUrl(itemSpriteId)}" class="w-full h-full object-contain" alt="Store Item">
-                            ${s.owned ? '<span class="absolute -top-1.5 -right-1.5 bg-slate-800 text-slate-400 text-[9px] font-black px-1.5 py-0.5 rounded-md border border-slate-700 uppercase tracking-wider shadow-sm">Owned</span>' : ''}
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col items-center text-center shadow-md relative overflow-hidden ${s.owned ? 'border-emerald-500/30 bg-emerald-950/5' : ''}">
+                        <span class="absolute top-2.5 right-2.5 text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-md border ${rarityColor}">${rarityLabel}</span>
+                        <img src="${finalImgDisplay}" class="w-20 h-20 bg-slate-950 rounded-xl p-1.5 border border-slate-800 mb-2 mt-3 object-contain">
+                        <div class="space-y-0.5">
+                            <p class="font-extrabold text-white text-sm uppercase tracking-wide leading-tight">${spriteName}</p>
+                            <p class="text-[10px] font-mono text-slate-500 font-bold uppercase tracking-widest">${s.id || 'No ID'}</p>
                         </div>
-                        
-                        <div class="mb-4 w-full">
-                            <h3 class="text-xs font-black text-slate-200 tracking-wide truncate max-w-full group-hover:text-slate-100">
-                                ${s.sprite_name || s.name || 'Unnamed Item'}
-                            </h3>
-                            <p class="text-[10px] text-slate-500 font-mono mt-0.5 truncate max-w-full">${itemSpriteId.substring(0, 18)}</p>
+                        <div class="w-full mt-3 px-1">
+                            <div class="flex justify-between items-center text-[9px] font-bold text-slate-400 mb-1">
+                                <span>Stock Left</span>
+                                <span class="${stockLeft === 0 ? 'text-rose-400 font-black' : 'text-slate-300'}">${stockLeft} / ${totalQty}</span>
+                            </div>
+                            <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800/60">
+                                <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${stockPercentage}%"></div>
+                            </div>
                         </div>
-
-                        ${actionButtonHtml}
+                        <div class="w-full mt-4">
+                            ${s.owned ? 
+                                `<button onclick="executeAvatarProfileEquip('${s.id}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold py-2 rounded-xl transition border border-slate-700 cursor-pointer">Equip Avatar</button>` :
+                                isSoldOut ? 
+                                `<button disabled class="w-full bg-slate-950 text-slate-600 text-xs font-bold py-2 rounded-xl border border-slate-900 cursor-not-allowed">Sold Out</button>` :
+                                `<button onclick="executeSpriteStorePurchase('${s.id}')" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-black py-2 rounded-xl transition shadow-md shadow-blue-600/10 cursor-pointer">🛒 Buy (${spriteCost} ★)</button>`
+                            }
+                        </div>
                     </div>
                 `;
             }).join('');
         }
 
         async function executeSpriteStorePurchase(spriteId) {
-            if (!playerData.storeInventory) return;
-            const purchasedSprite = playerData.storeInventory.find(s => s.id.toString().trim() === spriteId.toString().trim());
-            const spriteCost = purchasedSprite ? (parseInt(purchasedSprite.cost) || 0) : 0;
-            const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "Custom Sprite") : "Custom Sprite";
+            // 1. Find the target sprite in the local catalog to check its cost
+            const purchasedSprite = playerData.storeSprites.find(s => s.id.toString().trim() === spriteId.toString().trim());
+            const spriteCost = purchasedSprite ? (parseInt(purchasedSprite.cost_in_stars) || parseInt(purchasedSprite.cost) || 0) : 0;
+            const spriteName = purchasedSprite ? (purchasedSprite.sprite_name || purchasedSprite.name || "New Avatar") : "New Avatar";
 
+            // 2. Budget Guard: Prevent players from buying things they can't afford
             const currentStars = playerData.playerProfile ? (parseInt(playerData.playerProfile.totalStars) || 0) : 0;
             if (currentStars < spriteCost) {
                 alert(`❌ Insufficient Stars! "${spriteName}" costs ${spriteCost} ★, but you only have ${currentStars} ★.`);
-                return;
+                return; // Halt execution immediately!
             }
 
             try {
@@ -1271,7 +1295,34 @@
                 const res = await response.json();
                 
                 if (res.success) {
+                    // Display premium success message alert tray
                     alert(`🎉 Congrats! You successfully unlocked "${spriteName}"!`);
+                    
+                    // Local state mutation: instantly update ownership flag so it reflects without page reload
+                    playerData.storeSprites = playerData.storeSprites.map(s => {
+                        if (s.id.toString().trim() === spriteId.toString().trim()) {
+                            return { ...s, owned: true, stockLeft: s.stockLeft !== undefined ? Math.max(0, s.stockLeft - 1) : s.stockLeft };
+                        }
+                        return s;
+                    });
+
+                    // Add to your profile's owned inventory array list so it's instantly available for trading/equipping
+                    if (playerData.playerProfile && playerData.playerProfile.ownedSprites) {
+                        if (!playerData.playerProfile.ownedSprites.some(item => item.id === spriteId)) {
+                            playerData.playerProfile.ownedSprites.push({ id: spriteId, name: spriteName });
+                        }
+                    }
+
+                    // Deduct cost locally to instantly sync the top wallet star display bar
+                    if (playerData.playerProfile) {
+                        playerData.playerProfile.totalStars = Math.max(0, currentStars - spriteCost);
+                    }
+
+                    // Force immediate UI re-renders across headers and stores
+                    renderApplicationDashboardLayout();
+                    renderStoreInventoryLayout();
+                    
+                    // Background sync with the sheet database to confirm everything matches up perfectly
                     fetchSynchronizedDataEngine();
                 } else {
                     alert(res.message || "Purchase processing error.");
@@ -1285,65 +1336,52 @@
             try {
                 const response = await fetch(`${API_URL}?action=equipSprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
                 const res = await response.json();
+                
                 if (res.success) {
                     alert("✨ Avatar equipped successfully!");
-                    
-                    // Synchronize local states instantly so views re-render properly
+
+                    // 1. Instantly update your local player profile state
                     if (playerData.playerProfile) {
                         playerData.playerProfile.activeSpriteId = spriteId;
                     }
-                    
+
+                    // 2. Instantly update your identity row inside the local leaderboard list
                     if (playerData.leaderboard) {
-                        playerData.leaderboard = playerData.leaderboard.map(p => {
-                            if (p.id.toString().trim() === currentAuthId.toString().trim()) {
-                                return { ...p, activeSpriteId: spriteId };
+                        playerData.leaderboard = playerData.leaderboard.map(player => {
+                            if (player.id.toString().trim() === currentAuthId.toString().trim()) {
+                                return { ...player, activeSpriteId: spriteId };
                             }
-                            return p;
+                            return player;
                         });
                     }
-                    
-                    // Explicitly draw layouts down to the active views 
+
+                    // 3. Force immediate UI paint updates across the app viewport
                     renderApplicationDashboardLayout();
+                    if (currentTrainingCategory === 'gameboard' && activeSubTab === 'standings') {
+                        renderTeamLeaderboardLayout();
+                    }
                     
-                    // Handle asynchronous backend catch-up in background
+                    // 4. Run background sync to double check with server integrity
                     fetchSynchronizedDataEngine();
                 } else {
                     alert(res.message || "Equip processing error.");
                 }
-            } catch (err) {
-                console.error("Store transaction fault handler:", err);
+            } catch (err) { 
+                console.error("Avatar equipment execution fault:", err); 
             }
         }
 
         function openQuizModal(lessonId) {
             activeQuizLessonTarget = lessonId;
             activeQuizQuestionsCache = playerData.tests.filter(t => t.lesson_id.toString().trim() === lessonId.toString().trim());
-            
-            const matchingTestData = playerData.tests.find(t => t.lesson_id === lessonId);
-            activeQuizAlreadyCompleted = matchingTestData ? matchingTestData.completed === true : false;
-
             const titleEl = document.getElementById('quiz-modal-title');
             const bodyEl = document.getElementById('quiz-modal-body');
-            const alertEl = document.getElementById('quiz-completion-alert');
-            const submitBtn = document.getElementById('quiz-submit-action-btn');
-            
             const correspondingLesson = playerData.lessons.find(l => l.id === lessonId);
             titleEl.innerText = correspondingLesson ? `Exam: ${correspondingLesson.title}` : "Playoffs";
             
-            if (activeQuizAlreadyCompleted) {
-                alertEl.innerText = "You have already completed this test.";
-                alertEl.classList.remove('hidden');
-                submitBtn.innerText = "Submit Review";
-            } else {
-                alertEl.innerText = "";
-                alertEl.classList.add('hidden');
-                submitBtn.innerText = "Submit Answers";
-            }
-
             if (activeQuizQuestionsCache.length === 0) {
                 bodyEl.innerHTML = `<p class="text-slate-500 italic text-center p-4">No exam sheet configurations registered.</p>`;
-                document.getElementById('quiz-modal').classList.remove('hidden'); 
-                return;
+                document.getElementById('quiz-modal').classList.remove('hidden'); return;
             }
 
             bodyEl.innerHTML = activeQuizQuestionsCache.map((q, idx) => {
@@ -1381,12 +1419,6 @@
             if (missingAnswerGuard) { alert("Please answer all questions before submitting."); return; }
             const perfectScoreEarned = correctCount === total; const scorePercent = Math.round((correctCount / total) * 100);
 
-            if (activeQuizAlreadyCompleted) {
-                alert(`Review Complete! You scored ${scorePercent}% (${correctCount}/${total}) on your historical pass run.`);
-                closeQuizModal();
-                return;
-            }
-
             try {
                 const response = await fetch(`${API_URL}?action=submitTestResult&playerId=${currentAuthId}&lessonId=${activeQuizLessonTarget}&score=${scorePercent}&passed=${perfectScoreEarned}`, { method: 'POST' });
                 const res = await response.json();
@@ -1402,9 +1434,7 @@
             currentTrainingCategory = targetTab;
             ['strategy', 'workout', 'skills', 'gameboard', 'store'].forEach(tab => {
                 const el = document.getElementById(`nav-${tab}`);
-                if (el) {
-                    el.className = tab === targetTab ? "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer" : "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer";
-                }
+                el.className = tab === targetTab ? "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-blue-500 text-blue-400 transition cursor-pointer" : "flex-1 text-center py-3 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition cursor-pointer";
             });
 
             const lessonsList = document.getElementById('lessons-list');
@@ -1442,6 +1472,38 @@
                     errorEl.innerText = res.message; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
                 }
             } catch (err) { errorEl.innerText = "Network connection failed."; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials"; }
+        }
+
+        function resolveSpriteImageUrl(spriteId) {
+            if (!spriteId) return '';
+            const cleanId = spriteId.toString().trim();
+            
+            // Create a new variable to hold our target image URL context
+            let active_sprite_url = '';
+
+            // 1. If it's already a direct URL string from the updated backend, assign it immediately
+            if (cleanId.startsWith('http://') || cleanId.startsWith('https://')) {
+                active_sprite_url = cleanId;
+            } 
+            // 2. Otherwise, look up the raw ID in the synchronized storeSprites data array
+            else if (playerData && playerData.storeSprites) {
+                const matched = playerData.storeSprites.find(s => s.id.toString().trim() === cleanId);
+                if (matched) {
+                    // Checks for 'image_url' or common variant column references
+                    const foundUrl = matched.image_url || matched.image || matched.sprite_url;
+                    if (foundUrl && foundUrl.toString().trim() !== "") {
+                        active_sprite_url = foundUrl.toString().trim();
+                    }
+                }
+            }
+
+            // 3. Fallback to Dicebear avatar seed if no active URL could be resolved
+            if (!active_sprite_url) {
+                active_sprite_url = `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanId}`;
+            }
+
+            // Return the resolved variable instead of standard conditional flows
+            return active_sprite_url;
         }
 
         function logSystemOut() {
