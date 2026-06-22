@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coaches Board Architect</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-[#0b1329] text-slate-100 font-sans p-6 min-h-screen flex flex-col">
+
+    <header class="border-b border-slate-800 pb-4 mb-6 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-black uppercase tracking-tight text-white">Tactics Sandbox Toolbox</h1>
+            <p class="text-xs text-slate-400">Design automated play layouts, assign hotzones, and deploy interactive lessons instantly.</p>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 xl:grid-cols-4 gap-6 flex-1 items-start">
+        
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <h2 class="text-sm font-extrabold uppercase tracking-wider text-amber-400">1. Level Information</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Lesson Title</label>
+                    <input type="text" id="lvl-title" placeholder="e.g. 1-2-2 Forecheck Pressure" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Rink Background Link Image</label>
+                    <input type="text" id="lvl-bg" placeholder="https://example.com/rink-blueprint.png" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" onchange="updateCanvasBg()">
+                </div>
+            </div>
+
+            <h2 class="text-sm font-extrabold uppercase tracking-wider text-blue-400 pt-2">2. Toolset Element Library</h2>
+            <p class="text-[10px] text-slate-400 leading-relaxed">Click a button below to generate a customizable object token directly in the active center of your design grid view canvas:</p>
+            <div id="toolbox" class="grid grid-cols-2 gap-2">
+                <button onclick="spawnElement('F1')" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 py-2 rounded-xl text-xs font-bold font-mono">F1</button>
+                <button onclick="spawnElement('F2')" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 py-2 rounded-xl text-xs font-bold font-mono">F2</button>
+                <button onclick="spawnElement('F3')" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 py-2 rounded-xl text-xs font-bold font-mono">F3</button>
+                <button onclick="spawnElement('D1')" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 py-2 rounded-xl text-xs font-bold font-mono">D1</button>
+                <button onclick="spawnElement('D2')" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 py-2 rounded-xl text-xs font-bold font-mono">D2</button>
+                <button onclick="spawnElement('D3')" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 py-2 rounded-xl text-xs font-bold font-mono">D3</button>
+                <button onclick="spawnElement('puck')" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 py-2 rounded-xl text-xs font-bold font-mono">Puck</button>
+                <button onclick="spawnElement('net')" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 py-2 rounded-xl text-xs font-bold font-mono">Net</button>
+                <button onclick="spawnElement('correct')" class="bg-emerald-950/40 text-emerald-400 border border-emerald-900/40 py-2 rounded-xl text-xs font-black font-mono">CORRECT ZONE</button>
+            </div>
+
+            <div class="border-t border-slate-800/80 my-2 pt-4">
+                <button onclick="publishConstructedLevel()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold text-xs py-3 rounded-xl tracking-wider uppercase shadow-lg text-white">Deploy Play To App</button>
+            </div>
+        </div>
+
+        <div class="xl:col-span-3 flex flex-col items-center">
+            <div class="w-full bg-slate-950 p-3 rounded-t-2xl border border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                <span>Canvas Ratio Sandbox (1000 x 600 Coordinates Model)</span>
+                <span id="selected-metadata" class="text-amber-400 font-bold font-mono">No element selected</span>
+            </div>
+            <div class="relative w-full bg-slate-900 border-x border-b border-slate-800 rounded-b-2xl overflow-hidden aspect-[1000/600]">
+                <canvas id="builderCanvas" width="1000" height="600" class="w-full h-full bg-slate-950"></canvas>
+            </div>
+            <div class="w-full flex gap-3 mt-3">
+                <button onclick="togglePlayerStatus()" class="flex-1 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 text-xs font-bold py-2.5 rounded-xl">Toggle as Controlled Character Token</button>
+                <button onclick="removeSelectedElement()" class="bg-rose-950/40 hover:bg-rose-950/60 text-rose-400 border border-rose-900/40 text-xs font-bold px-6 py-2.5 rounded-xl">Delete Selected Node</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec";
+        const canvas = document.getElementById('builderCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let objectsList = [];
+        let selectedNode = null;
+        let isDragging = false;
+
+        function updateCanvasBg() {
+            canvas.style.backgroundImage = `url('${document.getElementById('lvl-bg').value}')`;
+            canvas.style.backgroundSize = "cover";
+        }
+
+        function spawnElement(name) {
+            const newNode = {
+                id: 'obj_' + new Date().getTime() + Math.random().toString(36).substr(2, 4),
+                name: name,
+                x: 500,
+                y: 300,
+                isPlayer: false
+            };
+            objectsList.push(newNode);
+            selectedNode = newNode;
+            updateInspectorDisplay();
+            drawSandbox();
+        }
+
+        function drawSandbox() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            objectsList.forEach(obj => {
+                ctx.save();
+                
+                // Differentiate styles based on element classification
+                if (obj.name === 'correct') {
+                    ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+                    ctx.strokeStyle = '#10b981';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(obj.x, obj.y, 40, 0, Math.PI*2);
+                    ctx.fill(); ctx.stroke();
+                } else {
+                    ctx.fillStyle = obj.isPlayer ? '#2563eb' : '#334155';
+                    ctx.beginPath(); ctx.arc(obj.x, obj.y, 25, 0, Math.PI*2);
+                    ctx.fill();
+                }
+
+                if (selectedNode && selectedNode.id === obj.id) {
+                    ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 4;
+                    ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.name === 'correct' ? 44 : 29, 0, Math.PI*2);
+                    ctx.stroke();
+                }
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(obj.name === 'correct' ? 'TARGET' : obj.name, obj.x, obj.y);
+                ctx.restore();
+            });
+        }
+
+        function getCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+                y: ((e.clientY - rect.top) / rect.height) * canvas.height
+            };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const pos = getCoordinates(e);
+            selectedNode = objectsList.find(obj => Math.hypot(obj.x - pos.x, obj.y - pos.y) < 35);
+            if (selectedNode) {
+                isDragging = true;
+                updateInspectorDisplay();
+                drawSandbox();
+            } else {
+                selectedNode = null;
+                updateInspectorDisplay();
+                drawSandbox();
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging || !selectedNode) return;
+            const pos = getCoordinates(e);
+            selectedNode.x = Math.round(pos.x);
+            selectedNode.y = Math.round(pos.y);
+            updateInspectorDisplay();
+            drawSandbox();
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        function updateInspectorDisplay() {
+            const meta = document.getElementById('selected-metadata');
+            if (selectedNode) {
+                meta.innerText = `Selected: ${selectedNode.name} (${selectedNode.x}, ${selectedNode.y}) ${selectedNode.isPlayer ? '[PLAYER]' : ''}`;
+            } else {
+                meta.innerText = "No element selected";
+            }
+        }
+
+        function togglePlayerStatus() {
+            if (!selectedNode || selectedNode.name === 'correct') return;
+            // Ensure there is only one active player element across the level canvas
+            objectsList.forEach(o => o.isPlayer = false);
+            selectedNode.isPlayer = true;
+            updateInspectorDisplay();
+            drawSandbox();
+        }
+
+        function removeSelectedElement() {
+            if (!selectedNode) return;
+            objectsList = objectsList.filter(o => o.id !== selectedNode.id);
+            selectedNode = null;
+            updateInspectorDisplay();
+            drawSandbox();
+        }
+
+        async function publishConstructedLevel() {
+            const title = document.getElementById('lvl-title').value;
+            const bgUrl = document.getElementById('lvl-bg').value;
+            
+            if (!title || !bgUrl) return alert("Complete the Level Title and Background fields before publishing.");
+            if (!objectsList.some(o => o.isPlayer)) return alert("Set one item on the field as the User's Controllable Character Token.");
+            if (!objectsList.some(o => o.name === 'correct')) return alert("Establish a hidden Correct Zone on the map layout.");
+
+            const payload = { title: title, background_url: bgUrl, objects: objectsList };
+            
+            try {
+                const response = await fetch(`${API_URL}?action=saveLevel`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                const res = await response.json();
+                if (res.success) {
+                    alert(res.message);
+                    objectsList = []; selectedNode = null;
+                    document.getElementById('lvl-title').value = "";
+                    drawSandbox();
+                }
+            } catch (err) { alert("Deployment connection matrix failed."); }
+        }
+    </script>
+</body>
+</html>
