@@ -302,22 +302,6 @@
         }
 
         function renderApplicationDashboardLayout() {
-<<<<<<< HEAD
-                    const p = playerData.playerProfile;
-                    document.getElementById('user-name-display').innerText = p.name;
-                    document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
-                    document.getElementById('user-stars-display').innerText = parseInt(p.totalStars).toLocaleString();
-                    document.getElementById('user-avatar-display').src = `https://api.dicebear.com/7.x/bottts/svg?seed=${p.activeSpriteId}`;
-                    
-                    if (currentTrainingCategory === 'gameboard') {
-                        if (activeSubTab === 'standings') renderTeamLeaderboardLayout();
-                        else if (activeSubTab === 'lineup') renderStartingLineupLayout();
-                        else renderLockerRoomMarketLayout();
-                    } else {
-                        renderLessonsList();
-                    }
-                }
-=======
             const p = playerData.playerProfile;
             document.getElementById('user-name-display').innerText = p.name;
             document.getElementById('user-jersey-display').innerText = `Jersey #${p.jerseyNumber}`;
@@ -344,7 +328,6 @@
                 renderLessonsList();
             }
         }
->>>>>>> New-feature
 
                 function renderLessonsList() {
             const container = document.getElementById('lessons-list');
@@ -1523,6 +1506,7 @@
             document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
             fetchSynchronizedDataEngine();
         }
+        
     </script>
 </body>
 </html>
