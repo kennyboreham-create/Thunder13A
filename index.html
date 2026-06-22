@@ -1456,46 +1456,65 @@
 
         // --- CHOOSE AND EQUIP AN UNLOCKED SPRITE ---
         async function equipSprite(spriteId) {
-            // Force capture the window event if it wasn't passed implicitly
-            const currentEvent = window.event || event;
-            const btn = currentEvent ? currentEvent.target : document.querySelector(`button[onclick*="'${spriteId}'"]`);
-            const originalText = btn ? btn.innerText : "Equip Avatar";
-
+            console.log("equipSprite triggered for ID:", spriteId);
+            let btn = null;
+            
             try {
-                // 1. Immediately visually change the button to show it registered the click
-                if (btn) {
-                    btn.innerText = "Equipping...";
-                    btn.disabled = true;
+                // 1. Try finding the button via the global window event first
+                if (window.event && window.event.target) {
+                    btn = window.event.target.closest('button');
+                }
+                
+                // 2. Fallback: Search all buttons for the matching spriteId attribute
+                if (!btn) {
+                    btn = Array.from(document.querySelectorAll('button')).find(b => {
+                        const onclickAttr = b.getAttribute('onclick') || '';
+                        return onclickAttr.includes(spriteId);
+                    });
                 }
 
-                // Send the payload to your Google Apps Script backend deployment
+                if (btn) {
+                    console.log("Button found successfully:", btn);
+                    btn.innerText = "Equipping...";
+                    btn.disabled = true;
+                } else {
+                    console.warn("Could not find the button element in the DOM for sprite:", spriteId);
+                }
+
+                // Send payload to Google Apps Script
+                console.log("Sending fetch request to:", API_URL);
                 const response = await fetch(`${API_URL}?action=equipSprite&playerId=${currentAuthId}&spriteId=${spriteId}`, {
                     method: "POST"
                 });
                 const res = await response.json();
+                console.log("Server response received:", res);
 
                 if (res.success) {
-                    // 2. Update the local client state cache
+                    // Update local state cache
                     if (!playerData.playerProfile) playerData.playerProfile = {};
                     playerData.playerProfile.activeSpriteId = spriteId;
                     
-                    // 3. Re-trigger the application dashboard header to change your profile picture instantly
-                    renderApplicationDashboardLayout();
-                    
-                    // 4. Instantly refresh the store grid to switch the button label to "✓ Equipped"
-                    renderLockerRoomMarketLayout();
+                    // Refresh layouts
+                    if (typeof renderApplicationDashboardLayout === 'function') {
+                        renderApplicationDashboardLayout();
+                    }
+                    if (typeof renderLockerRoomMarketLayout === 'function') {
+                        renderLockerRoomMarketLayout();
+                    } else {
+                        console.error("renderLockerRoomMarketLayout function is missing!");
+                    }
                 } else {
                     alert("Failed to equip sprite: " + (res.message || "Unknown error"));
                     if (btn) {
-                        btn.innerText = originalText;
+                        btn.innerText = "Equip Avatar";
                         btn.disabled = false;
                     }
                 }
             } catch (err) {
-                console.error("Error updating player active sprite configuration:", err);
-                alert("Network timeout. Check connectivity and try again.");
+                console.error("Critical error in equipSprite execution:", err);
+                alert("Network error. Check console logs for details.");
                 if (btn) {
-                    btn.innerText = originalText;
+                    btn.innerText = "Equip Avatar";
                     btn.disabled = false;
                 }
             }
