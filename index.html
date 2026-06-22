@@ -38,7 +38,8 @@
         let activeSlidesBaseUrl = '';
         let activeSlideIndex = 1;
         let activeSlideTotal = 0;
-       
+        // The function outputs the URL directly to whatever calls it
+        const playerImageUrl = resolveSpriteImageUrl(player.activeSpriteId);
     </script>
 
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
@@ -1504,8 +1505,7 @@
             // Return the resolved variable instead of standard conditional flows
             return active_sprite_url;
         }
-         // The function outputs the URL directly to whatever calls it
-        const playerImageUrl = resolveSpriteImageUrl(player.activeSpriteId);
+        
         function logSystemOut() {
             localStorage.removeItem('hockey_player_id'); currentAuthId = ""; playerData = {};
             document.getElementById('auth-player-id').value = ""; document.getElementById('auth-password').value = "";
