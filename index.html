@@ -330,86 +330,95 @@
         }
 
                 function renderLessonsList() {
-            const listContainer = document.getElementById('lessons-list-container') || document.getElementById('lessons-container');
-            if (!listContainer) return;
-
-            // Clear previous elements
-            listContainer.innerHTML = "";
-
-            // Safely verify if lessons exist in the player data object
-            if (!playerData || !playerData.lessons || playerData.lessons.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="text-center py-8 text-slate-500 text-sm">
-                        No tactical lessons or reps available right now.
-                    </div>
-                `;
+            const container = document.getElementById('lessons-list');
+            if (!playerData.lessons) return;
+            
+            if (currentTrainingCategory.toLowerCase() === 'workout') {
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderGranularWorkoutSection(container);
                 return;
             }
 
-            // Capture the current filter status state (e.g., 'all', 'todo', 'completed')
-            const filterElement = document.getElementById('lesson-filter-select');
-            const filterValue = filterElement ? filterElement.value : 'all';
+            if (currentTrainingCategory.toLowerCase() === 'skills') {
+                document.getElementById('strategy-filter-bar').classList.add('hidden');
+                renderGranularSkillsSection(container);
+                return;
+            }
 
+            document.getElementById('strategy-filter-bar').classList.remove('hidden');
+            const filterValue = document.getElementById('strategy-status-filter').value; 
+            let filteredLessons = playerData.lessons.filter(l => l.category && l.category.toString().trim().toLowerCase() === 'strategy');
+            
+            if (filteredLessons.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 italic p-4 text-center bg-slate-800/50 rounded-xl border border-slate-800">No strategy content loaded yet.</p>`;
+                return;
+            }
+
+            filteredLessons.sort((a, b) => a.completed - b.completed);
             let htmlOutput = "";
 
-            playerData.lessons.forEach(l => {
+            filteredLessons.forEach(l => {
                 const videoUrl = l.video_url ? l.video_url.trim() : "";
                 const isLessonComplete = l.completed;
-                const starReward = l.star_reward || 2;
 
-                // Apply tab filtering rules matching the workspace configuration
                 if (filterValue === 'todo' && isLessonComplete) return;
                 if (filterValue === 'completed' && !isLessonComplete) return;
 
-                // Verify if this is an interactive drill/level (No video URL + type is 'REPS')
-                const isInteractiveGame = (videoUrl === "" && l.type && l.type.toString().trim().toUpperCase() === "REPS");
-
                 htmlOutput += `
-                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm transition hover:border-slate-700/60 ${isLessonComplete ? 'opacity-60' : ''}">
-                        <div class="space-y-1"> 
-                            <div class="flex items-center gap-2 flex-wrap">
-                                ${isInteractiveGame ? 
-                                    `<span class="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded border border-blue-500/20 font-black uppercase tracking-wider">Board Reps</span>` : 
-                                    `<span class="bg-purple-500/10 text-purple-400 text-[10px] px-2 py-0.5 rounded border border-purple-500/20 font-black uppercase tracking-wider">Video</span>`
-                                }
-                                <p class="font-bold tracking-tight ${isLessonComplete ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
-                            </div>
-                            <div class="flex items-center gap-1.5 text-xs text-amber-400 font-bold">
-                                <span>⭐</span>
-                                <span>+${starReward} Stars</span>
-                            </div>
+                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-xl flex justify-between items-center shadow-sm ${isLessonComplete ? 'opacity-60' : ''}">
+                        <div> 
+                            <p class="font-bold ${isLessonComplete ? 'text-slate-400 line-through' : 'text-slate-100'}">${l.title}</p>
+                            <p class="text-xs text-yellow-500 font-medium">+${l.star_reward} Stars</p>
                         </div>
-                        
-                        <div class="flex items-center gap-3 shrink-0">
+                        <div class="flex items-center gap-3">
                         ${isLessonComplete ? 
                             `
-                            <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-xl font-bold border border-emerald-500/20 uppercase tracking-wider">Completed</span>
-                            ${videoUrl !== "" || isInteractiveGame ? 
-                                `<button onclick="openLessonModal('${l.id}')" class="text-blue-400 hover:text-blue-300 text-xs font-bold uppercase tracking-wider transition cursor-pointer">Review</button>` : 
-                                ''
-                            }
+                            <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Completed</span>
+                            ${videoUrl !== "" ? `<button onclick="openLessonModal('${l.id}')" class="text-blue-400 hover:text-blue-300 text-xs underline font-semibold cursor-pointer">Watch Again</button>` : ''}
                             ` : 
-                            `
-                            <button onclick="openLessonModal('${l.id}')" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-xl transition shadow-lg shadow-blue-600/10 active:scale-95 cursor-pointer">
-                                ${isInteractiveGame ? 'Play Reps ➔' : 'Start Lesson ➔'}
-                            </button>
-                            `
+                            `<button onclick="openLessonModal('${l.id}')" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition cursor-pointer">${videoUrl !== "" ? 'Start Lesson' : 'Open Lesson'}</button>`
                         }
                         </div>
                     </div>
                 `;
             });
 
-            // Check if filtering left the view empty
-            if (htmlOutput === "") {
-                listContainer.innerHTML = `
-                    <div class="text-center py-8 text-slate-500 text-sm">
-                        No exercises match your filter view criteria.
-                    </div>
-                `;
-            } else {
-                listContainer.innerHTML = `<div class="space-y-3">${htmlOutput}</div>`;
+            if (playerData.tests) {
+                const uniqueLessonIdsInTests = [...new Set(playerData.tests.map(t => t.lesson_id))];
+                uniqueLessonIdsInTests.forEach(lId => {
+                    const correspondingLesson = playerData.lessons.find(l => l.id === lId);
+                    const matchingTestData = playerData.tests.find(t => t.lesson_id === lId);
+                    const isTestPassed = matchingTestData ? matchingTestData.completed === true : false;
+                    
+                    // Prioritize test title property, fallback to matching lesson name, fallback to hardcoded default text
+                    const labelText = (matchingTestData && matchingTestData.title) ? matchingTestData.title : (correspondingLesson ? `${correspondingLesson.title} Test` : "Tactics Quiz Assessment");
+
+                    if (filterValue === 'todo' && isTestPassed) return;
+                    if (filterValue === 'completed' && !isTestPassed) return;
+
+                    htmlOutput += `
+                        <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex justify-between items-center shadow-md mt-3 hover:border-indigo-500/40 transition ${isTestPassed ? 'opacity-60' : ''}">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-indigo-500/20">Exam Assess</span>
+                                    <p class="font-bold ${isTestPassed ? 'text-slate-400 line-through' : 'text-slate-100'}">${labelText}</p>
+                                </div>
+                                <p class="text-xs text-yellow-500 font-medium mt-0.5">+10 Stars <span class="text-slate-400">(Requires 100%)</span></p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                            ${isTestPassed ? 
+                                `
+                                <span class="bg-emerald-500/10 text-emerald-400 text-xs px-3 py-1.5 rounded-full font-bold border border-emerald-500/20">Passed ✓</span>
+                                <button onclick="openQuizModal('${lId}')" class="text-indigo-400 hover:text-indigo-300 text-xs underline font-semibold">Review Exam</button>
+                                ` : 
+                                `<button onclick="openQuizModal('${lId}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow-sm">Take Test</button>`
+                            }
+                            </div>
+                        </div>
+                    `;
+                });
             }
+            container.innerHTML = htmlOutput === "" ? `<p class="text-slate-500 italic p-4 text-center bg-slate-900/40 rounded-xl border border-slate-800">No matching strategy items found.</p>` : htmlOutput;
         }
 
         function renderGranularWorkoutSection(container) {
@@ -757,159 +766,69 @@
         }
 
         function openLessonModal(lessonId) {
-            // Look up the targeted lesson from the globally synced player dataset
             const lesson = playerData.lessons.find(l => l.id.toString().trim() === lessonId.toString().trim());
             if (!lesson) return;
 
-            // Track active modal properties globally
-            activeLessonId = lesson.id;
-            activeLessonAlreadyCompleted = lesson.completed;
-            activeLessonStarReward = lesson.star_reward || 2;
-            lessonCompletionSubmitted = false;
+            closeLessonModal(false);
 
-            // Set modal headers and reward banners
-            document.getElementById('lesson-modal-title').innerText = lesson.title;
-            document.getElementById('lesson-modal-reward').innerText = `+${activeLessonStarReward} Stars`;
-            
-            const contentContainer = document.getElementById('lesson-modal-content');
-            const videoUrl = lesson.video_url ? lesson.video_url.trim() : "";
+            activeLessonId = lessonId;
+            activeLessonAlreadyCompleted = lesson.completed === true;
+            activeLessonStarReward = parseInt(lesson.star_reward) || 2;
+            lessonCompletionSubmitted = activeLessonAlreadyCompleted;
 
-            // Safely clear any previously running background timers or content scopes
-            if (lessonProgressTimer) clearInterval(lessonProgressTimer);
-            contentContainer.innerHTML = "";
+            document.getElementById('lesson-modal-title').innerText = lesson.title || 'Strategy Lesson';
+            document.getElementById('lesson-modal-reward').innerText = activeLessonAlreadyCompleted
+                ? 'Already earned +' + activeLessonStarReward + ' Stars'
+                : '+' + activeLessonStarReward + ' Stars on completion';
 
-            // Reset progress interface components
-            const progressBar = document.getElementById('lesson-progress-bar');
-            const progressPercent = document.getElementById('lesson-progress-percent');
-            const progressLabel = document.getElementById('lesson-progress-label');
-            const actionBtn = document.getElementById('lesson-action-btn');
+            const msgEl = document.getElementById('lesson-completion-message');
+            msgEl.classList.add('hidden');
+            msgEl.innerText = '';
 
-            if (progressBar) progressBar.style.width = "0%";
-            if (progressPercent) progressPercent.innerText = "0%";
-            if (progressLabel) progressLabel.innerText = "Initializing training module...";
-            if (actionBtn) {
-                actionBtn.classList.add('hidden');
-                actionBtn.disabled = true;
+            const videoUrl = lesson.video_url ? lesson.video_url.trim() : '';
+            activeSlideTotal = parseInt(lesson.slide_count || lesson.total_slides || lesson.slides_count) || 0;
+            const media = parseLessonMedia(videoUrl);
+            if (media.type === 'slides') media.slideCount = activeSlideTotal;
+
+            if (activeLessonAlreadyCompleted) {
+                setLessonProgress(0);
+                document.getElementById('lesson-progress-label').innerText = 'Review Progress';
+            } else {
+                setLessonProgress(0);
+                document.getElementById('lesson-progress-label').innerText = 'Lesson Progress';
             }
 
-            // BRANCH A: IF IT IS AN INTERACTIVE CANVAS BOARD REPS SCENARIO
-            const isInteractiveGame = (videoUrl === "" && lesson.type && lesson.type.toString().trim().toUpperCase() === "REPS");
+            mountLessonMedia(media);
 
-            if (isInteractiveGame) {
-                activeLessonMediaType = "reps";
-                
-                // Hide standard milestone trackers since game.html triggers its own star payouts instantly
-                if (progressBar) progressBar.style.width = "100%";
-                if (progressPercent) progressPercent.innerText = "100%";
-                if (progressLabel) progressLabel.innerText = "Interactive Tactical Drill Board Active";
-                if (actionBtn) actionBtn.classList.add('hidden');
-
-                // Render the full absolute game frame matching your deployed query paths
-                contentContainer.innerHTML = `
-                    <iframe 
-                        src="https://kennyboreham-create.github.io/trainingboard/game.html?levelId=${encodeURIComponent(lesson.id)}&playerId=${encodeURIComponent(currentAuthId)}" 
-                        class="w-full h-full border-0 absolute inset-0 bg-slate-950 rounded-xl"
-                        allow="autoplay; encrypted-media">
-                    </iframe>
-                `;
-            } 
-            // BRANCH B: STANDARD VIDEO / SLIDE LESSON
-            else {
-                activeLessonMediaType = "video";
-                
-                if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
-                    let videoId = "";
-                    if (videoUrl.includes("v=")) {
-                        videoId = videoUrl.split("v=")[1].split("&")[0];
-                    } else if (videoUrl.includes("embed/")) {
-                        videoId = videoUrl.split("embed/")[1].split("?")[0];
-                    } else if (videoUrl.includes("youtu.be/")) {
-                        videoId = videoUrl.split("youtu.be/")[1].split("?")[0];
-                    }
-
-                    contentContainer.innerHTML = `
-                        <div id="youtube-player-placeholder" class="w-full h-full bg-black"></div>
-                    `;
-
-                    // Initialize YouTube Iframe Player API stream controls
-                    setTimeout(() => {
-                        new YT.Player('youtube-player-placeholder', {
-                            height: '100%',
-                            width: '100%',
-                            videoId: videoId,
-                            playerVars: { 'autoplay': 1, 'controls': 1, 'rel': 0, 'modestbranding': 1 },
-                            events: {
-                                'onReady': (event) => {
-                                    startLessonProgressTrackingTimer(event.target.getDuration() || 60);
-                                },
-                                'onStateChange': (event) => {
-                                    if (event.data === YT.PlayerState.ENDED) {
-                                        unlockLessonCompletionButton();
-                                    }
-                                }
-                            }
-                        });
-                    }, 100);
-
-                } else if (videoUrl.includes("docs.google.com/presentation")) {
-                    // Embed layout handler optimized for Google Slides presentations
-                    contentContainer.innerHTML = `
-                        <iframe 
-                            src="${videoUrl}" 
-                            class="w-full h-full border-0 absolute inset-0 bg-slate-900" 
-                            allowfullscreen="true" 
-                            mozallowfullscreen="true" 
-                            webkitallowfullscreen="true">
-                        </iframe>
-                    `;
-                    // For slides, use a fixed 45-second timeline timer
-                    startLessonProgressTrackingTimer(45);
-                } else {
-                    // General external source web links or fallback elements
-                    contentContainer.innerHTML = `
-                        <div class="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-slate-950 rounded-xl border border-slate-800">
-                            <p class="text-sm font-bold text-slate-300 mb-4">This specific asset requires opening in a raw browser window environment.</p>
-                            <a href="${videoUrl}" target="_blank" onclick="unlockLessonCompletionButton()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider px-6 py-3 rounded-xl transition">
-                                Launch Lesson Materials ➔
-                            </a>
-                        </div>
-                    `;
-                    startLessonProgressTrackingTimer(15);
-                }
+            if (!videoUrl && !activeLessonAlreadyCompleted) {
+                setLessonProgress(100);
+                onLessonMediaComplete();
             }
 
-            // Remove the hidden class to reveal the training screen view viewport container
             document.getElementById('lesson-modal').classList.remove('hidden');
         }
 
-        function closeLessonModal() {
-            // Hide the lesson modal viewport
-            const modal = document.getElementById('lesson-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-
-            // Capture the iframe/video container block
-            const contentContainer = document.getElementById('lesson-modal-content');
-            if (contentContainer) {
-                // Explicitly clearing the innerHTML terminates active iframes and audio streams instantly
-                contentContainer.innerHTML = ""; 
-            }
-            
-            // Clear any active background countdown progress tracking timers
+        function closeLessonModal(resetState = true) {
             if (lessonProgressTimer) {
                 clearInterval(lessonProgressTimer);
+                lessonProgressTimer = null;
             }
+            if (ytPlayer && typeof ytPlayer.destroy === 'function') {
+                ytPlayer.destroy();
+                ytPlayer = null;
+            }
+            window.removeEventListener('message', handleDrivePostMessage);
+            document.getElementById('lesson-modal-content').innerHTML = '';
+            document.getElementById('lesson-modal').classList.add('hidden');
 
-            // Reset tracking flags
-            activeLessonId = null;
-            activeLessonMediaType = "";
-            activeLessonAlreadyCompleted = false;
-            lessonCompletionSubmitted = false;
-
-            // Refresh the player's metrics, wallet balance, and leaderboard standings instantly
-            if (typeof fetchSynchronizedDataEngine === "function") {
-                fetchSynchronizedDataEngine();
+            if (resetState) {
+                activeLessonId = null;
+                activeLessonAlreadyCompleted = false;
+                activeLessonMediaType = null;
+                lessonCompletionSubmitted = false;
+                activeSlidesBaseUrl = '';
+                activeSlideIndex = 1;
+                activeSlideTotal = 0;
             }
         }
 
