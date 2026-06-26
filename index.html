@@ -919,23 +919,12 @@
             lessonCompletionSubmitted = true;
             
             try {
-                // Construct clean payload data
-                const payload = {
-                    action: "completeLesson",
-                    playerId: currentAuthId,
-                    lessonId: lessonId,
-                    starBonus: rewardAmount
-                };
-
-                // Pass variables in BOTH the URL query string and the body for foolproof routing
+                // Switching to GET ensures Google Apps Script routes it cleanly into e.parameter
                 const targetUrl = `${API_URL}?action=completeLesson&playerId=${encodeURIComponent(currentAuthId)}&lessonId=${encodeURIComponent(lessonId)}&starBonus=${rewardAmount}`;
 
                 const response = await fetch(targetUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8' // Keeps CORS happy with Apps Script
-                    },
-                    body: JSON.stringify(payload)
+                    method: 'GET', // Change from POST to GET to align with parameter mapping
+                    mode: 'cors'
                 });
 
                 const res = await response.json();
@@ -947,11 +936,10 @@
                         msgEl.classList.remove('hidden');
                         msgEl.className = "text-xs mt-2 font-semibold text-emerald-400 animate-pulse";
                     }
-                    // Instantly refresh balances on the dashboard layout
                     fetchSynchronizedDataEngine();
                 } else {
                     console.error("Progress save request issue:", res.message);
-                    lessonCompletionSubmitted = false; // Reset to allow retry if it failed
+                    lessonCompletionSubmitted = false; 
                 }
             } catch (err) {
                 console.error("Network communication execution failure:", err);
