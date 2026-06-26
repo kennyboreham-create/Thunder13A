@@ -919,11 +919,27 @@
             lessonCompletionSubmitted = true;
             
             try {
-                // Dispatches standard execution route query arguments to update progress sheets
-                const response = await fetch(`${API_URL}?action=completeLesson&playerId=${currentAuthId}&lessonId=${lessonId}&starBonus=${rewardAmount}`, {
-                    method: 'POST'
+                // Construct clean payload data
+                const payload = {
+                    action: "completeLesson",
+                    playerId: currentAuthId,
+                    lessonId: lessonId,
+                    starBonus: rewardAmount
+                };
+
+                // Pass variables in BOTH the URL query string and the body for foolproof routing
+                const targetUrl = `${API_URL}?action=completeLesson&playerId=${encodeURIComponent(currentAuthId)}&lessonId=${encodeURIComponent(lessonId)}&starBonus=${rewardAmount}`;
+
+                const response = await fetch(targetUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8' // Keeps CORS happy with Apps Script
+                    },
+                    body: JSON.stringify(payload)
                 });
+
                 const res = await response.json();
+                
                 if (res.success) {
                     const msgEl = document.getElementById('lesson-completion-message');
                     if (msgEl) {
@@ -931,13 +947,15 @@
                         msgEl.classList.remove('hidden');
                         msgEl.className = "text-xs mt-2 font-semibold text-emerald-400 animate-pulse";
                     }
-                    // Sync dashboard database balances immediately
+                    // Instantly refresh balances on the dashboard layout
                     fetchSynchronizedDataEngine();
                 } else {
                     console.error("Progress save request issue:", res.message);
+                    lessonCompletionSubmitted = false; // Reset to allow retry if it failed
                 }
             } catch (err) {
                 console.error("Network communication execution failure:", err);
+                lessonCompletionSubmitted = false;
             }
         }
         async function onLessonMediaComplete() {
