@@ -769,11 +769,16 @@
             const lesson = playerData.lessons.find(l => l.id.toString().trim() === lessonId.toString().trim());
             if (!lesson) return;
 
-            closeLessonModal(false);
+            closeLessonModal(); // Clean slate to avoid multiple parallel tracking loops
 
             activeLessonId = lessonId;
             activeLessonAlreadyCompleted = lesson.completed === true;
-            activeLessonStarReward = parseInt(lesson.star_reward) || 2;
+            
+            // If it's your specific level-based link, override to 1 Star as requested; else pull default
+            const videoUrl = lesson.video_url ? lesson.video_url.trim() : '';
+            const isGameUrlStyle = videoUrl.includes("trainingboard/game.html");
+            
+            activeLessonStarReward = isGameUrlStyle ? 1 : (parseInt(lesson.star_reward) || 2);
             lessonCompletionSubmitted = activeLessonAlreadyCompleted;
 
             document.getElementById('lesson-modal-title').innerText = lesson.title || 'Strategy Lesson';
@@ -782,31 +787,108 @@
                 : '+' + activeLessonStarReward + ' Stars on completion';
 
             const msgEl = document.getElementById('lesson-completion-message');
-            msgEl.classList.add('hidden');
-            msgEl.innerText = '';
-
-            const videoUrl = lesson.video_url ? lesson.video_url.trim() : '';
-            activeSlideTotal = parseInt(lesson.slide_count || lesson.total_slides || lesson.slides_count) || 0;
-            const media = parseLessonMedia(videoUrl);
-            if (media.type === 'slides') media.slideCount = activeSlideTotal;
-
-            if (activeLessonAlreadyCompleted) {
-                setLessonProgress(0);
-                document.getElementById('lesson-progress-label').innerText = 'Review Progress';
-            } else {
-                setLessonProgress(0);
-                document.getElementById('lesson-progress-label').innerText = 'Lesson Progress';
+            if (msgEl) {
+                msgEl.classList.add('hidden');
+                msgEl.innerText = '';
             }
 
-            mountLessonMedia(media);
+            const contentContainer = document.getElementById('lesson-modal-content');
+            contentContainer.innerHTML = "";
 
-            if (!videoUrl && !activeLessonAlreadyCompleted) {
-                setLessonProgress(100);
-                onLessonMediaComplete();
+            // Reset Progress Interface Components
+            const progressBar = document.getElementById('lesson-progress-bar');
+            const progressPercent = document.getElementById('lesson-progress-percent');
+            const progressLabel = document.getElementById('lesson-progress-label');
+
+            if (progressBar) progressBar.style.width = "0%";
+            if (progressPercent) progressPercent.innerText = "0%";
+            if (progressLabel) progressLabel.innerText = "Initializing live exercise...";
+
+            // --- CASE A: THE NEW INTERACTIVE HOCKEY GAME LINK OPTION ---
+            if (isGameUrlStyle) {
+                activeLessonMediaType = "game_url";
+                
+                // Build the clean target URL matching the player state
+                let cleanPlayUrl = videoUrl;
+                // Strip off any historic completions attached to the sheet field text to stay safe
+                if (cleanPlayUrl.includes("&status=c")) {
+                    cleanPlayUrl = cleanPlayUrl.replace("&status=c", "");
+                }
+
+                contentContainer.innerHTML = `
+                    <iframe 
+                        id="lesson-game-frame"
+                        src="${cleanPlayUrl}" 
+                        class="w-full h-full border-0 absolute inset-0 bg-slate-950 rounded-xl"
+                        allow="autoplay; encrypted-media">
+                    </iframe>
+                `;
+
+                if (activeLessonAlreadyCompleted) {
+                    if (progressBar) progressBar.style.width = "100%";
+                    if (progressPercent) progressPercent.innerText = "100%";
+                    if (progressLabel) progressLabel.innerText = "Review Status Active";
+                } else {
+                    // Set an interval loop looking for url manipulation state shifts (&status=c)
+                    lessonProgressTimer = setInterval(() => {
+                        try {
+                            const frame = document.getElementById('lesson-game-frame');
+                            if (!frame) return;
+                            
+                            // Access frame location link context safely
+                            const currentFrameUrl = frame.contentWindow.location.href;
+                            
+                            if (currentFrameUrl.includes("status=c")) {
+                                clearInterval(lessonProgressTimer);
+                                
+                                if (progressBar) progressBar.style.width = "100%";
+                                if (progressPercent) progressPercent.innerText = "100%";
+                                if (progressLabel) progressLabel.innerText = "Level Complete! Submission Sync Active.";
+                                
+                                // Automatically award star and append to progress sheet tracking mechanics
+                                triggerGameLessonCompletionSubmit(lessonId, activeLessonStarReward);
+                            }
+                        } catch (e) {
+                            // Note: If Cross-Origin limitations block active frame reading context,
+                            // we add a windows message event helper handler fallback here:
+                        }
+                    }, 800);
+                }
+            } 
+            // --- CASE B: LEGACY VIDEO / POWERPOINT OPTIONS ---
+            else {
+                activeSlideTotal = parseInt(lesson.slide_count || lesson.total_slides || lesson.slides_count) || 0;
+                const media = parseLessonMedia(videoUrl);
+                if (media.type === 'slides') media.slideCount = activeSlideTotal;
+
+                if (activeLessonAlreadyCompleted) {
+                    setLessonProgress(0);
+                    if (progressLabel) progressLabel.innerText = 'Review Progress';
+                } else {
+                    setLessonProgress(0);
+                    if (progressLabel) progressLabel.innerText = 'Lesson Progress';
+                }
+
+                mountLessonMedia(media);
+
+                if (!videoUrl && !activeLessonAlreadyCompleted) {
+                    setLessonProgress(100);
+                    onLessonMediaComplete();
+                }
             }
 
             document.getElementById('lesson-modal').classList.remove('hidden');
         }
+
+        // Global Event Window Message Handler (In case game.html communicates via window.parent.postMessage)
+        window.addEventListener('message', (event) => {
+            if (event.data === 'level_completed' || (event.data && event.data.type === 'level_completed')) {
+                if (activeLessonId && activeLessonMediaType === "game_url" && !lessonCompletionSubmitted) {
+                    clearInterval(lessonProgressTimer);
+                    triggerGameLessonCompletionSubmit(activeLessonId, activeLessonStarReward);
+                }
+            }
+        });
 
         function closeLessonModal(resetState = true) {
             if (lessonProgressTimer) {
@@ -832,6 +914,32 @@
             }
         }
 
+        async function triggerGameLessonCompletionSubmit(lessonId, rewardAmount) {
+            if (lessonCompletionSubmitted) return;
+            lessonCompletionSubmitted = true;
+            
+            try {
+                // Dispatches standard execution route query arguments to update progress sheets
+                const response = await fetch(`${API_URL}?action=completeLesson&playerId=${currentAuthId}&lessonId=${lessonId}&starBonus=${rewardAmount}`, {
+                    method: 'POST'
+                });
+                const res = await response.json();
+                if (res.success) {
+                    const msgEl = document.getElementById('lesson-completion-message');
+                    if (msgEl) {
+                        msgEl.innerText = `Nice Work! +${rewardAmount} Star has been added to your vault wallet.`;
+                        msgEl.classList.remove('hidden');
+                        msgEl.className = "text-xs mt-2 font-semibold text-emerald-400 animate-pulse";
+                    }
+                    // Sync dashboard database balances immediately
+                    fetchSynchronizedDataEngine();
+                } else {
+                    console.error("Progress save request issue:", res.message);
+                }
+            } catch (err) {
+                console.error("Network communication execution failure:", err);
+            }
+        }
         async function onLessonMediaComplete() {
             setLessonProgress(100);
 
