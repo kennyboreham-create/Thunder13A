@@ -765,7 +765,7 @@
             container.innerHTML = `<div class="flex items-center justify-center h-full p-8 text-slate-400 text-sm">No media linked to this lesson. Close this window to return.</div>`;
         }
 
-        function openLessonModal(lessonId) {
+       function openLessonModal(lessonId) {
             const lesson = playerData.lessons.find(l => l.id.toString().trim() === lessonId.toString().trim());
             if (!lesson) return;
 
@@ -787,22 +787,45 @@
 
             const videoUrl = lesson.video_url ? lesson.video_url.trim() : '';
             activeSlideTotal = parseInt(lesson.slide_count || lesson.total_slides || lesson.slides_count) || 0;
-            const media = parseLessonMedia(videoUrl);
-            if (media.type === 'slides') media.slideCount = activeSlideTotal;
 
-            if (activeLessonAlreadyCompleted) {
-                setLessonProgress(0);
-                document.getElementById('lesson-progress-label').innerText = 'Review Progress';
-            } else {
-                setLessonProgress(0);
-                document.getElementById('lesson-progress-label').innerText = 'Lesson Progress';
-            }
+            // --- CHECK FOR 3RD OPTION: INTERACTIVE HOCKEY BOARD GAME REPS ---
+            const isInteractiveGame = (videoUrl === "" && lesson.type && lesson.type.toString().trim().toUpperCase() === "REPS");
 
-            mountLessonMedia(media);
-
-            if (!videoUrl && !activeLessonAlreadyCompleted) {
+            if (isInteractiveGame) {
+                // Force the progress bar to show complete/active view for the game environment
                 setLessonProgress(100);
-                onLessonMediaComplete();
+                document.getElementById('lesson-progress-label').innerText = 'Interactive Board Drill Active';
+                
+                // Target your modal content container to mount the custom canvas application
+                const contentContainer = document.getElementById('lesson-modal-content');
+                if (contentContainer) {
+                    contentContainer.innerHTML = `
+                        <iframe 
+                            src="https://kennyboreham-create.github.io/trainingboard/game.html?levelId=${encodeURIComponent(lesson.id)}&playerId=${encodeURIComponent(currentAuthId)}" 
+                            class="w-full h-full border-0 absolute inset-0 bg-slate-950 rounded-xl"
+                            allow="autoplay; encrypted-media">
+                        </iframe>
+                    `;
+                }
+            } else {
+                // --- FALLBACK TO EXISTING POWERPOINT OR YOUTUBE FLOW ---
+                const media = parseLessonMedia(videoUrl);
+                if (media.type === 'slides') media.slideCount = activeSlideTotal;
+
+                if (activeLessonAlreadyCompleted) {
+                    setLessonProgress(0);
+                    document.getElementById('lesson-progress-label').innerText = 'Review Progress';
+                } else {
+                    setLessonProgress(0);
+                    document.getElementById('lesson-progress-label').innerText = 'Lesson Progress';
+                }
+
+                mountLessonMedia(media);
+
+                if (!videoUrl && !activeLessonAlreadyCompleted) {
+                    setLessonProgress(100);
+                    onLessonMediaComplete();
+                }
             }
 
             document.getElementById('lesson-modal').classList.remove('hidden');
