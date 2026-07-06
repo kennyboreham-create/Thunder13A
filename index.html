@@ -423,15 +423,14 @@
 
         function renderGranularWorkoutSection(container) {
             const workoutExercises = ["20 Pushups", "30 Squats", "20 Lunges", "30 Jumps", "10 Burpees", "100 Jumping Jacks","30 Situps"];
-            // Looks up a daily workout configuration row, fallback to weekly if row ID hasn't been modified in the sheet
-            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_DAILY_WORKOUT") || playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
-            const dateContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Today";
+            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
+            const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
 
             let html = `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                     <div>
-                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Daily Calibration</span>
-                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Daily Workouts (${dateContext})</h3>
+                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Reset Every Monday</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Weekly Workouts (${weekContext})</h3>
                         <p class="text-xs text-slate-400 mt-1">Check off each training unit as you complete it. Earning +2 Stars per unit!</p>
                     </div>
                     <div class="space-y-2 pt-2">
@@ -439,8 +438,7 @@
 
             workoutExercises.forEach(ex => {
                 const cleanExName = ex.replace(/'/g, "").replace(/\s+/g, '_');
-                // Uses the current date context string to append separate entries every single day 
-                const activityKey = `WORKOUT_${cleanExName}_${dateContext.replace(/\s+/g, '_')}`;
+                const activityKey = `WORKOUT_${cleanExName}_${weekContext.replace(/\s+/g, '_')}`;
                 const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
 
                 html += `
@@ -771,16 +769,11 @@
             const lesson = playerData.lessons.find(l => l.id.toString().trim() === lessonId.toString().trim());
             if (!lesson) return;
 
-            closeLessonModal(); // Clean slate to avoid multiple parallel tracking loops
+            closeLessonModal(false);
 
             activeLessonId = lessonId;
             activeLessonAlreadyCompleted = lesson.completed === true;
-            
-            // If it's your specific level-based link, override to 1 Star as requested; else pull default
-            const videoUrl = lesson.video_url ? lesson.video_url.trim() : '';
-            const isGameUrlStyle = videoUrl.includes("trainingboard/game.html");
-            
-            activeLessonStarReward = isGameUrlStyle ? 1 : (parseInt(lesson.star_reward) || 2);
+            activeLessonStarReward = parseInt(lesson.star_reward) || 2;
             lessonCompletionSubmitted = activeLessonAlreadyCompleted;
 
             document.getElementById('lesson-modal-title').innerText = lesson.title || 'Strategy Lesson';
@@ -789,108 +782,31 @@
                 : '+' + activeLessonStarReward + ' Stars on completion';
 
             const msgEl = document.getElementById('lesson-completion-message');
-            if (msgEl) {
-                msgEl.classList.add('hidden');
-                msgEl.innerText = '';
+            msgEl.classList.add('hidden');
+            msgEl.innerText = '';
+
+            const videoUrl = lesson.video_url ? lesson.video_url.trim() : '';
+            activeSlideTotal = parseInt(lesson.slide_count || lesson.total_slides || lesson.slides_count) || 0;
+            const media = parseLessonMedia(videoUrl);
+            if (media.type === 'slides') media.slideCount = activeSlideTotal;
+
+            if (activeLessonAlreadyCompleted) {
+                setLessonProgress(0);
+                document.getElementById('lesson-progress-label').innerText = 'Review Progress';
+            } else {
+                setLessonProgress(0);
+                document.getElementById('lesson-progress-label').innerText = 'Lesson Progress';
             }
 
-            const contentContainer = document.getElementById('lesson-modal-content');
-            contentContainer.innerHTML = "";
+            mountLessonMedia(media);
 
-            // Reset Progress Interface Components
-            const progressBar = document.getElementById('lesson-progress-bar');
-            const progressPercent = document.getElementById('lesson-progress-percent');
-            const progressLabel = document.getElementById('lesson-progress-label');
-
-            if (progressBar) progressBar.style.width = "0%";
-            if (progressPercent) progressPercent.innerText = "0%";
-            if (progressLabel) progressLabel.innerText = "Initializing live exercise...";
-
-            // --- CASE A: THE NEW INTERACTIVE HOCKEY GAME LINK OPTION ---
-            if (isGameUrlStyle) {
-                activeLessonMediaType = "game_url";
-                
-                // Build the clean target URL matching the player state
-                let cleanPlayUrl = videoUrl;
-                // Strip off any historic completions attached to the sheet field text to stay safe
-                if (cleanPlayUrl.includes("&status=c")) {
-                    cleanPlayUrl = cleanPlayUrl.replace("&status=c", "");
-                }
-
-                contentContainer.innerHTML = `
-                    <iframe 
-                        id="lesson-game-frame"
-                        src="${cleanPlayUrl}" 
-                        class="w-full h-full border-0 absolute inset-0 bg-slate-950 rounded-xl"
-                        allow="autoplay; encrypted-media">
-                    </iframe>
-                `;
-
-                if (activeLessonAlreadyCompleted) {
-                    if (progressBar) progressBar.style.width = "100%";
-                    if (progressPercent) progressPercent.innerText = "100%";
-                    if (progressLabel) progressLabel.innerText = "Review Status Active";
-                } else {
-                    // Set an interval loop looking for url manipulation state shifts (&status=c)
-                    lessonProgressTimer = setInterval(() => {
-                        try {
-                            const frame = document.getElementById('lesson-game-frame');
-                            if (!frame) return;
-                            
-                            // Access frame location link context safely
-                            const currentFrameUrl = frame.contentWindow.location.href;
-                            
-                            if (currentFrameUrl.includes("status=c")) {
-                                clearInterval(lessonProgressTimer);
-                                
-                                if (progressBar) progressBar.style.width = "100%";
-                                if (progressPercent) progressPercent.innerText = "100%";
-                                if (progressLabel) progressLabel.innerText = "Level Complete! Submission Sync Active.";
-                                
-                                // Automatically award star and append to progress sheet tracking mechanics
-                                triggerGameLessonCompletionSubmit(lessonId, activeLessonStarReward);
-                            }
-                        } catch (e) {
-                            // Note: If Cross-Origin limitations block active frame reading context,
-                            // we add a windows message event helper handler fallback here:
-                        }
-                    }, 800);
-                }
-            } 
-            // --- CASE B: LEGACY VIDEO / POWERPOINT OPTIONS ---
-            else {
-                activeSlideTotal = parseInt(lesson.slide_count || lesson.total_slides || lesson.slides_count) || 0;
-                const media = parseLessonMedia(videoUrl);
-                if (media.type === 'slides') media.slideCount = activeSlideTotal;
-
-                if (activeLessonAlreadyCompleted) {
-                    setLessonProgress(0);
-                    if (progressLabel) progressLabel.innerText = 'Review Progress';
-                } else {
-                    setLessonProgress(0);
-                    if (progressLabel) progressLabel.innerText = 'Lesson Progress';
-                }
-
-                mountLessonMedia(media);
-
-                if (!videoUrl && !activeLessonAlreadyCompleted) {
-                    setLessonProgress(100);
-                    onLessonMediaComplete();
-                }
+            if (!videoUrl && !activeLessonAlreadyCompleted) {
+                setLessonProgress(100);
+                onLessonMediaComplete();
             }
 
             document.getElementById('lesson-modal').classList.remove('hidden');
         }
-
-        // Global Event Window Message Handler (In case game.html communicates via window.parent.postMessage)
-        window.addEventListener('message', (event) => {
-            if (event.data === 'level_completed' || (event.data && event.data.type === 'level_completed')) {
-                if (activeLessonId && activeLessonMediaType === "game_url" && !lessonCompletionSubmitted) {
-                    clearInterval(lessonProgressTimer);
-                    triggerGameLessonCompletionSubmit(activeLessonId, activeLessonStarReward);
-                }
-            }
-        });
 
         function closeLessonModal(resetState = true) {
             if (lessonProgressTimer) {
@@ -916,38 +832,6 @@
             }
         }
 
-        async function triggerGameLessonCompletionSubmit(lessonId, rewardAmount) {
-            if (lessonCompletionSubmitted) return;
-            lessonCompletionSubmitted = true;
-            
-            try {
-                // Switching to GET ensures Google Apps Script routes it cleanly into e.parameter
-                const targetUrl = `${API_URL}?action=completeLesson&playerId=${encodeURIComponent(currentAuthId)}&lessonId=${encodeURIComponent(lessonId)}&starBonus=${rewardAmount}`;
-
-                const response = await fetch(targetUrl, {
-                    method: 'GET', // Change from POST to GET to align with parameter mapping
-                    mode: 'cors'
-                });
-
-                const res = await response.json();
-                
-                if (res.success) {
-                    const msgEl = document.getElementById('lesson-completion-message');
-                    if (msgEl) {
-                        msgEl.innerText = `Nice Work! +${rewardAmount} Star has been added to your vault wallet.`;
-                        msgEl.classList.remove('hidden');
-                        msgEl.className = "text-xs mt-2 font-semibold text-emerald-400 animate-pulse";
-                    }
-                    fetchSynchronizedDataEngine();
-                } else {
-                    console.error("Progress save request issue:", res.message);
-                    lessonCompletionSubmitted = false; 
-                }
-            } catch (err) {
-                console.error("Network communication execution failure:", err);
-                lessonCompletionSubmitted = false;
-            }
-        }
         async function onLessonMediaComplete() {
             setLessonProgress(100);
 
