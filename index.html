@@ -423,14 +423,14 @@
 
         function renderGranularWorkoutSection(container) {
             const workoutExercises = ["20 Pushups", "30 Squats", "20 Lunges", "30 Jumps", "10 Burpees", "100 Jumping Jacks","30 Situps"];
-            // Looks up a daily workout configuration row, fallback to weekly if row ID hasn't been modified in the sheet
+            // Looks for L_DAILY_WORKOUT first, falls back to L_WEEKLY_WORKOUT if the sheet isn't changed yet
             let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_DAILY_WORKOUT") || playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
             const dateContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Today";
 
             let html = `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                     <div>
-                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Daily Calibration</span>
+                        <span class="bg-amber-500/10 text-amber-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-amber-500/20">Daily Calibration</span>
                         <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Daily Workouts (${dateContext})</h3>
                         <p class="text-xs text-slate-400 mt-1">Check off each training unit as you complete it. Earning +2 Stars per unit!</p>
                     </div>
@@ -439,7 +439,7 @@
 
             workoutExercises.forEach(ex => {
                 const cleanExName = ex.replace(/'/g, "").replace(/\s+/g, '_');
-                // Uses the current date context string to append separate entries every single day 
+                // Scopes completion to the specific date/title context instead of the week string
                 const activityKey = `WORKOUT_${cleanExName}_${dateContext.replace(/\s+/g, '_')}`;
                 const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
 
