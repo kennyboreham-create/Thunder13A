@@ -432,14 +432,15 @@
                 "30 Situps"
             ];
             
-            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
-            const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title).trim() : "Current Week";
+            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_DAILY_WORKOUT");
+            const dateContext = baseWorkoutLesson ? String(baseWorkoutLesson.title).trim()
+                : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
             let html = `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                     <div>
-                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Reset Every Monday</span>
-                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Weekly Workouts (${weekContext})</h3>
+                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Reset Every Day</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Daily Workouts (${dateContext})</h3>
                         <p class="text-xs text-slate-400 mt-1">Check off each training unit as you complete it. Earning +2 Stars per unit!</p>
                     </div>
                     <div class="space-y-2 pt-2">
@@ -448,8 +449,8 @@
             workoutExercises.forEach(ex => {
                 // Strict normalization matching code.gs text logic
                 const cleanExName = ex.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
-                const cleanWeek = weekContext.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
-                const activityKey = `workout_${cleanExName}_${cleanWeek}`;
+                const cleanDate = dateContext.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+                const activityKey = `workout_${cleanExName}_${cleanDate}`;
                 
                 const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
 
