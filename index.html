@@ -422,29 +422,45 @@
         }
 
         function renderGranularWorkoutSection(container) {
-            const workoutExercises = ["20 Pushups", "30 Squats", "20 Lunges", "30 Jumps", "10 Burpees", "100 Jumping Jacks","30 Situps"];
-            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
-            const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
+            const workoutExercises = [
+                "20 Pushups", 
+                "30 Squats", 
+                "20 Lunges", 
+                "30 Jumps", 
+                "10 Burpees", 
+                "100 Jumping Jacks",
+                "30 Situps"
+            ];
+            
+            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_DAILY_WORKOUT");
+            const dateContext = baseWorkoutLesson ? String(baseWorkoutLesson.title).trim()
+                : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
             let html = `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                     <div>
-                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Reset Daily</span>
-                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Weekly Workouts (${weekContext})</h3>
+                        <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Reset Every Day</span>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Daily Workouts (${dateContext})</h3>
                         <p class="text-xs text-slate-400 mt-1">Check off each training unit as you complete it. Earning +2 Stars per unit!</p>
                     </div>
                     <div class="space-y-2 pt-2">
             `;
 
             workoutExercises.forEach(ex => {
-                const cleanExName = ex.replace(/'/g, "").replace(/\s+/g, '_');
-                const activityKey = `WORKOUT_${cleanExName}_${weekContext.replace(/\s+/g, '_')}`;
+                // Strict normalization matching code.gs text logic
+                const cleanExName = ex.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+                const cleanDate = dateContext.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+                const activityKey = `workout_${cleanExName}_${cleanDate}`;
+                
                 const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
 
                 html += `
                     <label class="flex items-center justify-between p-4 bg-slate-950 border border-slate-800 rounded-xl hover:border-slate-700 transition cursor-pointer select-none ${isChecked ? 'opacity-50 border-emerald-500/20 bg-emerald-950/5' : ''}">
                         <div class="flex items-center gap-3">
-                            <input type="checkbox" ${isChecked ? 'checked disabled' : ''} onchange="submitIndividualItemProgress('${activityKey}', 2)" class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
+                            <input type="checkbox" 
+                                ${isChecked ? 'checked disabled' : ''} 
+                                onchange="submitIndividualItemProgress('${activityKey}', 2)" 
+                                class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-emerald-500 accent-emerald-500 cursor-pointer disabled:cursor-not-allowed">
                             <span class="text-sm font-bold ${isChecked ? 'line-through text-slate-500' : 'text-slate-200'}">${ex}</span>
                         </div>
                         <span class="text-xs font-bold ${isChecked ? 'text-emerald-400 bg-emerald-500/10' : 'text-yellow-500 bg-yellow-500/10'} px-2.5 py-1 rounded-lg border ${isChecked ? 'border-emerald-500/20' : 'border-yellow-500/20'}">
@@ -453,9 +469,12 @@
                     </label>
                 `;
             });
+            
             html += `</div></div>`;
             container.innerHTML = html;
         }
+
+
 
         function renderGranularSkillsSection(container) {
             const skillsExercises = ["100 Stickhandling Touches(Goalies: 20 touches a day with catcher and blocker)", "50 Shots(Goalies: Shots with catcher and blocker)"];
