@@ -15,8 +15,8 @@
 </head>
 <body class="text-slate-100 font-sans min-h-screen flex flex-col antialiased">
 
+    <script src="hockey-api.js"></script>
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec"; 
         let playerData = {};
         let currentAuthId = localStorage.getItem('hockey_player_id') || "";
         let currentTrainingCategory = "strategy"; 
@@ -41,7 +41,7 @@
     </script>
 
     <div id="auth-screen" class="fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-md w-full shadow-2xl text-center">
+            <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-lg w-full shadow-2xl text-center">
             <div class="w-16 h-16 bg-blue-600/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 002-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             </div>
@@ -59,7 +59,7 @@
                 </div>
                 <button onclick="attemptSystemLogin()" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/20 transition mt-2 cursor-pointer">Verify Credentials</button>
             </div>
-            <p id="auth-error" class="text-xs text-rose-500 font-semibold mt-4 hidden"></p>
+            <div id="auth-error" class="text-xs text-rose-500 font-semibold mt-4 hidden"></div>
         </div>
     </div>
 
@@ -89,6 +89,13 @@
                 </div>
             </div>
         </header>
+
+        <div id="api-error-banner" class="hidden bg-rose-950/80 border-b border-rose-500/40 px-4 py-3">
+            <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-start gap-3">
+                <div id="api-error-banner-body" class="text-xs flex-1"></div>
+                <button onclick="fetchSynchronizedDataEngine()" class="shrink-0 bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer">Retry connection</button>
+            </div>
+        </div>
 
         <nav class="bg-slate-900 border-b border-slate-800 px-2 sticky top-[65px] z-30">
             <div class="max-w-6xl mx-auto flex justify-around">
@@ -286,19 +293,49 @@
     </div>
 
     <script>
+        function showHockeyApiError(err, targetEl) {
+            const info = (err && err.hockeyApiInfo) ? err.hockeyApiInfo : describeHockeyApiFailure(err);
+            if (!targetEl) return;
+            targetEl.innerHTML = hockeyApiErrorHtml(info);
+            targetEl.classList.remove('hidden');
+        }
+
+        function hideHockeyApiError(targetEl) {
+            if (!targetEl) return;
+            targetEl.innerHTML = "";
+            targetEl.classList.add('hidden');
+        }
+
+        function showAppApiBanner(err) {
+            const banner = document.getElementById('api-error-banner');
+            const body = document.getElementById('api-error-banner-body');
+            showHockeyApiError(err, body);
+            if (banner) banner.classList.remove('hidden');
+        }
+
+        function hideAppApiBanner() {
+            const banner = document.getElementById('api-error-banner');
+            const body = document.getElementById('api-error-banner-body');
+            hideHockeyApiError(body);
+            if (banner) banner.classList.add('hidden');
+        }
+
         async function fetchSynchronizedDataEngine() {
             if (!currentAuthId) return;
             try {
-                const response = await fetch(`${API_URL}?action=getDashboard&playerId=${currentAuthId}`);
-                const data = await response.json();
+                const data = await hockeyApi('getDashboard', { playerId: currentAuthId });
                 if (data.success) {
                     playerData = data;
+                    hideAppApiBanner();
                     renderApplicationDashboardLayout();
                 } else {
                     alert(data.message || "Session data fetch sync break occurred.");
                     logSystemOut();
                 }
-            } catch (err) { console.error("Master read hook matrix fault:", err); }
+            } catch (err) {
+                console.error("Master read hook matrix fault:", err);
+                showAppApiBanner(err);
+            }
         }
 
         function renderApplicationDashboardLayout() {
@@ -513,10 +550,9 @@
 
         async function submitIndividualItemProgress(activityKey, starBonus) {
             try {
-                const response = await fetch(`${API_URL}?action=completeWorkoutModule&playerId=${currentAuthId}&activityId=${activityKey}&starBonus=${starBonus}`, { method: 'POST' });
-                const res = await response.json();
+                const res = await hockeyApi('completeWorkoutModule', { playerId: currentAuthId, activityId: activityKey, starBonus: starBonus }, 'POST');
                 if (res.success) { fetchSynchronizedDataEngine(); } else { alert(res.message); }
-            } catch (err) { console.error(err); }
+            } catch (err) { console.error(err); alert(err.hockeyApiInfo ? err.hockeyApiInfo.title : err.message); }
         }
 
         function extractYouTubeVideoId(url) {
@@ -862,8 +898,7 @@
             lessonCompletionSubmitted = true;
 
             try {
-                const response = await fetch(`${API_URL}?action=completeActivity&playerId=${currentAuthId}&activityType=LESSON&activityId=${activeLessonId}`, { method: 'POST' });
-                const res = await response.json();
+                const res = await hockeyApi('completeActivity', { playerId: currentAuthId, activityType: 'LESSON', activityId: activeLessonId }, 'POST');
                 if (res.success) {
                     activeLessonAlreadyCompleted = true;
                     showLessonCompletionMessage(`Lesson complete! You earned +${activeLessonStarReward} Stars!`, true);
@@ -878,7 +913,7 @@
             } catch (err) {
                 lessonCompletionSubmitted = false;
                 console.error(err);
-                showLessonCompletionMessage('Network error while saving completion.', false);
+                showLessonCompletionMessage((err && err.hockeyApiInfo && err.hockeyApiInfo.title) || 'Network error while saving completion.', false);
             }
         }
 
@@ -1040,15 +1075,19 @@
             const myOfferSpriteId = document.getElementById('trade-offer-selector').value;
 
             try {
-                const response = await fetch(`${API_URL}?action=proposeTrade&playerId=${currentAuthId}&targetPlayerId=${tradeTargetPlayerId}&offerSpriteId=${myOfferSpriteId}&requestSpriteId=${tradeTargetSpriteId}`, { method: 'POST' });
-                const res = await response.json();
+                const res = await hockeyApi('proposeTrade', {
+                    playerId: currentAuthId,
+                    targetPlayerId: tradeTargetPlayerId,
+                    offerSpriteId: myOfferSpriteId,
+                    requestSpriteId: tradeTargetSpriteId
+                }, 'POST');
                 alert(res.message);
                 if (res.success) {
                     closeTradeProposalModal();
                     closeInventoryModal();
                     fetchSynchronizedDataEngine();
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) { console.error(err); alert(err.hockeyApiInfo ? err.hockeyApiInfo.title : err.message); }
         }
 
         // --- LOCKER ROOM MARKET DISPATCH LAYOUT WITH MATCHING SHEET KEYS ---
@@ -1165,11 +1204,10 @@
 
         async function resolveTradeProposal(tradeId, actionType) {
             try {
-                const response = await fetch(`${API_URL}?action=${actionType}&playerId=${currentAuthId}&tradeId=${tradeId}`, { method: 'POST' });
-                const res = await response.json();
+                const res = await hockeyApi(actionType, { playerId: currentAuthId, tradeId: tradeId }, 'POST');
                 alert(res.message);
                 if (res.success) { fetchSynchronizedDataEngine(); }
-            } catch (err) { console.error(err); }
+            } catch (err) { console.error(err); alert(err.hockeyApiInfo ? err.hockeyApiInfo.title : err.message); }
         }
 
         function renderStartingLineupLayout() {
@@ -1226,10 +1264,9 @@
             const spriteId = document.getElementById('lineup-sprite-selector').value;
 
             try {
-                const response = await fetch(`${API_URL}?action=buyLineupSlot&playerId=${currentAuthId}&slotId=${selectedSlotToPurchase}&spriteId=${spriteId}`, { method: 'POST' });
-                const res = await response.json();
+                const res = await hockeyApi('buyLineupSlot', { playerId: currentAuthId, slotId: selectedSlotToPurchase, spriteId: spriteId }, 'POST');
                 if (res.success) { closeLineupModal(); fetchSynchronizedDataEngine(); } else { alert(res.message); }
-            } catch (err) { console.error(err); }
+            } catch (err) { console.error(err); alert(err.hockeyApiInfo ? err.hockeyApiInfo.title : err.message); }
         }
 
         function switchSubTab(subTab) {
@@ -1343,8 +1380,7 @@
             }
 
             try {
-                const response = await fetch(`${API_URL}?action=buySprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
-                const res = await response.json();
+                const res = await hockeyApi('buySprite', { playerId: currentAuthId, spriteId: spriteId }, 'POST');
                 
                 if (res.success) {
                     // Display premium success message alert tray
@@ -1380,14 +1416,14 @@
                     alert(res.message || "Purchase processing error.");
                 }
             } catch (err) { 
-                console.error("Store transaction fault handler:", err); 
+                console.error("Store transaction fault handler:", err);
+                alert(err.hockeyApiInfo ? err.hockeyApiInfo.title : (err.message || "Purchase processing error."));
             }
         }
 
         async function executeAvatarProfileEquip(spriteId) {
             try {
-                const response = await fetch(`${API_URL}?action=equipSprite&playerId=${currentAuthId}&spriteId=${spriteId}`, { method: 'POST' });
-                const res = await response.json();
+                const res = await hockeyApi('equipSprite', { playerId: currentAuthId, spriteId: spriteId }, 'POST');
                 
                 if (res.success) {
                     alert("✨ Avatar equipped successfully!");
@@ -1419,7 +1455,8 @@
                     alert(res.message || "Equip processing error.");
                 }
             } catch (err) { 
-                console.error("Avatar equipment execution fault:", err); 
+                console.error("Avatar equipment execution fault:", err);
+                alert(err.hockeyApiInfo ? err.hockeyApiInfo.title : (err.message || "Equip processing error."));
             }
         }
 
@@ -1472,17 +1509,13 @@
             const perfectScoreEarned = correctCount === total; const scorePercent = Math.round((correctCount / total) * 100);
 
             try {
-                const response = await fetch(`${API_URL}?action=submitTestResult&playerId=${currentAuthId}&lessonId=${activeQuizLessonTarget}&score=${scorePercent}&passed=${perfectScoreEarned}`, { method: 'POST' });
-                const res = await response.json();
+                const res = await hockeyApi('submitTestResult', { playerId: currentAuthId, lessonId: activeQuizLessonTarget, score: scorePercent, passed: perfectScoreEarned }, 'POST');
                 if (res.success) {
                     if (perfectScoreEarned) { alert(`🎉 Perfect Score! 100% Correct. You earned +10 Stars!`); } 
                     else { alert(`Quiz Finished. Result: ${scorePercent}%. 100% required to pass. Try again!`); }
                     closeQuizModal(); fetchSynchronizedDataEngine();
                 }
-            } catch (err) { console.error(err); }
-        }
-
-        function switchCategoryView(targetTab) {
+            } catch (err) { console.error(err); alert(err.hockeyApiInfo ? err.hockeyApiInfo.title : err.message); }
             currentTrainingCategory = targetTab;
             ['strategy', 'workout', 'skills', 'gameboard', 'store'].forEach(tab => {
                 const el = document.getElementById(`nav-${tab}`);
@@ -1511,11 +1544,11 @@
             const passInput = document.getElementById('auth-password').value.trim();
             const errorEl = document.getElementById('auth-error'); const btn = document.getElementById('login-btn');
             if(!idInput || !passInput) return;
-            btn.innerText = "Authorizing..."; errorEl.classList.add('hidden');
+            btn.innerText = "Authorizing...";
+            hideHockeyApiError(errorEl);
 
             try {
-                const response = await fetch(`${API_URL}?action=login&playerId=${idInput}&password=${encodeURIComponent(passInput)}`, { method: 'POST' });
-                const res = await response.json();
+                const res = await hockeyApi('login', { playerId: idInput, password: passInput }, 'POST');
                 if (res.success) {
                     currentAuthId = idInput; localStorage.setItem('hockey_player_id', idInput);
                     document.getElementById('auth-screen').classList.add('hidden'); document.getElementById('app-viewport').classList.remove('hidden');
@@ -1523,11 +1556,15 @@
                 } else {
                     errorEl.innerText = res.message; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials";
                 }
-            } catch (err) { errorEl.innerText = "Network connection failed."; errorEl.classList.remove('hidden'); btn.innerText = "Verify Credentials"; }
+            } catch (err) {
+                showHockeyApiError(err, errorEl);
+                btn.innerText = "Verify Credentials";
+            }
         }
 
         function logSystemOut() {
             localStorage.removeItem('hockey_player_id'); currentAuthId = ""; playerData = {};
+            hideAppApiBanner();
             document.getElementById('auth-player-id').value = ""; document.getElementById('auth-password').value = "";
             document.getElementById('login-btn').innerText = "Verify Credentials";
             document.getElementById('app-viewport').classList.add('hidden'); document.getElementById('auth-screen').classList.remove('hidden');
