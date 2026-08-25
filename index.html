@@ -1516,6 +1516,9 @@
                     closeQuizModal(); fetchSynchronizedDataEngine();
                 }
             } catch (err) { console.error(err); alert(err.hockeyApiInfo ? err.hockeyApiInfo.title : err.message); }
+        }
+
+        function switchCategoryView(targetTab) {
             currentTrainingCategory = targetTab;
             ['strategy', 'workout', 'skills', 'gameboard', 'store'].forEach(tab => {
                 const el = document.getElementById(`nav-${tab}`);
