@@ -422,32 +422,27 @@
         }
 
         function renderGranularWorkoutSection(container) {
-<<<<<<< HEAD
             const workoutExercises = [
-                "20 Pushups", 
-                "30 Squats", 
-                "20 Lunges", 
-                "30 Jumps", 
-                "10 Burpees", 
+                "20 Pushups",
+                "30 Squats",
+                "20 Lunges",
+                "30 Jumps",
+                "10 Burpees",
                 "100 Jumping Jacks",
                 "30 Situps",
                 "4 Laps Of A Soccer Field"
             ];
-            
+
             let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_DAILY_WORKOUT");
-            const dateContext = baseWorkoutLesson ? String(baseWorkoutLesson.title).trim()
+            const workoutContext = baseWorkoutLesson
+                ? String(baseWorkoutLesson.title).trim()
                 : new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-=======
-            const workoutExercises = ["20 Pushups", "30 Squats", "20 Lunges", "30 Jumps", "10 Burpees", "100 Jumping Jacks","30 Situps"];
-            let baseWorkoutLesson = playerData.lessons.find(l => l.id === "L_WEEKLY_WORKOUT");
-            const weekContext = baseWorkoutLesson ? String(baseWorkoutLesson.title) : "Current Week";
->>>>>>> parent of 1f1d944 (Merge branch 'New-feature')
 
             let html = `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                     <div>
                         <span class="bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded uppercase font-bold tracking-wider border border-emerald-500/20">Reset Daily</span>
-                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Weekly Workouts (${weekContext})</h3>
+                        <h3 class="text-xl font-black text-white uppercase tracking-tight mt-1">Weekly Workouts (${workoutContext})</h3>
                         <p class="text-xs text-slate-400 mt-1">Check off each training unit as you complete it. Earning +2 Stars per unit!</p>
                     </div>
                     <div class="space-y-2 pt-2">
@@ -455,7 +450,7 @@
 
             workoutExercises.forEach(ex => {
                 const cleanExName = ex.replace(/'/g, "").replace(/\s+/g, '_');
-                const activityKey = `WORKOUT_${cleanExName}_${weekContext.replace(/\s+/g, '_')}`;
+                const activityKey = `WORKOUT_${cleanExName}_${workoutContext.replace(/\s+/g, '_')}`;
                 const isChecked = playerData.completedRawIds && playerData.completedRawIds.includes(activityKey);
 
                 html += `
