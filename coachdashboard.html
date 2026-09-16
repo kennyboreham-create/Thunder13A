@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hockey Portal - Coach Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { background-color: #0b1329; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    </style>
+</head>
+<body class="text-slate-100 font-sans min-h-screen flex flex-col antialiased">
+
+    <header class="bg-slate-900 border-b border-slate-800 shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <span class="bg-indigo-600 p-2.5 rounded-xl shadow-inner shadow-indigo-400/20">
+                    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+                    </svg>
+                </span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">Team Strategy Command Center</h1>
+                    <p class="text-xs text-indigo-400 font-medium">Coach Tracking & Engagement Analytics View</p>
+                </div>
+            </div>
+            <button onclick="loadCoachAnalyticsEngine()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-sm cursor-pointer">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121 12h-4.5" />
+                </svg>
+                Refresh Board Metrics
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-6 space-y-6">
+        
+        <div id="loading-spinner-overlay" class="bg-slate-900/80 border border-slate-800 p-8 rounded-2xl flex flex-col items-center justify-center text-center space-y-3">
+            <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
+            <p class="text-sm font-semibold text-slate-300">Synchronizing team progress catalogs from sheet architecture...</p>
+        </div>
+
+        <div id="dashboard-content-grid" class="hidden space-y-6">
+            
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="p-4 bg-slate-900 border border-slate-800/80 rounded-2xl shadow-sm">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Registered Players</p>
+                    <p id="metric-total-players" class="text-3xl font-black text-indigo-400 mt-1">0</p>
+                </div>
+                <div class="p-4 bg-slate-900 border border-slate-800/80 rounded-2xl shadow-sm">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lessons Completed</p>
+                    <p id="metric-total-lessons" class="text-3xl font-black text-emerald-400 mt-1">0</p>
+                </div>
+                <div class="p-4 bg-slate-900 border border-slate-800/80 rounded-2xl shadow-sm">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Exams Passed</p>
+                    <p id="metric-total-tests" class="text-3xl font-black text-amber-400 mt-1">0</p>
+                </div>
+                <div class="p-4 bg-slate-900 border border-slate-800/80 rounded-2xl shadow-sm">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Store Avatars Unlocked</p>
+                    <p id="metric-total-sprites" class="text-3xl font-black text-fuchsia-400 mt-1">0</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col shadow-sm">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-800">
+                        <div>
+                            <h2 class="font-bold text-lg text-slate-100">Player Roster Track Record</h2>
+                            <p class="text-xs text-slate-400">Overview of star balances and performance totals</p>
+                        </div>
+                        <input type="text" id="roster-search-field" oninput="filterRosterOutputGrid()" placeholder="Search player name..." class="w-full sm:w-64 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-100" />
+                    </div>
+
+                    <div class="overflow-x-auto mt-4 custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-xs text-slate-400 uppercase font-bold tracking-wider border-b border-slate-800">
+                                    <th class="pb-3 pl-2">Jersey/Player</th>
+                                    <th class="pb-3 text-center">Wallet Balance</th>
+                                    <th class="pb-3 text-center">Lessons</th>
+                                    <th class="pb-3 text-center">Passed Exams</th>
+                                    <th class="pb-3 text-center">Inventory Owned</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roster-table-body" class="divide-y divide-slate-800/60 text-sm">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col shadow-sm">
+                    <div class="pb-3 border-b border-slate-800">
+                        <h2 class="font-bold text-lg text-slate-100">Live Activity Feed</h2>
+                        <p class="text-xs text-slate-400">Chronological history record log items from sheet data</p>
+                    </div>
+
+                    <div id="timeline-feed-box" class="flex-1 overflow-y-auto max-h-[450px] pr-1 mt-4 space-y-3 custom-scrollbar">
+                        </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // CRITICAL URL BINDING: Dynamically reads your current live production API endpoint structure
+        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec";
+        let coachDashboardDataset = {};
+
+        async function loadCoachAnalyticsEngine() {
+            document.getElementById('loading-spinner-overlay').classList.remove('hidden');
+            document.getElementById('dashboard-content-grid').classList.add('hidden');
+            
+            try {
+                const response = await fetch(`${API_URL}?action=getCoachDashboard`);
+                const res = await response.json();
+                
+                if (res.success) {
+                    coachDashboardDataset = res.data;
+                    renderGlobalCoachDashboardLayout();
+                } else {
+                    alert("System Fault Payload Transmission: " + res.message);
+                }
+            } catch (err) {
+                console.error("Dashboard engine load error:", err);
+                alert("Failed to read server data matrices securely. Double-check your deploy permissions.");
+            } finally {
+                document.getElementById('loading-spinner-overlay').classList.add('hidden');
+                document.getElementById('dashboard-content-grid').classList.remove('hidden');
+            }
+        }
+
+        function renderGlobalCoachDashboardLayout() {
+            // Bind core numerical metric summary figures
+            document.getElementById('metric-total-players').innerText = coachDashboardDataset.summary.totalPlayers || 0;
+            document.getElementById('metric-total-lessons').innerText = coachDashboardDataset.summary.lessonsCompletedTotal || 0;
+            document.getElementById('metric-total-tests').innerText = coachDashboardDataset.summary.examsPassedTotal || 0;
+            document.getElementById('metric-total-sprites').innerText = coachDashboardDataset.summary.spritesPurchasedTotal || 0;
+
+            // Render layouts to structural containers
+            filterRosterOutputGrid();
+            renderTimelineActivityFeed();
+        }
+
+        function filterRosterOutputGrid() {
+            const tableBody = document.getElementById('roster-table-body');
+            const searchVal = document.getElementById('roster-search-field').value.toLowerCase().trim();
+            
+            if (!coachDashboardDataset.players) return;
+            tableBody.innerHTML = "";
+
+            const targetRows = coachDashboardDataset.players.filter(p => p.name.toLowerCase().includes(searchVal));
+
+            if (targetRows.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-500 italic bg-slate-950/20 rounded-xl">No players found matching your search.</td></tr>`;
+                return;
+            }
+
+            targetRows.forEach(p => {
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-slate-800/30 transition">
+                        <td class="py-3 pl-2 flex items-center gap-3">
+                            <span class="bg-slate-950 border border-slate-800 text-indigo-400 font-mono text-xs px-2 py-1 rounded font-bold h-7 w-8 flex items-center justify-center">#${p.jerseyNumber || '??'}</span>
+                            <div>
+                                <p class="font-bold text-slate-200">${p.name}</p>
+                                <p class="text-[10px] text-slate-500 font-mono uppercase tracking-tight">${p.id}</p>
+                            </div>
+                        </td>
+                        <td class="py-3 text-center font-semibold text-yellow-500 font-mono">
+                            ${p.totalStars} ★ <span class="text-xs text-slate-500 font-normal">/ ${p.lifetimeStars}</span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-full font-bold border border-emerald-500/10">${p.lessonsCount}</span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="bg-amber-500/10 text-amber-400 text-xs px-2.5 py-1 rounded-full font-bold border border-amber-500/10">${p.examsCount}</span>
+                        </td>
+                        <td class="py-3 text-center">
+                            <span class="bg-fuchsia-500/10 text-fuchsia-400 text-xs px-2.5 py-1 rounded-full font-bold border border-fuchsia-500/10">${p.spritesCount} Items</span>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderTimelineActivityFeed() {
+            const feedBox = document.getElementById('timeline-feed-box');
+            if (!coachDashboardDataset.recentActivity) return;
+            feedBox.innerHTML = "";
+
+            if (coachDashboardDataset.recentActivity.length === 0) {
+                feedBox.innerHTML = `<p class="text-slate-500 italic text-sm p-4 text-center">No structural activity recorded yet.</p>`;
+                return;
+            }
+
+            coachDashboardDataset.recentActivity.forEach(act => {
+                let badgeClass = "bg-slate-800 border border-slate-700 text-slate-300";
+                
+                if (act.type.includes("TEST_PASSED")) badgeClass = "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400";
+                if (act.type.includes("TEST_FAILED")) badgeClass = "bg-rose-500/10 border border-rose-500/20 text-rose-400";
+                if (act.type.includes("LESSON")) badgeClass = "bg-blue-500/10 border border-blue-500/20 text-blue-400";
+                if (act.type.includes("DASHBOARD_TRACKER")) badgeClass = "bg-cyan-500/10 border border-cyan-500/20 text-cyan-400";
+                if (act.type.includes("INVENTORY_LOGGED")) badgeClass = "bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400";
+
+                const readableDate = act.timestamp ? new Date(act.timestamp).toLocaleDateString(undefined, {month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'}) : "Recent";
+
+                feedBox.innerHTML += `
+                    <div class="p-3 bg-slate-950/40 border border-slate-800/80 rounded-xl flex flex-col gap-2 shadow-inner">
+                        <div class="flex justify-between items-start gap-2">
+                            <p class="font-bold text-slate-200 text-xs">${act.playerName}</p>
+                            <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider ${badgeClass}">${act.type.replace("_COMPLETED", "")}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-[11px] text-slate-400">
+                            <p class="italic text-slate-300 truncate max-w-[180px]">Target ID: <span class="font-mono bg-slate-900 px-1 py-0.5 rounded border border-slate-800">${act.targetId}</span></p>
+                            <p class="font-mono text-slate-500 text-[10px]">${readableDate}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Auto initialization trigger on component visibility load sequence
+        document.addEventListener("DOMContentLoaded", loadCoachAnalyticsEngine);
+    </script>
+</body>
+</html>
