@@ -929,14 +929,20 @@
             document.getElementById('send-cancel').focus();
         }
 
+        function knownEmailFailure(data) {
+            if (!data || data.success !== false || !data.message) return false;
+            return data.code === 'SCORECARDS_ERROR'
+                || data.code === 'UNAUTHORIZED'
+                || data.code === 'MISSING_API_KEY'
+                || data.code === 'BUSY';
+        }
+
         function interpretPreview(data) {
             if (!data || data.deployed === false) return { kind: 'deploy' };
             if (data.success === true && Array.isArray(data.recipients) && Array.isArray(data.skipped)) {
                 return { kind: 'ok', data: data };
             }
-            if (data.success === false) {
-                return { kind: 'error', message: data.message || 'Scorecard emails could not be prepared.' };
-            }
+            if (knownEmailFailure(data)) return { kind: 'error', message: data.message };
             return { kind: 'deploy' };
         }
 
@@ -945,9 +951,7 @@
             if (data.success === true && (Array.isArray(data.results) || typeof data.sentCount === 'number')) {
                 return { kind: 'ok', data: data };
             }
-            if (data.success === false) {
-                return { kind: 'error', message: data.message || 'The scorecards could not be sent.' };
-            }
+            if (knownEmailFailure(data)) return { kind: 'error', message: data.message };
             return { kind: 'deploy' };
         }
 
