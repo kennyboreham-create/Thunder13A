@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hockey Portal - Team Scorecards</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style id="portal-css">
+        body { background-color: #0b1329; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        #scorecard-card, .sc-card {
+            box-sizing: border-box;
+            width: 560px;
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 18px;
+            padding: 28px 28px 22px;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .sc-kicker {
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #a5b4fc;
+            font-weight: 700;
+        }
+        .sc-title {
+            margin: 4px 0 0;
+            font-size: 13px;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .sc-name {
+            margin: 18px 0 0;
+            font-size: 28px;
+            line-height: 1.1;
+            font-weight: 800;
+            color: #f8fafc;
+            letter-spacing: -0.02em;
+        }
+        .sc-jersey {
+            display: inline-block;
+            margin-top: 8px;
+            background: #1e1b4b;
+            color: #c7d2fe;
+            border: 1px solid #4338ca;
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        .sc-section {
+            margin-top: 22px;
+            padding-top: 14px;
+            border-top: 1px solid #1e293b;
+        }
+        .sc-section h3 {
+            margin: 0 0 12px;
+            font-size: 11px;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: 700;
+        }
+        .sc-row { margin-bottom: 12px; }
+        .sc-row-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 5px;
+        }
+        .sc-label { font-size: 14px; font-weight: 700; color: #e2e8f0; }
+        .sc-value { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .sc-detail { margin: 4px 0 0; font-size: 11px; color: #94a3b8; }
+        .sc-track {
+            height: 10px;
+            background: #1e293b;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .sc-fill { height: 100%; border-radius: 999px; width: 0; }
+        .sc-foot {
+            margin: 18px 0 0;
+            font-size: 11px;
+            line-height: 1.45;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body class="text-slate-100 font-sans min-h-screen flex flex-col antialiased">
+
+    <header class="bg-slate-900 border-b border-slate-800 shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <span class="bg-indigo-600 p-2.5 rounded-xl shadow-inner shadow-indigo-400/20">
+                    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">Team Scorecards</h1>
+                    <p class="text-xs text-indigo-400 font-medium">Strategy, workouts, skills, and attendance</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="coachdashboard.html" class="text-slate-300 hover:text-white text-sm font-semibold px-3 py-2 rounded-xl border border-slate-700 hover:border-slate-500 transition">Command Center</a>
+                <button id="refresh-btn" type="button" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-sm cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121 12h-4.5" />
+                    </svg>
+                    Refresh scorecards
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-6 space-y-6">
+
+        <div id="mock-banner" class="hidden bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm rounded-2xl px-4 py-3">
+            Preview data is on (?mock=1). Remove that from the address to load hockeyDB.
+        </div>
+
+        <div id="loading-panel" class="bg-slate-900/80 border border-slate-800 p-8 rounded-2xl flex flex-col items-center justify-center text-center space-y-3">
+            <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
+            <p class="text-sm font-semibold text-slate-300">Loading team scorecards…</p>
+        </div>
+
+        <div id="error-panel" class="hidden bg-slate-900 border border-slate-800 p-8 rounded-2xl max-w-2xl mx-auto text-center space-y-4">
+            <div class="w-12 h-12 mx-auto rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+            </div>
+            <h2 id="error-title" class="text-lg font-bold text-white">The Apps Script update needs to be deployed</h2>
+            <p id="error-body" class="text-sm text-slate-300 leading-relaxed"></p>
+            <p id="error-detail" class="text-xs text-slate-500 hidden"></p>
+            <button id="retry-btn" type="button" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm px-4 py-2 rounded-xl cursor-pointer">Try again</button>
+        </div>
+
+        <div id="board" class="hidden space-y-6">
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="p-4 bg-slate-900 border border-slate-800/80 rounded-2xl shadow-sm">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Players</p>
+                    <p id="metric-players" class="text-3xl font-black text-indigo-400 mt-1">0</p>
+                </div>
+                <div class="p-4 bg-slate-900 border border-slate-800/80 rounded-2xl shadow-sm">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Strategy lessons</p>
+                    <p id="metric-strategy" class="text-3xl font-black text-emerald-400 mt-1">0</p>
+                </div>
+                <div class="p-4 bg-slate-900 border border-slate-800/80 rounded-2xl shadow-sm col-span-2 lg:col-span-1">
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Weeks in the average</p>
+                    <p id="metric-weeks" class="text-3xl font-black text-amber-400 mt-1">0</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Selected week</p>
+                    <p id="week-label" class="text-lg font-bold text-white mt-0.5">Week of —</p>
+                    <p id="week-note" class="text-xs text-slate-400 mt-1"></p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="week-prev" type="button" aria-label="Previous week" class="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700 hover:border-indigo-500 text-slate-100 font-bold cursor-pointer">‹</button>
+                    <button id="week-next" type="button" aria-label="Next week" class="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700 hover:border-indigo-500 text-slate-100 font-bold cursor-pointer">›</button>
+                </div>
+            </div>
+
+            <p id="range-note" class="text-xs text-slate-400 leading-relaxed px-1"></p>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm">
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left border-collapse min-w-[860px]">
+                        <thead>
+                            <tr class="text-[11px] text-slate-400 uppercase font-bold tracking-wider">
+                                <th rowspan="2" class="pb-3 pl-2 align-bottom border-b border-slate-800">Player</th>
+                                <th colspan="4" class="pb-2 text-center text-indigo-300 border-b border-slate-800">Overall</th>
+                                <th colspan="2" id="week-col-head" class="pb-2 text-center text-emerald-300 border-b border-slate-800">Week</th>
+                                <th rowspan="2" class="pb-3 pr-2 align-bottom border-b border-slate-800"></th>
+                            </tr>
+                            <tr class="text-[11px] text-slate-400 uppercase font-bold tracking-wider border-b border-slate-800">
+                                <th class="py-2 text-center">Strategy</th>
+                                <th class="py-2 text-center">Workout</th>
+                                <th class="py-2 text-center">Skills</th>
+                                <th class="py-2 text-center">Attendance</th>
+                                <th class="py-2 text-center">Workout</th>
+                                <th class="py-2 text-center">Skills</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roster-body" class="divide-y divide-slate-800/60 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="modal" class="fixed inset-0 z-[70] hidden items-center justify-center p-4 bg-slate-950/80">
+        <div class="max-h-[92vh] overflow-auto custom-scrollbar">
+            <div id="scorecard-card" class="sc-card"></div>
+            <div class="mt-4 flex justify-end gap-3">
+                <button id="modal-close" type="button" class="px-4 py-2 rounded-xl border border-slate-600 text-slate-200 text-sm font-semibold hover:border-slate-400 cursor-pointer">Close</button>
+                <button id="modal-email" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold cursor-pointer">Email</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" role="status" aria-live="polite" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] hidden max-w-md w-[calc(100%-2rem)] bg-slate-900 border border-slate-600 text-slate-100 text-sm font-semibold px-4 py-3 rounded-xl shadow-2xl text-center"></div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec";
+        const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const DEPLOY_MESSAGE = 'The scorecards action is not on the hockeyDB web app yet. Paste apps-script/scorecards.gs into the Apps Script editor, add the one doGet line from the top of that file, then redeploy with Deploy > Manage deployments > Edit > New version. That keeps the same URL.';
+
+        const params = new URLSearchParams(window.location.search);
+        const mockMode = params.get('mock') === '1';
+
+        let payload = null;
+        let selectedMonday = null;
+        let currentMonday = null;
+        let overallMondays = [];
+        let activePlayerId = null;
+        let toastTimer = null;
+
+        function torontoTodayYmd(now) {
+            const fmt = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Toronto',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+            const bag = {};
+            fmt.formatToParts(now || new Date()).forEach(part => {
+                bag[part.type] = part.value;
+            });
+            return bag.year + '-' + bag.month + '-' + bag.day;
+        }
+
+        function addDays(ymd, n) {
+            const parts = ymd.split('-').map(Number);
+            const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + n));
+            const month = String(dt.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(dt.getUTCDate()).padStart(2, '0');
+            return dt.getUTCFullYear() + '-' + month + '-' + day;
+        }
+
+        function mondayOf(ymd) {
+            const parts = ymd.split('-').map(Number);
+            const day = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2])).getUTCDay();
+            const delta = day === 0 ? -6 : 1 - day;
+            return addDays(ymd, delta);
+        }
+
+        function listWeekMondays(startMonday, endMonday) {
+            const weeks = [];
+            if (!startMonday || !endMonday || startMonday > endMonday) return weeks;
+            let cursor = startMonday;
+            while (cursor <= endMonday && weeks.length < 520) {
+                weeks.push(cursor);
+                cursor = addDays(cursor, 7);
+            }
+            return weeks;
+        }
+
+        function formatMonthDay(ymd) {
+            const parts = ymd.split('-').map(Number);
+            return MONTHS[parts[1] - 1] + ' ' + parts[2];
+        }
+
+        function weekLabel(monday) {
+            return 'Week of ' + formatMonthDay(monday) + ' – ' + formatMonthDay(addDays(monday, 6));
+        }
+
+        function normalizeYmd(value) {
+            const match = String(value || '').trim().match(/^(\d{4}-\d{2}-\d{2})/);
+            return match ? match[1] : '';
+        }
+
+        function uniqueDates(values) {
+            const seen = {};
+            (values || []).forEach(value => {
+                const ymd = normalizeYmd(value);
+                if (ymd) seen[ymd] = true;
+            });
+            return Object.keys(seen).sort();
+        }
+
+        function countInWeek(dates, monday) {
+            const sunday = addDays(monday, 6);
+            let count = 0;
+            uniqueDates(dates).forEach(ymd => {
+                if (ymd >= monday && ymd <= sunday) count += 1;
+            });
+            return count;
+        }
+
+        function workoutWeekFraction(player, monday) {
+            return countInWeek(player.workoutDates, monday) >= 1 ? 1 : 0;
+        }
+
+        function skillsWeekFraction(player, monday) {
+            return Math.min(countInWeek(player.skillsDates, monday), 2) / 2;
+        }
+
+        function average(values) {
+            if (!values.length) return null;
+            return values.reduce((sum, value) => sum + value, 0) / values.length;
+        }
+
+        function overallWorkoutFraction(player) {
+            return average(overallMondays.map(monday => workoutWeekFraction(player, monday)));
+        }
+
+        function overallSkillsFraction(player) {
+            return average(overallMondays.map(monday => skillsWeekFraction(player, monday)));
+        }
+
+        function strategyFraction(player) {
+            const total = Number(payload && payload.strategyTotal);
+            if (!isFinite(total) || total <= 0) return null;
+            const ids = {};
+            (player.strategyCompleted || []).forEach(id => {
+                const key = String(id || '').trim();
+                if (key) ids[key] = true;
+            });
+            return Object.keys(ids).length / total;
+        }
+
+        function attendanceFraction(player) {
+            const attendance = player.attendance;
+            if (!attendance) return null;
+            const total = Number(attendance.total);
+            const attended = Number(attendance.attended);
+            if (!isFinite(total) || total <= 0 || !isFinite(attended)) return null;
+            return attended / total;
+        }
+
+        function formatPct(fraction) {
+            if (fraction === null || fraction === undefined || !isFinite(fraction)) return '—';
+            const rounded = Math.round(fraction * 1000) / 10;
+            if (Math.abs(rounded - Math.round(rounded)) < 1e-9) return String(Math.round(rounded)) + '%';
+            return rounded.toFixed(1) + '%';
+        }
+
+        function pctClass(fraction) {
+            if (fraction === null || fraction === undefined || !isFinite(fraction)) return 'text-slate-500';
+            const pct = fraction * 100;
+            if (pct >= 80) return 'text-emerald-400';
+            if (pct >= 50) return 'text-amber-400';
+            return 'text-rose-400';
+        }
+
+        function barColor(kind) {
+            if (kind === 'strategy') return '#818cf8';
+            if (kind === 'workout') return '#34d399';
+            if (kind === 'skills') return '#fbbf24';
+            return '#22d3ee';
+        }
+
+        function valueColor(fraction) {
+            if (fraction === null || fraction === undefined || !isFinite(fraction)) return '#94a3b8';
+            const pct = fraction * 100;
+            if (pct >= 80) return '#34d399';
+            if (pct >= 50) return '#fbbf24';
+            return '#fb7185';
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[ch]));
+        }
+
+        function playerById(id) {
+            return (payload.players || []).find(player => player.id === id) || null;
+        }
+
+        function earliestTrackedDate() {
+            let earliest = '';
+            (payload.players || []).forEach(player => {
+                uniqueDates(player.workoutDates).concat(uniqueDates(player.skillsDates)).forEach(ymd => {
+                    if (!earliest || ymd < earliest) earliest = ymd;
+                });
+            });
+            return earliest;
+        }
+
+        function refreshWeekRange() {
+            const today = torontoTodayYmd();
+            currentMonday = mondayOf(today);
+            const lastCompleted = addDays(currentMonday, -7);
+            const earliest = earliestTrackedDate();
+            overallMondays = earliest ? listWeekMondays(mondayOf(earliest), lastCompleted) : [];
+            if (!selectedMonday) selectedMonday = lastCompleted;
+        }
+
+        function setWeek(monday) {
+            if (monday > currentMonday) return;
+            selectedMonday = monday;
+            renderBoard();
+            if (activePlayerId && !document.getElementById('modal').classList.contains('hidden')) {
+                renderScorecard(playerById(activePlayerId));
+            }
+        }
+
+        function showToast(message, status, pngWidth, pngHeight) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.dataset.status = status || '';
+            toast.dataset.pngWidth = pngWidth ? String(pngWidth) : '';
+            toast.dataset.pngHeight = pngHeight ? String(pngHeight) : '';
+            toast.classList.remove('hidden');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.add('hidden'), 6000);
+        }
+
+        function metricCell(player, metric, fraction) {
+            const td = document.createElement('td');
+            td.className = 'py-3 text-center font-bold tabular-nums ' + pctClass(fraction);
+            td.dataset.player = player.id;
+            td.dataset.metric = metric;
+            td.textContent = formatPct(fraction);
+            return td;
+        }
+
+        function renderBoard() {
+            document.getElementById('metric-players').textContent = String((payload.players || []).length);
+            document.getElementById('metric-strategy').textContent = String(payload.strategyTotal || 0);
+            document.getElementById('metric-weeks').textContent = String(overallMondays.length);
+            document.getElementById('week-label').textContent = weekLabel(selectedMonday);
+            document.getElementById('week-col-head').textContent = weekLabel(selectedMonday);
+
+            const inProgress = selectedMonday === currentMonday;
+            document.getElementById('week-note').textContent = inProgress
+                ? 'This week is still in progress, so it is not part of the overall average.'
+                : 'Monday through Sunday, Toronto time.';
+
+            const nextBtn = document.getElementById('week-next');
+            const nextBlocked = selectedMonday >= currentMonday;
+            nextBtn.disabled = nextBlocked;
+            nextBtn.classList.toggle('opacity-40', nextBlocked);
+            nextBtn.classList.toggle('cursor-not-allowed', nextBlocked);
+
+            const rangeNote = document.getElementById('range-note');
+            if (!overallMondays.length) {
+                rangeNote.textContent = 'No completed tracking weeks yet. Overall workout and skills stay blank until a full Monday–Sunday week has finished after the first check.';
+            } else {
+                const start = formatMonthDay(overallMondays[0]);
+                const end = formatMonthDay(addDays(overallMondays[overallMondays.length - 1], 6));
+                rangeNote.textContent = 'Overall workout and skills average ' + overallMondays.length + ' completed week' + (overallMondays.length === 1 ? '' : 's') + ' (' + start + ' – ' + end + '). A workout week is 100% with at least one day, otherwise 0%. A skills week is min(days, 2) / 2. Strategy is completed lessons divided by current Strategy lessons. Attendance is attended divided by total events.';
+            }
+
+            const body = document.getElementById('roster-body');
+            body.innerHTML = '';
+            const players = payload.players || [];
+            if (!players.length) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td colspan="8" class="py-8 text-center text-slate-500 italic">No players to show.</td>';
+                body.appendChild(tr);
+                return;
+            }
+
+            players.forEach(player => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/30 transition';
+
+                const who = document.createElement('td');
+                who.className = 'py-3 pl-2';
+                const jersey = player.jersey ? '#' + player.jersey : '#??';
+                who.innerHTML = '<div class="flex items-center gap-3"><span class="bg-slate-950 border border-slate-800 text-indigo-400 font-mono text-xs px-2 py-1 rounded font-bold min-w-8 text-center">' + escapeHtml(jersey) + '</span><div><p class="font-bold text-slate-200">' + escapeHtml(player.name || 'Unnamed') + '</p><p class="text-[10px] text-slate-500 font-mono uppercase tracking-tight">' + escapeHtml(player.id) + '</p></div></div>';
+                tr.appendChild(who);
+
+                tr.appendChild(metricCell(player, 'overall-strategy', strategyFraction(player)));
+                tr.appendChild(metricCell(player, 'overall-workout', overallWorkoutFraction(player)));
+                tr.appendChild(metricCell(player, 'overall-skills', overallSkillsFraction(player)));
+                tr.appendChild(metricCell(player, 'overall-attendance', attendanceFraction(player)));
+                tr.appendChild(metricCell(player, 'week-workout', workoutWeekFraction(player, selectedMonday)));
+                tr.appendChild(metricCell(player, 'week-skills', skillsWeekFraction(player, selectedMonday)));
+
+                const action = document.createElement('td');
+                action.className = 'py-3 pr-2 text-right';
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer';
+                button.textContent = 'Scorecard';
+                button.addEventListener('click', () => openScorecard(player.id));
+                action.appendChild(button);
+                tr.appendChild(action);
+                body.appendChild(tr);
+            });
+        }
+
+        function attendanceDetail(player) {
+            const attendance = player.attendance;
+            if (!attendance) return 'Attendance sheet is not available yet';
+            const total = Number(attendance.total);
+            if (!isFinite(total) || total <= 0) return 'No events recorded';
+            const attended = Number(attendance.attended);
+            const away = Number(attendance.away);
+            return (isFinite(attended) ? attended : 0) + ' of ' + total + ' events · ' + (isFinite(away) ? away : 0) + ' away';
+        }
+
+        function barRow(label, fraction, kind, detail) {
+            const width = (fraction === null || !isFinite(fraction)) ? 0 : Math.max(0, Math.min(100, fraction * 100));
+            return '<div class="sc-row"><div class="sc-row-top"><span class="sc-label">' + escapeHtml(label) + '</span><span class="sc-value" style="color:' + valueColor(fraction) + '">' + escapeHtml(formatPct(fraction)) + '</span></div><div class="sc-track"><div class="sc-fill" style="width:' + width + '%;background:' + barColor(kind) + '"></div></div>' + (detail ? '<p class="sc-detail">' + escapeHtml(detail) + '</p>' : '') + '</div>';
+        }
+
+        function renderScorecard(player) {
+            if (!player) return;
+            const jersey = player.jersey ? '#' + player.jersey : '#??';
+            const card = document.getElementById('scorecard-card');
+            card.innerHTML =
+                '<p class="sc-kicker">Thunder Bowl</p>' +
+                '<p class="sc-title">Player scorecard</p>' +
+                '<h2 class="sc-name">' + escapeHtml(player.name || 'Unnamed') + '</h2>' +
+                '<span class="sc-jersey">Jersey ' + escapeHtml(jersey) + '</span>' +
+                '<div class="sc-section"><h3>Overall</h3>' +
+                    barRow('Strategy', strategyFraction(player), 'strategy', (player.strategyCompleted || []).length + ' of ' + (payload.strategyTotal || 0) + ' lessons') +
+                    barRow('Workout', overallWorkoutFraction(player), 'workout', overallMondays.length ? 'Average of ' + overallMondays.length + ' completed weeks' : 'No completed weeks yet') +
+                    barRow('Skills', overallSkillsFraction(player), 'skills', 'Up to 2 skill days count each week') +
+                    barRow('Attendance', attendanceFraction(player), 'attendance', attendanceDetail(player)) +
+                '</div>' +
+                '<div class="sc-section"><h3>' + escapeHtml(weekLabel(selectedMonday)) + '</h3>' +
+                    barRow('Workout', workoutWeekFraction(player, selectedMonday), 'workout', '100% once any workout day is checked') +
+                    barRow('Skills', skillsWeekFraction(player, selectedMonday), 'skills', countInWeek(player.skillsDates, selectedMonday) + ' skill day' + (countInWeek(player.skillsDates, selectedMonday) === 1 ? '' : 's') + ' this week') +
+                '</div>' +
+                '<p class="sc-foot">Weeks are Monday to Sunday, America/Toronto. Overall workout and skills skip the week until it is finished.</p>';
+        }
+
+        function openScorecard(playerId) {
+            activePlayerId = playerId;
+            renderScorecard(playerById(playerId));
+            const modal = document.getElementById('modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeScorecard() {
+            const modal = document.getElementById('modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            activePlayerId = null;
+        }
+
+        function scorecardStyleText() {
+            const style = document.getElementById('portal-css');
+            return style ? style.textContent : '';
+        }
+
+        async function canvasFromCard(card) {
+            const iframe = document.createElement('iframe');
+            iframe.setAttribute('aria-hidden', 'true');
+            iframe.style.cssText = 'position:fixed;left:-2400px;top:0;width:640px;height:1400px;opacity:1;pointer-events:none;border:0;';
+            document.body.appendChild(iframe);
+            const doc = iframe.contentDocument;
+            doc.open();
+            doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:16px;background:#0b1329;}' + scorecardStyleText() + '</style></head><body>' + card.outerHTML + '</body></html>');
+            doc.close();
+            await new Promise(resolve => setTimeout(resolve, 40));
+            const target = doc.body.querySelector('.sc-card') || doc.body;
+            try {
+                return await html2canvas(target, {
+                    backgroundColor: '#0b1329',
+                    scale: 2,
+                    logging: false,
+                    width: target.scrollWidth,
+                    height: target.scrollHeight,
+                    windowWidth: 640
+                });
+            } finally {
+                iframe.remove();
+            }
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+
+        function openMailto(player) {
+            const subject = (player.name || 'Player') + ' Scorecard';
+            const body = 'The scorecard image is ready. Press Ctrl+V in the email body to paste it.';
+            const href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+            const link = document.createElement('a');
+            link.href = href;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        async function emailScorecard() {
+            const player = playerById(activePlayerId);
+            const button = document.getElementById('modal-email');
+            if (!player || button.disabled) return;
+            if (typeof html2canvas !== 'function') {
+                showToast('The image tool is still loading. Try Email again in a moment.', 'error');
+                return;
+            }
+            button.disabled = true;
+            button.textContent = 'Working…';
+            try {
+                const card = document.getElementById('scorecard-card');
+                const canvas = await canvasFromCard(card);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (!blob) throw new Error('empty image');
+                const filename = (player.name || 'player').trim().replace(/[^\w]+/g, '-').replace(/^-|-$/g, '') || 'player';
+                let copied = false;
+                try {
+                    if (!navigator.clipboard || typeof ClipboardItem === 'undefined') {
+                        throw new Error('clipboard unavailable');
+                    }
+                    await navigator.clipboard.write([
+                        new ClipboardItem({ 'image/png': blob })
+                    ]);
+                    copied = true;
+                } catch (clipboardError) {
+                    copied = false;
+                }
+                if (copied) {
+                    showToast('Scorecard image copied — press Ctrl+V in the email body', 'copied', canvas.width, canvas.height);
+                    openMailto(player);
+                } else {
+                    downloadBlob(blob, filename + '-scorecard.png');
+                    showToast('Clipboard was unavailable, so the scorecard PNG was downloaded instead.', 'downloaded', canvas.width, canvas.height);
+                }
+            } catch (err) {
+                showToast('Could not create the scorecard image. Try again.', 'error');
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Email';
+            }
+        }
+
+        function showPanel(name) {
+            document.getElementById('loading-panel').classList.toggle('hidden', name !== 'loading');
+            document.getElementById('error-panel').classList.toggle('hidden', name !== 'error');
+            document.getElementById('board').classList.toggle('hidden', name !== 'board');
+        }
+
+        function showDeployError(detail) {
+            document.getElementById('error-title').textContent = 'The Apps Script update needs to be deployed';
+            document.getElementById('error-body').textContent = DEPLOY_MESSAGE;
+            const extra = document.getElementById('error-detail');
+            if (detail) {
+                extra.textContent = detail;
+                extra.classList.remove('hidden');
+            } else {
+                extra.textContent = '';
+                extra.classList.add('hidden');
+            }
+            showPanel('error');
+        }
+
+        function showConfigError(message) {
+            document.getElementById('error-title').textContent = 'Scorecards could not be read';
+            document.getElementById('error-body').textContent = message || 'The hockeyDB sheet could not be read.';
+            document.getElementById('error-detail').classList.add('hidden');
+            showPanel('error');
+        }
+
+        function showBoard(data) {
+            payload = data;
+            payload.players = (data.players || []).map(player => ({
+                id: String(player.id),
+                name: player.name || '',
+                jersey: player.jersey == null ? '' : String(player.jersey),
+                strategyCompleted: player.strategyCompleted || [],
+                workoutDates: uniqueDates(player.workoutDates),
+                skillsDates: uniqueDates(player.skillsDates),
+                attendance: player.attendance || null
+            })).sort((a, b) => {
+                const aj = parseFloat(a.jersey);
+                const bj = parseFloat(b.jersey);
+                const aNum = Number.isFinite(aj);
+                const bNum = Number.isFinite(bj);
+                if (aNum && bNum && aj !== bj) return aj - bj;
+                if (aNum !== bNum) return aNum ? -1 : 1;
+                return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
+            });
+            selectedMonday = null;
+            refreshWeekRange();
+            showPanel('board');
+            renderBoard();
+        }
+
+        function buildMockPayload(todayYmd) {
+            const current = mondayOf(todayYmd);
+            const week1 = addDays(current, -21);
+            const week2 = addDays(current, -14);
+            const week3 = addDays(current, -7);
+            const lessons = [];
+            for (let i = 1; i <= 26; i++) lessons.push('S' + String(i).padStart(2, '0'));
+            return {
+                success: true,
+                strategyTotal: 26,
+                players: [
+                    {
+                        id: 'owen',
+                        name: 'Owen Brooks',
+                        jersey: '4',
+                        strategyCompleted: lessons.slice(),
+                        workoutDates: [addDays(current, 2)],
+                        skillsDates: [addDays(week1, 3), addDays(week1, 4), addDays(week1, 5), addDays(week3, 0), addDays(week3, 2)],
+                        attendance: null
+                    },
+                    {
+                        id: 'maya',
+                        name: 'Maya Chen',
+                        jersey: '17',
+                        strategyCompleted: lessons.slice(0, 20),
+                        workoutDates: [addDays(week1, 1), addDays(week2, 1), addDays(week3, 1), addDays(week3, 3), addDays(current, 1)],
+                        skillsDates: [addDays(week1, 1), addDays(week1, 2), addDays(week2, 2), addDays(current, 1)],
+                        attendance: { attended: 9, away: 1, total: 12 }
+                    },
+                    {
+                        id: 'priya',
+                        name: 'Priya Shah',
+                        jersey: '22',
+                        strategyCompleted: [],
+                        workoutDates: [],
+                        skillsDates: [],
+                        attendance: { attended: 0, away: 2, total: 0 }
+                    },
+                    {
+                        id: 'luke',
+                        name: 'Luke Nguyen',
+                        jersey: '91',
+                        strategyCompleted: lessons.slice(0, 13),
+                        workoutDates: [week1, week2, week3],
+                        skillsDates: [addDays(week2, 6)],
+                        attendance: { attended: 10, away: 0, total: 10 }
+                    }
+                ]
+            };
+        }
+
+        async function loadScorecards() {
+            closeScorecard();
+            showPanel('loading');
+            if (mockMode) {
+                document.getElementById('mock-banner').classList.remove('hidden');
+                showBoard(buildMockPayload(torontoTodayYmd()));
+                return;
+            }
+            document.getElementById('mock-banner').classList.add('hidden');
+            let response;
+            try {
+                response = await fetch(API_URL + '?action=getTeamScorecards');
+            } catch (err) {
+                showDeployError('');
+                return;
+            }
+            const text = await response.text();
+            let data = null;
+            try {
+                data = JSON.parse(text.replace(/^\uFEFF/, '').trim());
+            } catch (err) {
+                showDeployError('');
+                return;
+            }
+            if (data && data.code === 'SCORECARDS_ERROR') {
+                showConfigError(data.message);
+                return;
+            }
+            if (!data || data.success === false || !Array.isArray(data.players) || typeof data.strategyTotal !== 'number') {
+                console.error('Scorecards action is not available', text.slice(0, 400));
+                showDeployError('');
+                return;
+            }
+            showBoard(data);
+        }
+
+        document.getElementById('refresh-btn').addEventListener('click', loadScorecards);
+        document.getElementById('retry-btn').addEventListener('click', loadScorecards);
+        document.getElementById('week-prev').addEventListener('click', () => setWeek(addDays(selectedMonday, -7)));
+        document.getElementById('week-next').addEventListener('click', () => setWeek(addDays(selectedMonday, 7)));
+        document.getElementById('modal-close').addEventListener('click', closeScorecard);
+        document.getElementById('modal-email').addEventListener('click', emailScorecard);
+        document.getElementById('modal').addEventListener('click', event => {
+            if (event.target.id === 'modal') closeScorecard();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') closeScorecard();
+        });
+
+        loadScorecards();
+    </script>
+</body>
+</html>
