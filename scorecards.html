@@ -165,7 +165,13 @@
                     <p id="week-label" class="text-lg font-bold text-white mt-0.5">Week of —</p>
                     <p id="week-note" class="text-xs text-slate-400 mt-1"></p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <button id="send-all-btn" type="button" class="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold cursor-pointer inline-flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <span id="send-all-label">Send all scorecards</span>
+                    </button>
                     <button id="week-prev" type="button" aria-label="Previous week" class="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700 hover:border-indigo-500 text-slate-100 font-bold cursor-pointer">‹</button>
                     <button id="week-next" type="button" aria-label="Next week" class="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700 hover:border-indigo-500 text-slate-100 font-bold cursor-pointer">›</button>
                 </div>
@@ -209,12 +215,50 @@
         </div>
     </div>
 
+    <div id="send-modal" class="fixed inset-0 z-[85] hidden items-center justify-center p-4 bg-slate-950/80" role="dialog" aria-modal="true" aria-labelledby="send-title">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-auto custom-scrollbar">
+            <div class="p-5 sm:p-6 space-y-4">
+                <div>
+                    <p class="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Thunder 13A</p>
+                    <h2 id="send-title" class="text-xl font-bold text-white mt-1">Send all scorecards</h2>
+                    <p id="send-week" class="text-base font-bold text-white mt-2"></p>
+                    <p id="send-summary" class="text-sm text-slate-300 mt-1"></p>
+                    <p class="text-xs text-slate-500 mt-1">Each player receives only their own scorecard. Nothing is sent until you confirm.</p>
+                </div>
+                <div id="send-message" class="hidden text-sm rounded-xl px-3 py-2"></div>
+                <p id="send-progress" class="hidden text-sm font-semibold text-indigo-200">Sending scorecards…</p>
+                <div id="send-confirm-view" class="space-y-4">
+                    <div>
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Will receive an email</p>
+                        <ul id="send-recipients" class="mt-2 text-sm"></ul>
+                    </div>
+                    <div>
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Skipped</p>
+                        <ul id="send-skipped" class="mt-2 text-sm"></ul>
+                    </div>
+                    <label class="block" for="send-key">
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Passphrase</span>
+                        <input id="send-key" type="password" autocomplete="off" spellcheck="false" class="mt-2 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="Send key">
+                        <span class="block text-xs text-slate-500 mt-1">Remembered in this browser tab only.</span>
+                    </label>
+                </div>
+                <div id="send-results-view" class="hidden space-y-3"></div>
+                <div class="flex justify-end gap-3 pt-1">
+                    <button id="send-cancel" type="button" class="px-4 py-2 rounded-xl border border-slate-600 text-slate-200 text-sm font-semibold hover:border-slate-400 cursor-pointer">Cancel</button>
+                    <button id="send-confirm" type="button" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold cursor-pointer">Confirm and send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" role="status" aria-live="polite" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] hidden max-w-md w-[calc(100%-2rem)] bg-slate-900 border border-slate-600 text-slate-100 text-sm font-semibold px-4 py-3 rounded-xl shadow-2xl text-center"></div>
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec";
         const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const DEPLOY_MESSAGE = 'The scorecards action is not on the hockeyDB web app yet. Paste apps-script/scorecards.gs into the Apps Script editor, add the one doGet line from the top of that file, then redeploy with Deploy > Manage deployments > Edit > New version. That keeps the same URL.';
+        const EMAIL_DEPLOY_MESSAGE = 'The send-all action is not on the hockeyDB web app yet. Paste apps-script/scorecards_email.gs into the Apps Script editor, add the doGet and doPost lines from the top of that file, set RESEND_API_KEY, RESEND_FROM, and SCORECARD_SEND_KEY in Script properties, then redeploy with Deploy > Manage deployments > Edit > New version. That keeps the same URL.';
+        const SEND_KEY_STORAGE = 'scorecardSendKey';
 
         const params = new URLSearchParams(window.location.search);
         const mockMode = params.get('mock') === '1';
@@ -225,6 +269,8 @@
         let overallMondays = [];
         let activePlayerId = null;
         let toastTimer = null;
+        let sendSending = false;
+        let pendingWeekStart = null;
 
         function torontoTodayYmd(now) {
             const fmt = new Intl.DateTimeFormat('en-US', {
@@ -749,8 +795,447 @@
             };
         }
 
+        function readStoredSendKey() {
+            try {
+                return sessionStorage.getItem(SEND_KEY_STORAGE) || '';
+            } catch (err) {
+                return '';
+            }
+        }
+
+        function storeSendKey(value) {
+            try {
+                sessionStorage.setItem(SEND_KEY_STORAGE, value);
+            } catch (err) {}
+        }
+
+        function maskEmail(email) {
+            const parts = String(email || '').split('@');
+            if (parts.length !== 2 || !parts[0] || !parts[1]) return '***';
+            return parts[0].charAt(0) + '***@' + parts[1];
+        }
+
+        function setSendButtonState(state) {
+            const button = document.getElementById('send-all-btn');
+            const busy = state !== 'ready';
+            button.disabled = busy;
+            button.classList.toggle('opacity-40', busy);
+            button.classList.toggle('cursor-not-allowed', busy);
+            const labels = { sending: 'Sending…', checking: 'Checking…' };
+            document.getElementById('send-all-label').textContent = labels[state] || 'Send all scorecards';
+        }
+
+        function sendModalOpen() {
+            return !document.getElementById('send-modal').classList.contains('hidden');
+        }
+
+        function openSendModalShell() {
+            const modal = document.getElementById('send-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideSendModalShell() {
+            const modal = document.getElementById('send-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function showSendMessage(text, kind) {
+            const el = document.getElementById('send-message');
+            if (!text) {
+                el.classList.add('hidden');
+                el.textContent = '';
+                return;
+            }
+            el.classList.remove('hidden');
+            el.textContent = text;
+            el.className = 'text-sm rounded-xl px-3 py-2 ' + (kind === 'error'
+                ? 'bg-rose-500/10 border border-rose-500/30 text-rose-200'
+                : 'bg-slate-950 border border-slate-700 text-slate-300');
+        }
+
+        function setConfirmEnabled(enabled) {
+            const button = document.getElementById('send-confirm');
+            button.disabled = !enabled;
+            button.classList.toggle('opacity-40', !enabled);
+            button.classList.toggle('cursor-not-allowed', !enabled);
+            button.textContent = 'Confirm and send';
+        }
+
+        function resetSendModal() {
+            pendingWeekStart = null;
+            document.getElementById('send-week').textContent = '';
+            document.getElementById('send-summary').textContent = '';
+            document.getElementById('send-recipients').innerHTML = '';
+            document.getElementById('send-skipped').innerHTML = '';
+            document.getElementById('send-results-view').innerHTML = '';
+            document.getElementById('send-results-view').classList.add('hidden');
+            document.getElementById('send-confirm-view').classList.remove('hidden');
+            document.getElementById('send-progress').classList.add('hidden');
+            document.getElementById('send-confirm').classList.remove('hidden');
+            document.getElementById('send-cancel').textContent = 'Cancel';
+            document.getElementById('send-cancel').disabled = false;
+            document.getElementById('send-cancel').classList.remove('opacity-40', 'cursor-not-allowed');
+            showSendMessage('');
+            setConfirmEnabled(true);
+            const input = document.getElementById('send-key');
+            input.disabled = false;
+            input.value = readStoredSendKey();
+        }
+
+        function closeSendModal() {
+            if (sendSending) return;
+            hideSendModalShell();
+            pendingWeekStart = null;
+            setSendButtonState('ready');
+        }
+
+        function fillPersonList(listId, people, emptyText, detailKey) {
+            const ul = document.getElementById(listId);
+            ul.innerHTML = '';
+            if (!people.length) {
+                const li = document.createElement('li');
+                li.className = 'text-slate-500 italic py-1';
+                li.textContent = emptyText;
+                ul.appendChild(li);
+                return;
+            }
+            people.forEach(person => {
+                const li = document.createElement('li');
+                li.className = 'flex items-baseline justify-between gap-3 py-1.5 border-b border-slate-800/80';
+                const name = document.createElement('span');
+                name.className = 'font-semibold text-slate-100';
+                name.textContent = person.name || 'Unnamed';
+                const detail = document.createElement('span');
+                detail.className = 'text-xs font-mono text-slate-400 text-right';
+                detail.textContent = person[detailKey] || '';
+                li.appendChild(name);
+                li.appendChild(detail);
+                ul.appendChild(li);
+            });
+        }
+
+        function showSendBlocked(message) {
+            document.getElementById('send-confirm-view').classList.add('hidden');
+            document.getElementById('send-results-view').classList.add('hidden');
+            document.getElementById('send-confirm').classList.add('hidden');
+            document.getElementById('send-progress').classList.add('hidden');
+            document.getElementById('send-week').textContent = '';
+            document.getElementById('send-summary').textContent = '';
+            document.getElementById('send-cancel').textContent = 'Close';
+            document.getElementById('send-cancel').disabled = false;
+            showSendMessage(message, 'error');
+            document.getElementById('send-cancel').focus();
+        }
+
+        function interpretPreview(data) {
+            if (!data || data.deployed === false) return { kind: 'deploy' };
+            if (data.success === true && Array.isArray(data.recipients) && Array.isArray(data.skipped)) {
+                return { kind: 'ok', data: data };
+            }
+            if (data.success === false) {
+                return { kind: 'error', message: data.message || 'Scorecard emails could not be prepared.' };
+            }
+            return { kind: 'deploy' };
+        }
+
+        function interpretSend(data) {
+            if (!data || data.deployed === false) return { kind: 'deploy' };
+            if (data.success === true && (Array.isArray(data.results) || typeof data.sentCount === 'number')) {
+                return { kind: 'ok', data: data };
+            }
+            if (data.success === false) {
+                return { kind: 'error', message: data.message || 'The scorecards could not be sent.' };
+            }
+            return { kind: 'deploy' };
+        }
+
+        async function readApiJson(response) {
+            const text = await response.text();
+            try {
+                return JSON.parse(text.replace(/^\uFEFF/, '').trim());
+            } catch (err) {
+                return null;
+            }
+        }
+
+        function buildMockEmailPreview() {
+            const emails = {
+                owen: 'owen.brooks@example.com',
+                maya: 'maya.chen@example.com',
+                luke: 'luke.nguyen@example.com'
+            };
+            const recipients = [];
+            const skipped = [];
+            (payload.players || []).forEach(player => {
+                const email = emails[player.id];
+                if (!email) {
+                    skipped.push({ id: player.id, name: player.name || 'Unnamed', reason: 'No email' });
+                    return;
+                }
+                recipients.push({
+                    id: player.id,
+                    name: player.name || 'Unnamed',
+                    emailMasked: maskEmail(email)
+                });
+            });
+            return {
+                success: true,
+                weekStart: selectedMonday,
+                weekRange: formatMonthDay(selectedMonday) + ' – ' + formatMonthDay(addDays(selectedMonday, 6)),
+                weekLabel: weekLabel(selectedMonday),
+                recipients: recipients,
+                skipped: skipped
+            };
+        }
+
+        async function fetchEmailPreview() {
+            if (mockMode) {
+                await new Promise(resolve => setTimeout(resolve, 250));
+                return buildMockEmailPreview();
+            }
+            const url = API_URL + '?action=getScorecardEmailPreview&weekStart=' + encodeURIComponent(selectedMonday || '');
+            let response;
+            try {
+                response = await fetch(url, { cache: 'no-store' });
+            } catch (err) {
+                return { deployed: false };
+            }
+            return readApiJson(response);
+        }
+
+        async function postSendAll(sendKey, weekStart) {
+            if (mockMode) {
+                await new Promise(resolve => setTimeout(resolve, 800));
+                const preview = buildMockEmailPreview();
+                preview.weekStart = weekStart || preview.weekStart;
+                return {
+                    success: true,
+                    weekStart: preview.weekStart,
+                    weekRange: preview.weekRange,
+                    weekLabel: preview.weekLabel,
+                    sentCount: preview.recipients.length,
+                    failedCount: 0,
+                    results: preview.recipients.map(player => ({
+                        id: player.id,
+                        name: player.name,
+                        status: 'sent'
+                    })),
+                    skipped: preview.skipped
+                };
+            }
+            const body = new URLSearchParams();
+            body.set('action', 'sendAllScorecards');
+            body.set('sendKey', sendKey);
+            body.set('weekStart', weekStart || '');
+            let response;
+            try {
+                response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+                    body: body.toString()
+                });
+            } catch (err) {
+                return { deployed: false };
+            }
+            return readApiJson(response);
+        }
+
+        function fillConfirm(data) {
+            pendingWeekStart = data.weekStart || selectedMonday;
+            document.getElementById('send-week').textContent = data.weekLabel || weekLabel(pendingWeekStart);
+            const recipientCount = data.recipients.length;
+            const skippedCount = data.skipped.length;
+            document.getElementById('send-summary').textContent = recipientCount + ' will receive an email. ' + skippedCount + ' skipped.';
+            fillPersonList('send-recipients', data.recipients, 'None', 'emailMasked');
+            fillPersonList('send-skipped', data.skipped, 'None', 'reason');
+            const canSend = recipientCount > 0;
+            setConfirmEnabled(canSend);
+            document.getElementById('send-key').disabled = !canSend;
+            if (!canSend) {
+                showSendMessage('No scorecards will be sent. Add an email address for at least one player.', 'info');
+            }
+            const focusTarget = canSend ? document.getElementById('send-key') : document.getElementById('send-cancel');
+            focusTarget.focus();
+        }
+
+        function resultStat(label, value, valueClass) {
+            const box = document.createElement('div');
+            box.className = 'p-3 bg-slate-950 border border-slate-800 rounded-xl';
+            const title = document.createElement('p');
+            title.className = 'text-[11px] font-bold uppercase tracking-wider text-slate-400';
+            title.textContent = label;
+            const number = document.createElement('p');
+            number.className = 'text-3xl font-black mt-1 ' + valueClass;
+            number.textContent = String(value);
+            box.appendChild(title);
+            box.appendChild(number);
+            return box;
+        }
+
+        function resultGroup(title, rows, detailClass, emptyText) {
+            const wrap = document.createElement('div');
+            const heading = document.createElement('p');
+            heading.className = 'text-[11px] font-bold uppercase tracking-wider text-slate-400';
+            heading.textContent = title;
+            wrap.appendChild(heading);
+            const ul = document.createElement('ul');
+            ul.className = 'mt-1 text-sm';
+            if (!rows.length) {
+                const li = document.createElement('li');
+                li.className = 'text-slate-400 py-1';
+                li.textContent = emptyText;
+                ul.appendChild(li);
+            } else {
+                rows.forEach(row => {
+                    const li = document.createElement('li');
+                    li.className = 'py-1.5 border-b border-slate-800/80';
+                    const name = document.createElement('p');
+                    name.className = 'font-semibold text-slate-100';
+                    name.textContent = row.name || 'Unnamed';
+                    const detail = document.createElement('p');
+                    detail.className = 'text-xs mt-0.5 ' + detailClass;
+                    detail.textContent = row.detail || '';
+                    li.appendChild(name);
+                    li.appendChild(detail);
+                    ul.appendChild(li);
+                });
+            }
+            wrap.appendChild(ul);
+            return wrap;
+        }
+
+        function showSendResults(data) {
+            const results = Array.isArray(data.results) ? data.results : [];
+            const sentRows = results.filter(row => row.status === 'sent');
+            const failedRows = results.filter(row => row.status === 'failed');
+            const sentCount = results.length ? sentRows.length : (Number(data.sentCount) || 0);
+            const failedCount = results.length ? failedRows.length : (Number(data.failedCount) || 0);
+            const view = document.getElementById('send-results-view');
+            view.innerHTML = '';
+            const counts = document.createElement('div');
+            counts.className = 'grid grid-cols-2 gap-3';
+            counts.appendChild(resultStat('Sent', sentCount, 'text-emerald-400'));
+            counts.appendChild(resultStat('Failed', failedCount, failedCount ? 'text-rose-400' : 'text-slate-300'));
+            view.appendChild(counts);
+            if (data.weekLabel) {
+                const week = document.createElement('p');
+                week.className = 'text-sm font-semibold text-slate-200';
+                week.textContent = data.weekLabel;
+                view.appendChild(week);
+            }
+            view.appendChild(resultGroup(
+                'Failures',
+                failedRows.map(row => ({ name: row.name, detail: row.error || 'The email could not be sent.' })),
+                'text-rose-300',
+                'No failures.'
+            ));
+            view.appendChild(resultGroup(
+                'Sent',
+                sentRows.map(row => ({ name: row.name, detail: 'Sent' })),
+                'text-emerald-300',
+                'None sent.'
+            ));
+            const skipped = Array.isArray(data.skipped) ? data.skipped : [];
+            if (skipped.length) {
+                view.appendChild(resultGroup(
+                    'Skipped',
+                    skipped.map(row => ({ name: row.name, detail: row.reason || 'Skipped' })),
+                    'text-slate-400',
+                    'None'
+                ));
+            }
+            view.classList.remove('hidden');
+            document.getElementById('send-confirm-view').classList.add('hidden');
+            document.getElementById('send-confirm').classList.add('hidden');
+            document.getElementById('send-progress').classList.add('hidden');
+            document.getElementById('send-week').textContent = data.weekLabel || document.getElementById('send-week').textContent;
+            document.getElementById('send-summary').textContent = sentCount + ' sent. ' + failedCount + ' failed.';
+            document.getElementById('send-cancel').textContent = 'Close';
+            document.getElementById('send-cancel').disabled = false;
+            document.getElementById('send-cancel').focus();
+        }
+
+        async function onSendAllClick() {
+            const button = document.getElementById('send-all-btn');
+            if (button.disabled || sendSending || !payload) return;
+            setSendButtonState('checking');
+            let data;
+            try {
+                data = await fetchEmailPreview();
+            } catch (err) {
+                data = { deployed: false };
+            }
+            setSendButtonState('holding');
+            resetSendModal();
+            openSendModalShell();
+            const interpreted = interpretPreview(data);
+            if (interpreted.kind === 'deploy') {
+                showSendBlocked(EMAIL_DEPLOY_MESSAGE);
+                return;
+            }
+            if (interpreted.kind === 'error') {
+                showSendBlocked(interpreted.message);
+                return;
+            }
+            fillConfirm(interpreted.data);
+        }
+
+        async function onSendConfirm() {
+            if (sendSending) return;
+            const button = document.getElementById('send-confirm');
+            if (button.disabled || button.classList.contains('hidden')) return;
+            const sendKey = document.getElementById('send-key').value.replace(/^\s+|\s+$/g, '');
+            if (!sendKey) {
+                showSendMessage('Enter the passphrase.', 'error');
+                document.getElementById('send-key').focus();
+                return;
+            }
+            storeSendKey(sendKey);
+            sendSending = true;
+            setSendButtonState('sending');
+            setConfirmEnabled(false);
+            document.getElementById('send-confirm').textContent = 'Sending…';
+            document.getElementById('send-cancel').disabled = true;
+            document.getElementById('send-cancel').classList.add('opacity-40', 'cursor-not-allowed');
+            document.getElementById('send-key').disabled = true;
+            document.getElementById('send-progress').classList.remove('hidden');
+            showSendMessage('');
+            let data;
+            try {
+                data = await postSendAll(sendKey, pendingWeekStart || selectedMonday);
+            } catch (err) {
+                data = { deployed: false };
+            } finally {
+                sendSending = false;
+                setSendButtonState('holding');
+                document.getElementById('send-cancel').disabled = false;
+                document.getElementById('send-cancel').classList.remove('opacity-40', 'cursor-not-allowed');
+            }
+            const interpreted = interpretSend(data);
+            if (interpreted.kind === 'deploy') {
+                document.getElementById('send-progress').classList.add('hidden');
+                document.getElementById('send-key').disabled = false;
+                setConfirmEnabled(true);
+                showSendMessage(EMAIL_DEPLOY_MESSAGE, 'error');
+                return;
+            }
+            if (interpreted.kind === 'error') {
+                document.getElementById('send-progress').classList.add('hidden');
+                document.getElementById('send-key').disabled = false;
+                setConfirmEnabled(true);
+                showSendMessage(interpreted.message, 'error');
+                document.getElementById('send-key').focus();
+                document.getElementById('send-key').select();
+                return;
+            }
+            showSendResults(interpreted.data);
+        }
+
         async function loadScorecards() {
             closeScorecard();
+            if (!sendSending) closeSendModal();
             showPanel('loading');
             if (mockMode) {
                 document.getElementById('mock-banner').classList.remove('hidden');
@@ -794,8 +1279,25 @@
         document.getElementById('modal').addEventListener('click', event => {
             if (event.target.id === 'modal') closeScorecard();
         });
+        document.getElementById('send-all-btn').addEventListener('click', onSendAllClick);
+        document.getElementById('send-cancel').addEventListener('click', closeSendModal);
+        document.getElementById('send-confirm').addEventListener('click', onSendConfirm);
+        document.getElementById('send-modal').addEventListener('click', event => {
+            if (event.target.id === 'send-modal') closeSendModal();
+        });
+        document.getElementById('send-key').addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                onSendConfirm();
+            }
+        });
         document.addEventListener('keydown', event => {
-            if (event.key === 'Escape') closeScorecard();
+            if (event.key !== 'Escape') return;
+            if (sendModalOpen()) {
+                closeSendModal();
+                return;
+            }
+            closeScorecard();
         });
 
         loadScorecards();
