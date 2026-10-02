@@ -43,6 +43,11 @@
             <p class="text-sm font-semibold text-slate-300">Synchronizing team progress catalogs from sheet architecture...</p>
         </div>
 
+        <div id="api-error-banner" class="hidden bg-rose-950/70 border border-rose-500/30 rounded-2xl p-5">
+            <div id="api-error-banner-body" class="text-xs"></div>
+            <button onclick="loadCoachAnalyticsEngine()" class="mt-4 bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2 rounded-xl text-xs transition cursor-pointer">Retry connection</button>
+        </div>
+
         <div id="dashboard-content-grid" class="hidden space-y-6">
             
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -106,31 +111,34 @@
         </div>
     </main>
 
+    <script src="hockey-api.js"></script>
     <script>
-        // CRITICAL URL BINDING: Dynamically reads your current live production API endpoint structure
-        const API_URL = "https://script.google.com/macros/s/AKfycbyi04VRkZt27UmlfJKFQ9i2t7LvDuWl4-AWEB-hDuzVeQ4X-GYtZ7wk6NFYUG-_mTuj/exec";
         let coachDashboardDataset = {};
 
         async function loadCoachAnalyticsEngine() {
             document.getElementById('loading-spinner-overlay').classList.remove('hidden');
             document.getElementById('dashboard-content-grid').classList.add('hidden');
+            const errorBanner = document.getElementById('api-error-banner');
+            const errorBody = document.getElementById('api-error-banner-body');
+            errorBanner.classList.add('hidden');
+            errorBody.innerHTML = "";
             
             try {
-                const response = await fetch(`${API_URL}?action=getCoachDashboard`);
-                const res = await response.json();
+                const res = await hockeyApi('getCoachDashboard');
                 
                 if (res.success) {
                     coachDashboardDataset = res.data;
                     renderGlobalCoachDashboardLayout();
+                    document.getElementById('dashboard-content-grid').classList.remove('hidden');
                 } else {
                     alert("System Fault Payload Transmission: " + res.message);
                 }
             } catch (err) {
                 console.error("Dashboard engine load error:", err);
-                alert("Failed to read server data matrices securely. Double-check your deploy permissions.");
+                errorBody.innerHTML = hockeyApiErrorHtml(err.hockeyApiInfo || describeHockeyApiFailure(err));
+                errorBanner.classList.remove('hidden');
             } finally {
                 document.getElementById('loading-spinner-overlay').classList.add('hidden');
-                document.getElementById('dashboard-content-grid').classList.remove('hidden');
             }
         }
 
